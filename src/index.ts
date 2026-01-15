@@ -24,6 +24,7 @@ import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
+import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 
 // Import shared utility functions and types
@@ -311,6 +312,20 @@ export class mcp_abap_adt_server {
               },
               required: ['class_name']
             }
+          },
+          {
+            name: 'RunClassTests',
+            description: 'Run unit tests for a class and retrieve results',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class'
+                }
+              },
+              required: ['class_name']
+            }
           }
         ]
       };
@@ -347,6 +362,8 @@ export class mcp_abap_adt_server {
           return await handleGetTransaction(request.params.arguments);
         case 'GetClassTests':
           return await handleGetClassTests(request.params.arguments);
+        case 'RunClassTests':
+          return await handleRunClassTests(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

@@ -13,6 +13,7 @@ import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
+import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { cleanup } from './lib/utils';
 
@@ -155,6 +156,16 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
   describe('handleGetClassTests', () => {
     it('should successfully retrieve class tests', async () => {
       const result = await handleGetClassTests({ class_name: 'CL_WB_PGEDITOR_INITIAL_SCREEN' });
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+    });
+  });
+
+  describe('handleRunClassTests', () => {
+    it('should successfully run class tests and retrieve results', async () => {
+      const result = await handleRunClassTests({ class_name: 'CL_WB_PGEDITOR_INITIAL_SCREEN' });
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
