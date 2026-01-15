@@ -27,8 +27,35 @@ async function pollRunStatus(statusUrl: string, maxAttempts: number = MAX_POLL_A
 }
 
 function extractResultsLink(runResponse: string): string {
-    // Extract the href from the JUnit format results link
-    const junitLinkMatch = runResponse.match(/type="application\/vnd\.sap\.adt\.api\.junit\.run-result\.v1\+xml"[^>]*href="([^"]+)"/);
+    // Try multiple patterns for extracting the results link
+    let junitLinkMatch;
+    
+    // Pattern 1: Original pattern
+    junitLinkMatch = runResponse.match(/type="application\/vnd\.sap\.adt\.api\.junit\.run-result\.v1\+xml"[^>]*href="([^"]+)"/);
+    if (junitLinkMatch && junitLinkMatch[1]) {
+        return junitLinkMatch[1];
+    }
+    
+    // Pattern 2: Try without version in content type
+    junitLinkMatch = runResponse.match(/type="application\/vnd\.sap\.adt\.api\.junit\.run-result[^"]*"[^>]*href="([^"]+)"/);
+    if (junitLinkMatch && junitLinkMatch[1]) {
+        return junitLinkMatch[1];
+    }
+    
+    // Pattern 3: Try any junit result link
+    junitLinkMatch = runResponse.match(/junit[^>]*href="([^"]+)"/i);
+    if (junitLinkMatch && junitLinkMatch[1]) {
+        return junitLinkMatch[1];
+    }
+    
+    // Pattern 4: Try any href with result in the path
+    junitLinkMatch = runResponse.match(/href="([^"]*result[^"]+)"/i);
+    if (junitLinkMatch && junitLinkMatch[1]) {
+        return junitLinkMatch[1];
+    }
+    
+    // Pattern 5: Generic href pattern as fallback
+    junitLinkMatch = runResponse.match(/href="([^"]+)"/);
     if (junitLinkMatch && junitLinkMatch[1]) {
         return junitLinkMatch[1];
     }
