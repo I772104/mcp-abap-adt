@@ -23,6 +23,7 @@ import { handleGetInclude } from './handlers/handleGetInclude';
 import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
+import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 
 // Import shared utility functions and types
@@ -296,6 +297,20 @@ export class mcp_abap_adt_server {
               },
               required: ['interface_name']
             }
+          },
+          {
+            name: 'GetClassTests',
+            description: 'Retrieve local test classes from a class',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class'
+                }
+              },
+              required: ['class_name']
+            }
           }
         ]
       };
@@ -330,6 +345,8 @@ export class mcp_abap_adt_server {
           return await handleGetInterface(request.params.arguments);
         case 'GetTransaction':
           return await handleGetTransaction(request.params.arguments);
+        case 'GetClassTests':
+          return await handleGetClassTests(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

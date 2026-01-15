@@ -12,6 +12,7 @@ import { handleGetInclude } from './handlers/handleGetInclude';
 import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
+import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { cleanup } from './lib/utils';
 
@@ -144,6 +145,16 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
     it('should successfully retrieve transaction details', async () => {
       const result = await handleGetTransaction({ transaction_name: 'SE93' });
       console.log(result)
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+    });
+  });
+
+  describe('handleGetClassTests', () => {
+    it('should successfully retrieve class tests', async () => {
+      const result = await handleGetClassTests({ class_name: 'CL_WB_PGEDITOR_INITIAL_SCREEN' });
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
