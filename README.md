@@ -1,7 +1,9 @@
 > [!CAUTION]
 > **🚨 INTERNAL EVALUATION PROJECT - NOT FOR PRODUCTION USE 🚨**
 > 
-> This project is an internal evaluation tool at SAP and is **NOT INTENDED TO BE PRODUCTIZED**. It is provided for testing and evaluation purposes only. Do not use this in production environments or rely on it for critical business operations.
+> This project is an internal evaluation tool at SAP and is **NOT INTENDED TO BE PRODUCTIZED**. It is provided for SAP internal testing and evaluation purposes only. Do not use this in production environments or rely on it for critical business operations.
+> This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
+> The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
 
 # mcp-abap-adt: Your Gateway to ABAP Development Tools (ADT)
 [![smithery badge](https://smithery.ai/badge/@mario-andreschak/mcp-abap-adt)](https://smithery.ai/server/@mario-andreschak/mcp-abap-adt)
