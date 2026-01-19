@@ -423,27 +423,14 @@ export async function handleGetClassCoverage(args: any) {
             const coverageResponse = await attemptCoverageDataRetrieval(measurementId, className, config);
             console.error('Detailed coverage data retrieved successfully');
             
-            // Create simplified XML from SAP coverage data
-            const simplifiedXml = createSimplifiedXmlFromSapData(coverageResponse.data, className, measurementId);
-            
-            const xmlResponse = {
-                data: simplifiedXml,
-                status: 200,
-                statusText: 'OK',
-                headers: { 'Content-Type': 'application/xml' },
-                config: {},
-                request: {}
-            } as any;
-            
-            return return_response(xmlResponse);
+            // Return the complete coverage response directly
+            return return_response(coverageResponse);
         } catch (coverageError) {
-            // Fallback: Generate simplified XML from test results analysis
-            console.error('Generating simplified XML coverage response from test results');
-            const analysis = parseTestResults(testResultsXml);
-            const simplifiedXml = createSimplifiedXmlFromAnalysis(analysis, className, measurementId);
+            // Fallback: Return the raw test results XML
+            console.error('Returning raw test results XML as fallback');
             
             const xmlResponse = {
-                data: simplifiedXml,
+                data: testResultsXml,
                 status: 200,
                 statusText: 'OK',
                 headers: { 'Content-Type': 'application/xml' },
