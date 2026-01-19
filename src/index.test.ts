@@ -15,6 +15,7 @@ import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
+import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { cleanup } from './lib/utils';
 
 describe('mcp_abap_adt_server - Integration Tests', () => {
@@ -94,7 +95,7 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
 
   describe('handleGetPackage', () => {
     it('should successfully retrieve package details', async () => {
-      const result = await handleGetPackage({ package_name: 'SABP_TYPES' });
+      const result = await handleGetPackage({ package_name: 'SABAPDEMOS' });
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
@@ -155,7 +156,7 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
 
   describe('handleGetClassTests', () => {
     it('should successfully retrieve class tests', async () => {
-      const result = await handleGetClassTests({ class_name: 'CL_WB_PGEDITOR_INITIAL_SCREEN' });
+      const result = await handleGetClassTests({ class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE' });
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
@@ -165,7 +166,17 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
 
   describe('handleRunClassTests', () => {
     it('should successfully run class tests and retrieve results', async () => {
-      const result = await handleRunClassTests({ class_name: 'CL_WB_PGEDITOR_INITIAL_SCREEN' });
+      const result = await handleRunClassTests({ class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE' });
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+    });
+  });
+
+  describe('handleGetClassUsages', () => {
+    it('should successfully retrieve class usages', async () => {
+      const result = await handleGetClassUsages({ class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE' });
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
