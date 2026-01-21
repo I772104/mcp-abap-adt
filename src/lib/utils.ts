@@ -16,13 +16,42 @@ export function return_response(response: AxiosResponse) {
     };
 }
 export function return_error(error: any) {
+    let errorMessage = 'Unknown error occurred';
+    
+    if (error instanceof AxiosError) {
+        // Handle Axios-specific errors with detailed information
+        if (error.response) {
+            // Server responded with error status
+            errorMessage = `HTTP ${error.response.status}: ${String(error.response.data) || error.message}`;
+        } else if (error.request) {
+            // Request was made but no response received
+            errorMessage = `Network error: ${error.message} (${error.code || 'NETWORK_ERROR'})`;
+        } else {
+            // Something else happened
+            errorMessage = `Request setup error: ${error.message}`;
+        }
+    } else if (error instanceof Error) {
+        errorMessage = error.message;
+    } else if (error === undefined) {
+        errorMessage = 'Undefined error - this may indicate a configuration or connection issue';
+    } else if (error === null) {
+        errorMessage = 'Null error occurred';
+    } else if (typeof error === 'string') {
+        errorMessage = error;
+    } else {
+        // Try to stringify the error for debugging
+        try {
+            errorMessage = JSON.stringify(error);
+        } catch {
+            errorMessage = `Unknown error type: ${typeof error}`;
+        }
+    }
+    
     return {
         isError: true,
         content: [{
             type: 'text',
-            text: `Error: ${error instanceof AxiosError ? String(error.response?.data)
-                : error instanceof Error ? error.message
-                    : String(error)}`
+            text: `Error: ${errorMessage}`
         }]
     };
 }
@@ -85,42 +114,52 @@ export async function getAuthHeaders() {
 }
 
 async function fetchCsrfToken(url: string): Promise<string> {
-    try {
-        const response = await createAxiosInstance()({
-            method: 'GET',
-            url,
-            headers: {
-                ...(await getAuthHeaders()),
-                'x-csrf-token': 'fetch'
-            }
-        });
+    const baseUrl = await getBaseUrl();
+    
+    // Try multiple endpoints to fetch CSRF token
+    const csrfEndpoints = [
+        `${baseUrl}/sap/bc/adt/core/discovery`,  // ADT discovery endpoint (most reliable)
+        `${baseUrl}/sap/bc/adt`,                 // ADT base endpoint
+        url                                      // Original URL as fallback
+    ];
+    
+    for (const endpoint of csrfEndpoints) {
+        try {
+            const response = await createAxiosInstance()({
+                method: 'GET',
+                url: endpoint,
+                headers: {
+                    ...(await getAuthHeaders()),
+                    'x-csrf-token': 'fetch'
+                }
+            });
 
-        const token = response.headers['x-csrf-token'];
-        if (!token) {
-            throw new Error('No CSRF token in response headers');
-        }
-
-        // Extract and store cookies
-        if (response.headers['set-cookie']) {
-            cookies = response.headers['set-cookie'].join('; ');
-        }
-
-        return token;
-    } catch (error) {
-        // Even if the request fails, try to get token from error response
-        if (error instanceof AxiosError && error.response?.headers['x-csrf-token']) {
-            const token = error.response.headers['x-csrf-token'];
+            const token = response.headers['x-csrf-token'];
             if (token) {
-                 // Extract and store cookies from the error response as well
-                if (error.response.headers['set-cookie']) {
-                    cookies = error.response.headers['set-cookie'].join('; ');
+                // Extract and store cookies
+                if (response.headers['set-cookie']) {
+                    cookies = response.headers['set-cookie'].join('; ');
                 }
                 return token;
             }
+        } catch (error) {
+            // Even if the request fails, try to get token from error response
+            if (error instanceof AxiosError && error.response?.headers['x-csrf-token']) {
+                const token = error.response.headers['x-csrf-token'];
+                if (token) {
+                    // Extract and store cookies from the error response as well
+                    if (error.response.headers['set-cookie']) {
+                        cookies = error.response.headers['set-cookie'].join('; ');
+                    }
+                    return token;
+                }
+            }
+            // Continue to next endpoint if this one failed
+            console.error(`Failed to fetch CSRF token from ${endpoint}:`, error instanceof Error ? error.message : String(error));
         }
-        // If we couldn't get token from error response either, throw the original error
-        throw new Error(`Failed to fetch CSRF token: ${error instanceof Error ? error.message : String(error)}`);
     }
+    
+    throw new Error('Failed to fetch CSRF token from any available endpoint');
 }
 
 export async function makeAdtRequest(url: string, method: string, timeout: number, data?: any, params?: any, customHeaders?: any) {
