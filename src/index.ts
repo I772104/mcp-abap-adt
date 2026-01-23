@@ -28,6 +28,7 @@ import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
+import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -356,6 +357,28 @@ export class mcp_abap_adt_server {
               },
               required: ['class_name']
             }
+          },
+          {
+            name: 'CheckSyntax',
+            description: 'Check ABAP source code syntax and return detailed error information',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                source_code: {
+                  type: 'string',
+                  description: 'ABAP source code to check for syntax errors'
+                },
+                object_name: {
+                  type: 'string',
+                  description: 'Optional name of the ABAP object (for better error reporting)'
+                },
+                object_type: {
+                  type: 'string',
+                  description: 'Optional ABAP object type (CLAS, PROG, FUGR, etc. - auto-detected if not provided)'
+                }
+              },
+              required: ['source_code']
+            }
           }
         ]
       };
@@ -398,6 +421,8 @@ export class mcp_abap_adt_server {
           return await handleGetClassCoverage(request.params.arguments);
         case 'GetClassUsages':
           return await handleGetClassUsages(request.params.arguments);
+        case 'CheckSyntax':
+          return await handleCheckSyntax(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

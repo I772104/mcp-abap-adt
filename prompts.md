@@ -29,135 +29,50 @@ I will automatically:
 ```
 ---
 
-### Prompt 1B: Create Comprehensive Unit Tests for ABAP Class
+### Prompt 1B: Create Unit Tests for ABAP Class (Streamlined Approach)
 
 ```
-I need you to create comprehensive unit tests for an ABAP class. Please follow this systematic approach:
+Create effective unit tests for ABAP class [CLASS_NAME] to improve test coverage.
 
-**STEP 1: ANALYZE THE CLASS & EXISTING COVERAGE**
-- Use the GetClass tool to retrieve the complete source code of the class: [CLASS_NAME]
-- Use the GetClassTests tool to check if there are existing test classes and analyze them
-- **Use GetClassCoverage tool to analyze current test coverage and identify gaps**
-- If the class implements interfaces, use GetInterface tool to understand the contract
-- For any referenced structures/tables, use GetStructure or GetTable tools to understand data dependencies
+**STEP 1: ASSESS CURRENT STATE**
+- Use GetClassCoverage to see current coverage baseline
+- Use GetClassTests to check existing tests
+- Use GetClass to understand the class structure
+- Target: Achieve >70% statement coverage
 
-**STEP 2: COVERAGE GAP ANALYSIS**
-- Review the coverage report to identify:
-  * Untested methods (0% coverage)
-  * Partially covered methods with uncovered branches
-  * Critical business logic with insufficient coverage
-  * Error handling paths that need testing
-- Prioritize test creation based on:
-  * **Critical**: Public API methods, business logic, data persistence
-  * **High**: Authorization checks, validation logic, error handlers
-  * **Medium**: Helper methods, private utilities
-  * **Low**: Simple getters/setters, constants
+**STEP 2: IDENTIFY LOW-HANGING FRUIT**
+- Focus on methods with 0% coverage first (easy wins)
+- Look for simple public methods that don't require complex setup
+- Prioritize: Public API → Protected methods → Error handlers
 
-**STEP 3: ANALYZE DEPENDENCIES**
-- Identify all external dependencies (other classes, function modules, database tables)
-- Determine which dependencies need to be mocked vs. can be tested directly
-- Look for any configuration dependencies or customizing tables
+**STEP 3: CREATE BASIC MOCKS & SETUP**
+- Create simple mock classes for GUI objects (ALV, containers)
+- Use OSQL test environment for database table mocking
+- Keep mocking minimal - only what's absolutely needed
 
-**STEP 4: CREATE TEST STRATEGY**
-- Generate test classes following ABAP Unit testing best practices
-- Create test methods targeting coverage gaps with focus on:
-  * **Happy Path Tests**: Normal operation scenarios
-  * **Edge Case Tests**: Boundary conditions, empty inputs, maximum values
-  * **Error Handling Tests**: Invalid inputs, exception scenarios
-  * **Branch Coverage**: All conditional paths (IF/CASE statements)
-  * **Integration Tests**: End-to-end workflows where applicable
+**STEP 4: WRITE TARGETED TESTS**
+- Create test methods using given/when/then structure
+- Start with happy path scenarios
+- Add edge cases for uncovered branches
+- Use descriptive test method names (t001_method_name)
 
-**STEP 5: IMPLEMENT MOCKING STRATEGY**
-- Create test doubles/mocks for external dependencies
-- Use dependency injection patterns where possible
-- Mock database operations appropriately
-- Consider using ABAP Unit's built-in mocking frameworks
+**STEP 5: SYNTAX VALIDATION**
+- Use CheckSyntax to validate test code before implementation
+- Fix any syntax errors identified in the test methods
+- Ensure clean compilation before proceeding
 
-**STEP 6: TEST DATA MANAGEMENT**
-- Create meaningful test data that covers various scenarios
-- Use factory methods for complex test data creation
-- Ensure test data is isolated and doesn't affect other tests
+**STEP 6: MEASURE & ITERATE**
+- Run tests with RunClassTests to verify they pass
+- Check coverage improvement with GetClassCoverage
+- Add more tests if needed to reach 70%+ coverage
 
-**STEP 7: ASSERTIONS AND VALIDATION**
-- Use appropriate assertion methods (CL_ABAP_UNIT_ASSERT)
-- Include descriptive error messages in assertions
-- Test both expected results and side effects
-- Validate state changes where applicable
+**PROVEN APPROACH:**
+- Small wins first - target 0% coverage methods
+- Simple, focused test methods (one concept per test)
+- Practical mocking (don't over-engineer)
+- Realistic targets (70%+ is excellent)
+- Dont't use names with more than 30 characters
 
-**STEP 8: PERFORMANCE CONSIDERATIONS**
-- Include performance tests for critical methods
-- Test with large data volumes where relevant
-- Consider memory consumption for data-intensive operations
-
-**STEP 9: VALIDATION & COVERAGE VERIFICATION**
-- Use RunClassTests tool to execute the created tests
-- Analyze test results and fix any failing tests
-- **Use GetClassCoverage tool to verify improved coverage**
-- Compare before/after coverage metrics
-- Identify any remaining gaps and create additional tests
-- Ensure all tests pass and provide meaningful feedback
-
-**STEP 10: ITERATIVE IMPROVEMENT**
-- Repeat coverage analysis after adding new tests
-- Continue until target coverage level is achieved (aim for >80%)
-- Document any intentionally untested code with justification
-
-**ADDITIONAL REQUIREMENTS:**
-- Follow ABAP naming conventions for test classes and methods
-- Include comprehensive documentation for complex test scenarios
-- Organize tests logically with clear setup/teardown methods
-- Consider using test fixtures for complex initialization
-- Include integration tests that verify the class works with real dependencies (when safe)
-
-**CUSTOMIZATION PARAMETERS:**
-- Test Coverage Target: [80%|90%|95%] - Default: 80%
-- Coverage Type Priority: [STATEMENT|BRANCH|PROCEDURE|ALL] - Default: ALL
-- Mock Strategy: [MINIMAL|MODERATE|EXTENSIVE]
-- Include Performance Tests: [YES|NO]
-- Include Integration Tests: [YES|NO]
-- Specific Testing Framework: [STANDARD|CUSTOM_FRAMEWORK]
-
-Please provide the complete test class implementation with detailed explanations of the testing approach and rationale for each test case.
-```
-
----
-
-### Prompt 1C: Improve Test Coverage for Existing Tests
-
-```
-Improve the unit test coverage for class [CLASS_NAME] which already has some tests.
-
-**STEP 1: BASELINE ASSESSMENT**
-- Use GetClassCoverage to establish current coverage baseline
-- Use GetClassTests to review existing test implementation
-- Identify specific coverage gaps (methods, branches, statements)
-
-**STEP 2: GAP PRIORITIZATION**
-- Analyze the coverage report and categorize gaps:
-  * **Critical Gaps**: Core business logic with 0% coverage
-  * **High Priority**: Partially tested methods with uncovered branches
-  * **Medium Priority**: Helper methods and utilities
-  * **Low Priority**: Trivial code paths
-
-**STEP 3: TARGETED TEST CREATION**
-- Create new test methods specifically targeting the identified gaps
-- Focus on:
-  * Methods with 0% coverage first
-  * Uncovered branches in partially tested methods
-  * Error handling paths
-  * Edge cases and boundary conditions
-
-**STEP 4: VERIFICATION**
-- Run tests using RunClassTests
-- Verify coverage improvement using GetClassCoverage
-- Compare before/after metrics
-- Iterate until target coverage is achieved
-
-**DELIVERABLES:**
-- Coverage improvement report (before vs. after)
-- New test methods added
-- Coverage gap justification for any remaining untested code
-```
 
 ## 2. Code Review & Analysis Prompt
 
@@ -210,7 +125,7 @@ Analyze and optimize the performance of ABAP object: [OBJECT_NAME]
 
 **DELIVERABLES:**
 - Performance hotspot identification
-- Optimized code versions
+- Optimized code versions with CheckSyntax validation
 - Before/after performance comparison estimates
 - Best practice recommendations
 - Monitoring and measurement suggestions
@@ -263,6 +178,7 @@ Help me refactor the ABAP object: [OBJECT_NAME] to improve code quality and main
 
 **DELIVERABLES:**
 - Refactored code with explanations
+- Syntax validation using CheckSyntax for all refactored code
 - Migration strategy from old to new implementation
 - Updated unit tests for refactored code
 - Impact analysis on dependent objects
@@ -302,10 +218,46 @@ Analyze the dependencies and relationships of ABAP object: [OBJECT_NAME]
 4. **Execute systematically** following the step-by-step approach
 5. **Iterate and refine** based on results and feedback
 
+## 7. ABAP Syntax Validation Prompt
+
+### Prompt: Validate ABAP Code Syntax
+
+```
+Validate the syntax of ABAP code before implementation or after modifications.
+
+**SYNTAX CHECK PROCESS:**
+1. Use CheckSyntax to validate ABAP source code
+2. Review any syntax errors, warnings, or issues identified
+3. Fix syntax problems before proceeding with implementation
+
+**USAGE SCENARIOS:**
+- **Before Implementation**: Validate new code before creating objects
+- **After Modifications**: Check syntax after making changes to existing code
+- **Code Review**: Ensure syntactic correctness during reviews
+- **Refactoring**: Validate refactored code maintains proper syntax
+- **Learning**: Check ABAP syntax when learning new language features
+
+**SYNTAX CHECK COVERS:**
+- Class definitions and implementations
+- Method signatures and implementations
+- Variable declarations and usage
+- Statement syntax and structure
+- ABAP keyword usage and spelling
+- Proper statement termination (periods, commas)
+
+**IMPORTANT NOTE:**
+The CheckSyntax tool requires the target class to exist in the system. For completely new classes, create an empty class first, then use CheckSyntax to validate your proposed implementation before adding the actual code.
+
+**EXAMPLE USAGE:**
+Use CheckSyntax with source_code parameter containing your ABAP code and object_name parameter with the target class name.
+```
+
 ## Best Practices for Using These Prompts
 
 - Always start with thorough analysis using MCP tools
-- Validate results by running tests when applicable
+- **Use CheckSyntax for all code creation and modification tasks**
+- Validate syntax before implementing changes in the system
+- Run tests when applicable to verify functionality
 - Document your findings and decisions
 - Consider the broader impact on the system
 - Follow SAP and ABAP development standards
