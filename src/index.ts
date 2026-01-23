@@ -29,6 +29,8 @@ import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
+import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
+import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -379,6 +381,46 @@ export class mcp_abap_adt_server {
               },
               required: ['source_code']
             }
+          },
+          {
+            name: 'CreateLocalClass',
+            description: 'Create a new ABAP class in local package ($TMP) without transport assignment',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class (must start with Z or Y)'
+                },
+                source_code: {
+                  type: 'string',
+                  description: 'Complete ABAP class source code (definition and implementation)'
+                },
+                description: {
+                  type: 'string',
+                  description: 'Optional description for the class'
+                },
+                package: {
+                  type: 'string',
+                  description: 'Package name (defaults to $TMP, must be local package)'
+                }
+              },
+              required: ['class_name', 'source_code']
+            }
+          },
+          {
+            name: 'DeleteLocalClass',
+            description: 'Delete a local ABAP class (only Z/Y classes in local packages)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class to delete (must start with Z or Y)'
+                }
+              },
+              required: ['class_name']
+            }
           }
         ]
       };
@@ -423,6 +465,10 @@ export class mcp_abap_adt_server {
           return await handleGetClassUsages(request.params.arguments);
         case 'CheckSyntax':
           return await handleCheckSyntax(request.params.arguments);
+        case 'CreateLocalClass':
+          return await handleCreateLocalClass(request.params.arguments);
+        case 'DeleteLocalClass':
+          return await handleDeleteLocalClass(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
