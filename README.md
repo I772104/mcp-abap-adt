@@ -202,6 +202,38 @@ Cline is a VS Code extension that uses MCP servers to provide language support. 
 
 This server provides the following tools, which can be used through Cline (or any other MCP client):
 
+### Core ABAP Object Retrieval
+These tools allow you to retrieve source code and definitions from your ABAP system:
+- **GetProgram**: Retrieve complete ABAP program source code
+- **GetClass**: Get ABAP class definitions and implementations  
+- **GetInterface**: Access ABAP interface source code
+- **GetInclude**: Retrieve ABAP include program source
+- **GetFunction**: Get function module source code (requires function group)
+- **GetFunctionGroup**: Retrieve entire function group source
+
+### Data Structure Analysis  
+Tools for analyzing ABAP data structures and table contents:
+- **GetTable**: Retrieve ABAP table structure and metadata
+- **GetTableContents**: Extract actual data from ABAP tables (configurable row limit)
+- **GetStructure**: Get DDIC structure definitions
+- **GetTypeInfo**: Retrieve ABAP type information and metadata
+
+### Development Support
+Tools to help with ABAP development workflows:
+- **SearchObject**: Quick search across ABAP objects using wildcards (e.g., "Z*" for custom objects)
+- **GetPackage**: Retrieve package details and contained objects
+- **GetTransaction**: Get transaction code details and associated programs
+- **CheckSyntax**: Validate ABAP code syntax
+
+### Testing & Quality Assurance
+Advanced tools for unit testing and code quality analysis:
+- **GetClassTests**: Retrieve unit test classes for ABAP classes
+- **RunClassTests**: Execute unit tests and get results
+- **GetClassCoverage**: Run tests and retrieve code coverage metrics
+- **GetClassUsages**: Find where ABAP classes are used across the system
+
+### Complete Tool Reference
+
 | Tool Name           | Description                                       | Input Parameters                                                   | Example Usage (in Cline)                                   |
 | ------------------- | ------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
 | `GetProgram`        | Retrieve ABAP program source code.                | `program_name` (string): Name of the ABAP program.                 | `@tool GetProgram program_name=ZMY_PROGRAM`                |
@@ -217,3 +249,8 @@ This server provides the following tools, which can be used through Cline (or an
 | `SearchObject`      | Search for ABAP objects using quick search.       | `query` (string), `maxResults` (number, optional, default 100)     | `@tool SearchObject query=ZMY* maxResults=20`              |
 | `GetInterface`      | Retrieve ABAP interface source code.              | `interface_name` (string): Name of the ABAP interface.             | `@tool GetInterface interface_name=ZIF_MY_INTERFACE`       |
 | `GetTransaction`    | Retrieve ABAP transaction details.                | `transaction_name` (string): Name of the ABAP transaction.         | `@tool GetTransaction transaction_name=ZMY_TRANSACTION`    |
+| `GetClassTests`     | Retrieve local test classes from a class.         | `class_name` (string): Name of the ABAP class.                     | `@tool GetClassTests class_name=ZCL_MY_CLASS`              |
+| `RunClassTests`     | Run unit tests for a class and retrieve results.  | `class_name` (string): Name of the ABAP class.                     | `@tool RunClassTests class_name=ZCL_MY_CLASS`              |
+| `GetClassCoverage`  | Run unit tests and retrieve test coverage results.| `class_name` (string): Name of the ABAP class.                     | `@tool GetClassCoverage class_name=ZCL_MY_CLASS`           |
+| `GetClassUsages`    | Retrieve usages for an ABAP class.                | `class_name` (string): Name of the ABAP class.                     | `@tool GetClassUsages class_name=ZCL_MY_CLASS`             |
+| `CheckSyntax`       | Check ABAP code syntax validation.                | Various parameters for syntax checking                             | `@tool CheckSyntax` (see CheckSyntax.md for details)       |
