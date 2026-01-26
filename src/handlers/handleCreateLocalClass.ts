@@ -1,6 +1,5 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
-import { handleCheckSyntax } from './handleCheckSyntax';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
 
 /**
@@ -48,6 +47,46 @@ function validateLocalPackage(packageName: string): void {
     if (!isLocalPackage) {
         throw new McpError(ErrorCode.InvalidParams, 'Package must be local ($TMP, $LOCAL, or other $-prefixed packages)');
     }
+}
+
+/**
+ * Basic syntax validation to catch obvious errors without circular dependency
+ */
+function validateBasicSyntax(sourceCode: string): any[] | null {
+    const errors: any[] = [];
+    
+    // Check for missing periods in common statements
+    const lines = sourceCode.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Skip empty lines and comments
+        if (!line || line.startsWith('*') || line.startsWith('"')) {
+            continue;
+        }
+        
+        // Check for missing periods in METHODS declarations
+        if (line.includes('METHODS:') && !line.endsWith('.') && !line.endsWith(',')) {
+            errors.push({
+                type: 'error',
+                message: 'Missing period in METHODS declaration',
+                line: i + 1,
+                severity: 'error'
+            });
+        }
+        
+        // Check for missing RETURNING VALUE parameter name
+        if (line.includes('RETURNING VALUE()')) {
+            errors.push({
+                type: 'error',
+                message: 'Missing parameter name in RETURNING VALUE()',
+                line: i + 1,
+                severity: 'error'
+            });
+        }
+    }
+    
+    return errors.length > 0 ? errors : null;
 }
 
 /**
@@ -107,79 +146,29 @@ async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<
  * Handles fallback when class creation succeeds but source upload fails due to syntax issues
  */
 async function handleFallbackSyntaxCheck(params: CreateLocalClassParams, originalError: any, baseUrl: string, encodedClassName: string): Promise<any> {
-    // Re-run syntax check to get detailed error information
-    const syntaxResult = await handleCheckSyntax({
-        source_code: params.source_code,
-        object_name: params.class_name,
-        object_type: 'CLAS'
-    });
-
-    // If syntax check call itself failed, return the original HTTP error
-    if (syntaxResult.isError) {
-        throw originalError;
-    }
-
-    // Parse syntax results to check if there are actual syntax errors
-    const syntaxData = JSON.parse(syntaxResult.content[0].text);
-    const hasSyntaxErrors = syntaxData.syntaxCheck?.status === 'error' || 
-                           syntaxData.syntaxCheck?.errorCount > 0 ||
-                           (syntaxData.syntaxCheck?.errors && syntaxData.syntaxCheck.errors.length > 0);
-    
-    // If there are syntax errors, clean up the wrongfully created class
-    let cleanupResult: {
-        attempted: boolean;
-        successful: boolean;
-        reason?: string;
-        message?: string;
-    } | null = null;
-    
-    if (hasSyntaxErrors) {
-        try {
-            const deleteResult = await handleDeleteLocalClass({ class_name: params.class_name });
-            if (deleteResult.isError) {
-                // Deletion failed, but we still want to return syntax errors
-                cleanupResult = {
-                    attempted: true,
-                    successful: false,
-                    reason: "Could not delete the basic class structure"
-                };
-            } else {
-                cleanupResult = {
-                    attempted: true,
-                    successful: true,
-                    message: "Basic class structure was cleaned up due to syntax errors"
-                };
-            }
-        } catch (cleanupError) {
-            cleanupResult = {
-                attempted: true,
-                successful: false,
-                reason: "Cleanup failed due to system error"
-            };
-        }
+    // Try to clean up the created class since upload failed
+    try {
+        await handleDeleteLocalClass({ class_name: params.class_name });
+    } catch (cleanupError) {
+        // Cleanup failed, but continue with error reporting
     }
     
-    // Enhance the syntax check response with context about what happened
-    const enhancedSyntaxData = {
-        ...syntaxData,
-        classCreationStatus: {
-            message: cleanupResult?.successful 
-                ? "Class creation failed due to syntax errors. Basic structure was cleaned up."
-                : cleanupResult?.attempted 
-                ? "Class creation failed due to syntax errors. Basic structure could not be cleaned up automatically."
-                : "Class creation failed due to syntax errors",
-            cleanup: cleanupResult,
-            instructions: cleanupResult?.successful 
-                ? "Fix the syntax errors below and try creating the class again"
-                : "Fix the syntax errors below. You may need to manually delete the basic class structure before recreating."
-        }
+    // Return the original error with context
+    const errorResponse = {
+        status: 'error',
+        message: `Class creation failed during source code upload. This is likely due to syntax errors in the provided code.`,
+        details: {
+            className: params.class_name,
+            originalError: originalError.message || String(originalError),
+            recommendation: "Use the CheckSyntax tool to validate your code before creating the class"
+        },
+        timestamp: new Date().toISOString()
     };
 
-    // Return enhanced syntax check result
     const enhancedResponse = {
-        data: JSON.stringify(enhancedSyntaxData, null, 2),
-        status: 200,
-        statusText: 'OK',
+        data: JSON.stringify(errorResponse, null, 2),
+        status: 400,
+        statusText: 'Bad Request',
         headers: {},
         config: { headers: {} }
     } as any;
@@ -208,31 +197,7 @@ export async function handleCreateLocalClass(args: any): Promise<any> {
         validateClassName(params.class_name);
         validateLocalPackage(params.package!);
 
-        // Step 1: First do the syntax check
-        const syntaxResult = await handleCheckSyntax({
-            source_code: params.source_code,
-            object_name: params.class_name,
-            object_type: 'CLAS'
-        });
-
-        // If syntax validation call itself failed, return that error
-        if (syntaxResult.isError) {
-            return syntaxResult;
-        }
-
-        // Parse the syntax validation result
-        const syntaxData = JSON.parse(syntaxResult.content[0].text);
-        
-        // If there are syntax errors, return the syntax check response directly
-        if (syntaxData.syntaxCheck?.status === 'error' || 
-            syntaxData.syntaxCheck?.errorCount > 0 ||
-            (syntaxData.syntaxCheck?.errors && syntaxData.syntaxCheck.errors.length > 0)) {
-            
-            // Return the syntax check result as-is (don't create anything)
-            return syntaxResult;
-        }
-
-        // Step 2: Only proceed with class creation if syntax is valid
+        // Proceed with class creation (let ADT handle syntax validation)
         const baseUrl = await getBaseUrl();
         const encodedClassName = encodeURIComponent(params.class_name);
 
@@ -280,14 +245,13 @@ export async function handleCreateLocalClass(args: any): Promise<any> {
         }
 
         // Step 4: Prepare success response
-        const successResponse = {
+            const successResponse = {
             status: 'success',
             message: `Local class ${params.class_name} created successfully`,
             details: {
                 className: params.class_name,
                 package: params.package,
                 description: params.description,
-                syntaxCheck: syntaxData.syntaxCheck,
                 location: {
                     metadataUrl: `${createUrl}/${encodedClassName}`,
                     sourceUrl: sourceUrl

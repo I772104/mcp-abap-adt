@@ -369,18 +369,22 @@ export class mcp_abap_adt_server {
               properties: {
                 source_code: {
                   type: 'string',
-                  description: 'ABAP source code to check for syntax errors'
+                  description: 'ABAP source code to check for syntax errors (optional if object_name is provided - will fetch from existing class)'
                 },
                 object_name: {
                   type: 'string',
-                  description: 'Optional name of the ABAP object (for better error reporting)'
+                  description: 'Name of the ABAP object. If source_code is not provided, will attempt to fetch source from this existing class'
                 },
                 object_type: {
                   type: 'string',
                   description: 'Optional ABAP object type (CLAS, PROG, FUGR, etc. - auto-detected if not provided)'
                 }
               },
-              required: ['source_code']
+              required: [],
+              anyOf: [
+                { required: ['source_code'] },
+                { required: ['object_name'] }
+              ]
             }
           },
           {
