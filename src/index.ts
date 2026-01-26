@@ -29,6 +29,9 @@ import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
+import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
+import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
+import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -366,18 +369,85 @@ export class mcp_abap_adt_server {
               properties: {
                 source_code: {
                   type: 'string',
-                  description: 'ABAP source code to check for syntax errors'
+                  description: 'ABAP source code to check for syntax errors (optional if object_name is provided - will fetch from existing class)'
                 },
                 object_name: {
                   type: 'string',
-                  description: 'Optional name of the ABAP object (for better error reporting)'
+                  description: 'Name of the ABAP object. If source_code is not provided, will attempt to fetch source from this existing class'
                 },
                 object_type: {
                   type: 'string',
                   description: 'Optional ABAP object type (CLAS, PROG, FUGR, etc. - auto-detected if not provided)'
                 }
               },
-              required: ['source_code']
+              required: [],
+              anyOf: [
+                { required: ['source_code'] },
+                { required: ['object_name'] }
+              ]
+            }
+          },
+          {
+            name: 'CreateLocalClass',
+            description: 'Create a new ABAP class in local package ($TMP) without transport assignment',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class (must start with Z or Y)'
+                },
+                source_code: {
+                  type: 'string',
+                  description: 'Complete ABAP class source code (definition and implementation)'
+                },
+                description: {
+                  type: 'string',
+                  description: 'Optional description for the class'
+                },
+                package: {
+                  type: 'string',
+                  description: 'Package name (defaults to $TMP, must be local package)'
+                }
+              },
+              required: ['class_name', 'source_code']
+            }
+          },
+          {
+            name: 'DeleteLocalClass',
+            description: 'Delete a local ABAP class (only Z/Y classes in local packages)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class to delete (must start with Z or Y)'
+                }
+              },
+              required: ['class_name']
+            }
+          },
+          {
+            name: 'CreateClassTests',
+            description: 'Create or replace test classes within an existing global ABAP class',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                parent_class_name: {
+                  type: 'string',
+                  description: 'Name of the existing ABAP class to add test classes to'
+                },
+                test_source_code: {
+                  type: 'string',
+                  description: 'Complete test class source code (local test classes implementation)'
+                },
+                backup_existing: {
+                  type: 'boolean',
+                  description: 'Optional: Create backup of existing test classes before replacing',
+                  default: false
+                }
+              },
+              required: ['parent_class_name', 'test_source_code']
             }
           }
         ]
@@ -423,6 +493,12 @@ export class mcp_abap_adt_server {
           return await handleGetClassUsages(request.params.arguments);
         case 'CheckSyntax':
           return await handleCheckSyntax(request.params.arguments);
+        case 'CreateLocalClass':
+          return await handleCreateLocalClass(request.params.arguments);
+        case 'DeleteLocalClass':
+          return await handleDeleteLocalClass(request.params.arguments);
+        case 'CreateClassTests':
+          return await handleCreateClassTests(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

@@ -16,6 +16,11 @@ import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
+import { handleCheckSyntax } from './handlers/handleCheckSyntax';
+import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
+import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
+import { handleCreateClassTests } from './handlers/handleCreateClassTests';
+import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { cleanup } from './lib/utils';
 
 describe('mcp_abap_adt_server - Integration Tests', () => {
@@ -171,7 +176,7 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
       expect(result.content[0].type).toBe('text');
-    });
+    }, 15000); // Increase timeout to 15 seconds for running tests
   });
 
   describe('handleGetClassUsages', () => {
@@ -182,5 +187,230 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
       expect(result.content.length).toBeGreaterThan(0);
       expect(result.content[0].type).toBe('text');
     });
+  });
+
+  describe('handleGetTableContents', () => {
+    it('should successfully retrieve table contents', async () => {
+      const result = await handleGetTableContents({ table_name: 'DD02L', max_rows: 5 });
+      // Table contents might fail due to permissions, but should return a result structure
+      expect(Array.isArray(result.content)).toBe(true);
+      if (!result.isError) {
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+      }
+    });
+
+    it('should use default max_rows when not specified', async () => {
+      const result = await handleGetTableContents({ table_name: 'DD02L' });
+      // Table contents might fail due to permissions, but should return a result structure
+      expect(Array.isArray(result.content)).toBe(true);
+      if (!result.isError) {
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+      }
+    });
+  });
+
+  describe('handleCheckSyntax', () => {
+    it('should successfully check syntax for valid ABAP code', async () => {
+      const validCode = `REPORT test.
+DATA: lv_test TYPE string.
+lv_test = 'Hello World'.
+WRITE: lv_test.`;
+      
+      const result = await handleCheckSyntax({ 
+        source_code: validCode,
+        object_name: 'Z_TEST_REPORT',
+        object_type: 'PROG'
+      });
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      // Parse the result to check syntax status
+      const syntaxResult = JSON.parse(result.content[0].text);
+      expect(syntaxResult.syntaxCheck).toBeDefined();
+    });
+
+    it('should detect syntax errors in invalid ABAP code', async () => {
+      const invalidCode = `REPORT test.
+DATA: lv_test TYPE string
+lv_test = 'Hello World'
+WRITE: lv_test.`;  // Missing periods
+      
+      const result = await handleCheckSyntax({ 
+        source_code: invalidCode,
+        object_name: 'Z_TEST_REPORT_INVALID'
+      });
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      // Parse the result to check syntax status
+      const syntaxResult = JSON.parse(result.content[0].text);
+      expect(syntaxResult.syntaxCheck).toBeDefined();
+    });
+  });
+
+  describe('handleCreateLocalClass', () => {
+    const testClassName = 'Z_TEST_CLASS_' + Date.now().toString().slice(-6);
+    const validClassCode = `CLASS ${testClassName} DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS: get_message RETURNING VALUE(r_message) TYPE string.
+ENDCLASS.
+
+CLASS ${testClassName} IMPLEMENTATION.
+  METHOD get_message.
+    r_message = 'Hello from test class'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    afterAll(async () => {
+      // Clean up: attempt to delete the test class
+      try {
+        await handleDeleteLocalClass({ class_name: testClassName });
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    });
+
+    it('should successfully create a local class', async () => {
+      const result = await handleCreateLocalClass({
+        class_name: testClassName,
+        source_code: validClassCode,
+        description: 'Test class for integration testing'
+      });
+      
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      // Parse the result
+      const createResult = JSON.parse(result.content[0].text);
+      expect(createResult.status).toBe('success');
+      expect(createResult.details.className).toBe(testClassName);
+    }, 30000); // Longer timeout for class creation
+
+    it('should reject invalid class names', async () => {
+      const result = await handleCreateLocalClass({
+        class_name: 'INVALID_NAME', // Should start with Z or Y
+        source_code: validClassCode
+      });
+      
+      expect(result.isError).toBe(true);
+    });
+
+    it('should reject classes with syntax errors', async () => {
+      const invalidCode = `CLASS Z_INVALID DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+  
+  PUBLIC SECTION.
+    METHODS: invalid_method RETURNING VALUE() TYPE string // Missing parameter name
+ENDCLASS.`;
+
+      const result = await handleCreateLocalClass({
+        class_name: 'Z_INVALID_' + Date.now().toString().slice(-6),
+        source_code: invalidCode
+      });
+      
+      expect(result.isError).toBe(false); // Handler returns success but with error status
+      expect(Array.isArray(result.content)).toBe(true);
+      
+      const syntaxResult = JSON.parse(result.content[0].text);
+      // The handler returns an error response structure when syntax validation fails
+      expect(syntaxResult.status).toBe('error');
+      expect(syntaxResult.details).toBeDefined();
+      expect(syntaxResult.details.recommendation).toContain('CheckSyntax tool');
+    });
+  });
+
+  describe('handleDeleteLocalClass', () => {
+    it('should reject deletion of non-Z/Y classes', async () => {
+      const result = await handleDeleteLocalClass({ class_name: 'CL_STANDARD_CLASS' });
+      expect(result.isError).toBe(true);
+    });
+
+    it('should handle non-existent classes gracefully', async () => {
+      const result = await handleDeleteLocalClass({ class_name: 'Z_NON_EXISTENT_CLASS_12345' });
+      // Could be success or error depending on how ADT handles non-existent classes
+      expect(Array.isArray(result.content)).toBe(true);
+    });
+  });
+
+  describe('handleCreateClassTests', () => {
+    const testClassCode = `CLASS ltcl_test DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    METHODS: test_basic_functionality FOR TESTING.
+ENDCLASS.
+
+CLASS ltcl_test IMPLEMENTATION.
+  METHOD test_basic_functionality.
+    cl_abap_unit_assert=>assert_true( abap_true ).
+  ENDMETHOD.
+ENDCLASS.`;
+
+    it('should reject creation for non-existent parent class', async () => {
+      const result = await handleCreateClassTests({
+        parent_class_name: 'CL_NON_EXISTENT_CLASS_12345',
+        test_source_code: testClassCode
+      });
+      
+      expect(result.isError).toBe(true);
+    });
+
+    it('should validate test class syntax', async () => {
+      const invalidTestCode = `CLASS ltcl_test DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    METHODS: test_method FOR TESTING // Missing period
+ENDCLASS.`;
+
+      const result = await handleCreateClassTests({
+        parent_class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE',
+        test_source_code: invalidTestCode
+      });
+      
+      // The handler might return error for invalid syntax or permission issues
+      expect(Array.isArray(result.content)).toBe(true);
+      
+      if (!result.isError) {
+        const syntaxResult = JSON.parse(result.content[0].text);
+        expect(syntaxResult.testClassCreationStatus || syntaxResult.syntaxCheck).toBeDefined();
+      }
+    });
+
+    it('should handle backup option correctly', async () => {
+      const result = await handleCreateClassTests({
+        parent_class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE',
+        test_source_code: testClassCode,
+        backup_existing: true
+      });
+      
+      // This might fail due to permissions, but we test the parameter handling
+      expect(Array.isArray(result.content)).toBe(true);
+    });
+  });
+
+  describe('handleGetClassCoverage', () => {
+    it('should attempt to get class coverage', async () => {
+      const result = await handleGetClassCoverage({ class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE' });
+      
+      // Coverage tests might fail due to system configuration, but should return a result
+      expect(Array.isArray(result.content)).toBe(true);
+    }, 30000); // Longer timeout for coverage analysis
   });
 });
