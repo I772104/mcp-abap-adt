@@ -1,7 +1,7 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
 import { handleGetClass } from './handleGetClass';
-import { handleCreateLocalClass } from './handleCreateLocalClass';
+import { handleCreateClass } from './handleCreateClass';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
 
 /**
@@ -187,6 +187,32 @@ function generateTempClassName(): string {
 }
 
 /**
+ * Check if the source code contains test classes
+ */
+function isTestClassCode(sourceCode: string): boolean {
+    if (!sourceCode) return false;
+    
+    const upperCode = sourceCode.toUpperCase();
+    
+    // Check for common test class patterns
+    const testClassPatterns = [
+        /CLASS\s+LCL_TEST/i,           // Local test class naming pattern
+        /CLASS\s+.*_TEST/i,            // Any class ending with _TEST
+        /CLASS\s+.*TEST.*DEFINITION/i, // Class definition containing TEST
+        /#[Tt][Ee][Ss][Tt]/,          // Pragma test
+        /FOR\s+TESTING/i,              // FOR TESTING declaration
+        /RISK\s+LEVEL/i,               // Test risk level declaration
+        /DURATION\s+(SHORT|MEDIUM|LONG)/i, // Test duration declaration
+        /METHODS:\s*\w*[Tt][Ee][Ss][Tt]/i, // Test methods
+        /METHOD\s+\w*[Tt][Ee][Ss][Tt]/i,   // Test method implementation
+        /CLASS-TESTMETHODS/i,          // Test method section
+    ];
+    
+    // Check if any test pattern matches
+    return testClassPatterns.some(pattern => pattern.test(sourceCode));
+}
+
+/**
  * Direct ADT syntax check - bypasses class creation to get real ADT errors
  */
 async function performDirectAdtSyntaxCheck(sourceCode: string, className: string): Promise<{syntaxCheck: SyntaxCheckResults, rawResponse: string}> {
@@ -263,7 +289,7 @@ ENDCLASS.
 CLASS ${tempClassName.toLowerCase()} IMPLEMENTATION.
 ENDCLASS.`;
 
-        const createResult = await handleCreateLocalClass({
+        const createResult = await handleCreateClass({
             class_name: tempClassName,
             source_code: minimalSource,
             description: `Temp class for syntax check`,
@@ -370,6 +396,10 @@ export async function handleCheckSyntax(args: any) {
         let tempClassUsed = false;
         let tempClassName: string | undefined;
         let approach = 'direct_adt_api';
+        let skippedTempCreation = false;
+        
+        // Check if the source code is for a test class
+        const isTestClass = isTestClassCode(sourceCode);
         
         // Try direct ADT syntax check first
         console.error(`Starting direct ADT syntax check for: ${objectName}`);
@@ -380,8 +410,8 @@ export async function handleCheckSyntax(args: any) {
             (directResults.rawResponse.includes('does not exist') || 
              directResults.rawResponse.includes('notProcessed'));
         
-        if (!classExists && responseContainsNotExist) {
-            // Use temporary class approach for non-existing classes
+        if (!classExists && responseContainsNotExist && !isTestClass) {
+            // Use temporary class approach for non-existing classes (but NOT for test classes)
             console.error(`Direct ADT approach failed because class doesn't exist. Using temporary class approach...`);
             const tempResults = await performTempClassSyntaxCheck(sourceCode, objectName);
             
@@ -409,7 +439,13 @@ export async function handleCheckSyntax(args: any) {
                 // Don't fail the entire operation if cleanup fails
             }
         } else {
-            // Use direct results
+            // Use direct results - either class exists, or it's a test class, or direct ADT worked
+            if (isTestClass && !classExists && responseContainsNotExist) {
+                console.error(`Skipping temporary class creation for test class code - using direct results even if class doesn't exist`);
+                skippedTempCreation = true;
+                approach = 'direct_adt_api_test_class';
+            }
+            
             syntaxResults = {
                 syntaxCheck: directResults.syntaxCheck,
                 rawAdtResponse: directResults.rawResponse
@@ -427,6 +463,8 @@ export async function handleCheckSyntax(args: any) {
                 classExists: classExists,
                 tempClassUsed: tempClassUsed,
                 tempClassName: tempClassName,
+                isTestClass: isTestClass,
+                skippedTempCreation: skippedTempCreation,
                 adtEndpoint: tempClassUsed ? 'Temp class + ADT checkruns API' : 'Direct ADT checkruns API',
                 method: tempClassUsed ? 'temp_class_adt_checkruns' : 'adt_checkruns',
                 timestamp: new Date().toISOString(),

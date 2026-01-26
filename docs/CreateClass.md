@@ -1,10 +1,12 @@
-# CreateLocalClass Tool
+# CreateClass Tool
 
-The CreateLocalClass tool enables developers to create new ABAP classes directly in the local development package ($TMP) without requiring transport assignments. This tool is designed for rapid prototyping, testing, and local development scenarios.
+The CreateClass tool enables developers to create new ABAP classes or replace existing ones directly in the local development package ($TMP) without requiring transport assignments. This tool is designed for rapid prototyping, testing, and local development scenarios.
 
 ## Features
 
-- **Local Development Focus**: Creates classes exclusively in local packages ($TMP, $LOCAL)
+- **Local Development Focus**: Creates or replaces classes exclusively in local packages ($TMP, $LOCAL)
+- **Replace Functionality**: Automatically replaces existing classes with new source code
+- **Backup Support**: Optional backup of existing class content before replacement
 - **Pre-Syntax Validation**: Validates ABAP syntax before attempting to create the class
 - **Z/Y Naming Enforcement**: Ensures proper naming conventions for customer/partner objects
 - **Comprehensive Error Handling**: Provides detailed feedback for various failure scenarios
@@ -32,6 +34,27 @@ The CreateLocalClass tool enables developers to create new ABAP classes directly
 }
 ```
 
+### Replacing Existing Class with Backup
+
+```json
+{
+  "class_name": "ZCL_MY_EXAMPLE",
+  "source_code": "CLASS zcl_my_example DEFINITION PUBLIC FINAL CREATE PUBLIC.\n  PUBLIC SECTION.\n    METHODS: hello_world_v2.\nENDCLASS.\n\nCLASS zcl_my_example IMPLEMENTATION.\n  METHOD hello_world_v2.\n    WRITE: 'Hello World Version 2!'.\n  ENDMETHOD.\nENDCLASS.",
+  "backup_existing": true,
+  "description": "Updated version of my example class"
+}
+```
+
+### Replacing Existing Class without Backup
+
+```json
+{
+  "class_name": "ZCL_DEMO_UTILITY",
+  "source_code": "CLASS zcl_demo_utility DEFINITION PUBLIC FINAL CREATE PUBLIC.\n  PUBLIC SECTION.\n    CLASS-METHODS: calculate_vat_v2 IMPORTING value TYPE p DECIMALS 2 RETURNING VALUE(result) TYPE p DECIMALS 2.\nENDCLASS.\n\nCLASS zcl_demo_utility IMPLEMENTATION.\n  METHOD calculate_vat_v2.\n    result = value * '1.19'.\n  ENDMETHOD.\nENDCLASS.",
+  "description": "Updated VAT calculation with decimal precision"
+}
+```
+
 ### Complex Class Example
 
 ```json
@@ -44,12 +67,13 @@ The CreateLocalClass tool enables developers to create new ABAP classes directly
 
 ## Parameters
 
-| Parameter      | Type    | Required | Description                                                             |
-|----------------|---------|----------|-------------------------------------------------------------------------|
-| `class_name`   | string  | Yes      | Name of the ABAP class (must start with Z or Y, max 30 characters)      |
-| `source_code`  | string  | Yes      | Complete ABAP class source code including definition and implementation |
-| `description`  | string  | No       | Class description (defaults to "Local class {class_name}")              |
-| `package`      | string  | No       | Package name (defaults to $TMP, must be local package)                  |
+| Parameter         | Type    | Required | Description                                                                |
+|-------------------|---------|----------|----------------------------------------------------------------------------|
+| `class_name`      | string  | Yes      | Name of the ABAP class (must start with Z or Y, max 30 characters)         |
+| `source_code`     | string  | Yes      | Complete ABAP class source code including definition and implementation    |
+| `description`     | string  | No       | Class description (defaults to "Local class {class_name}")                 |
+| `package`         | string  | No       | Package name (defaults to $TMP, must be local package)                     |
+| `backup_existing` | boolean | No       | Create backup of existing class content before replacing (default: false)  |
 
 ## Naming Conventions
 
@@ -114,7 +138,7 @@ The tool enforces local package usage to prevent transport complications:
 
 ## Response Format
 
-### Success Response
+### Success Response - New Class Creation
 ```json
 {
   "status": "success",
@@ -123,17 +147,80 @@ The tool enforces local package usage to prevent transport complications:
     "className": "ZCL_EXAMPLE",
     "package": "$TMP",
     "description": "Local class ZCL_EXAMPLE",
-    "syntaxCheck": {
-      "status": "success",
-      "errors": [],
-      "warnings": [],
-      "info": [],
-      "summary": {
-        "totalIssues": 0,
-        "errorCount": 0,
-        "warningCount": 0,
-        "infoCount": 0
-      }
+    "action": "create",
+    "backup": {
+      "created": false,
+      "message": "No backup requested"
+    },
+    "location": {
+      "metadataUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE",
+      "sourceUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE/source/main"
+    }
+  },
+  "timestamp": "2024-01-21T10:30:00.000Z"
+}
+```
+
+### Success Response - Class Replacement with Backup
+```json
+{
+  "status": "success",
+  "message": "Local class ZCL_EXAMPLE replaced successfully",
+  "details": {
+    "className": "ZCL_EXAMPLE",
+    "package": "$TMP",
+    "description": "Updated version of my example class",
+    "action": "replace",
+    "backup": {
+      "created": true,
+      "timestamp": "2024-01-21T10:30:00.000Z",
+      "message": "Previous class content backed up"
+    },
+    "location": {
+      "metadataUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE",
+      "sourceUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE/source/main"
+    }
+  },
+  "timestamp": "2024-01-21T10:30:00.000Z"
+}
+```
+
+### Success Response - Class Replacement without Backup
+```json
+{
+  "status": "success",
+  "message": "Local class ZCL_EXAMPLE replaced successfully",
+  "details": {
+    "className": "ZCL_EXAMPLE",
+    "package": "$TMP", 
+    "description": "Updated example class",
+    "action": "replace",
+    "backup": {
+      "created": false,
+      "message": "No backup requested"
+    },
+    "location": {
+      "metadataUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE",
+      "sourceUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE/source/main"
+    }
+  },
+  "timestamp": "2024-01-21T10:30:00.000Z"
+}
+```
+
+### Success Response - Backup Failed but Class Replaced
+```json
+{
+  "status": "success",
+  "message": "Local class ZCL_EXAMPLE replaced successfully",
+  "details": {
+    "className": "ZCL_EXAMPLE",
+    "package": "$TMP",
+    "description": "Updated example class",
+    "action": "replace",
+    "backup": {
+      "created": false,
+      "message": "Backup was requested but could not be created"
     },
     "location": {
       "metadataUrl": "https://sap-system/sap/bc/adt/oo/classes/ZCL_EXAMPLE",
@@ -168,13 +255,13 @@ The tool enforces local package usage to prevent transport complications:
 }
 ```
 
-**Class Already Exists**
+**Authorization Error**
 ```json
 {
   "isError": true,
   "content": [{
     "type": "text",
-    "text": "Error: Class ZCL_EXAMPLE already exists. Use a different name or delete the existing class first."
+    "text": "Error: Insufficient authorization to create/modify classes. Check S_DEVELOP authorization."
   }]
 }
 ```
@@ -205,7 +292,7 @@ The tool enforces local package usage to prevent transport complications:
 
 ### Best Practices for Error Resolution
 
-1. **Always validate syntax** using CheckSyntax before CreateLocalClass
+1. **Always validate syntax** using CheckSyntax before CreateClass
 2. **Use unique class names** with meaningful prefixes
 3. **Check system connectivity** before attempting creation
 4. **Verify user authorizations** for development activities
@@ -230,7 +317,7 @@ const syntaxResult = await use_mcp_tool({
 if (syntaxResult.syntaxCheck.status !== 'error') {
   const createResult = await use_mcp_tool({
     server_name: "mcp-abap-adt-1",
-    tool_name: "CreateLocalClass",
+    tool_name: "CreateClass",
     arguments: {
       class_name: "ZCL_TEST",
       source_code: abapCode,
@@ -253,7 +340,7 @@ const templateClass = await use_mcp_tool({
 const modifiedCode = templateClass.data.replace(/ZCL_TEMPLATE/g, 'ZCL_NEW_CLASS');
 const newClass = await use_mcp_tool({
   server_name: "mcp-abap-adt-1",
-  tool_name: "CreateLocalClass", 
+  tool_name: "CreateClass", 
   arguments: {
     class_name: "ZCL_NEW_CLASS",
     source_code: modifiedCode,

@@ -2,6 +2,84 @@
 
 This file contains comprehensive prompts for various ABAP development tasks that can be used with the MCP ABAP ADT server tools.
 
+## Quick Start Workflows
+
+### Workflow 1: Create New Local Class
+
+**Simple 3-Step Process:**
+1. **Create Class** → Use `CreateClass` with your ABAP code
+2. **Check Syntax** → Use `CheckSyntax` to validate the class
+3. **Fix & Repeat** → Fix any syntax errors and re-check until clean
+
+```
+Step 1: CreateClass
+- class_name: "ZCL_MY_NEW_CLASS"
+- source_code: [Your ABAP class code]
+- backup_existing: true (if replacing existing class)
+
+Step 2: CheckSyntax  
+- object_name: "ZCL_MY_NEW_CLASS"
+- object_type: "CLAS"
+
+Step 3: Fix syntax errors if any, then repeat Step 2 until 0 errors/warnings
+```
+
+### Workflow 2: Create Unit Tests for Existing Class
+
+**Simple 3-Step Process:**
+1. **Create Tests** → Use `CreateClassTests` with your test code
+2. **Check Syntax** → Use `CheckSyntax` to validate the tests
+3. **Run Tests** → Use `RunClassTests` to verify they work
+
+```
+Step 1: CreateClassTests
+- parent_class_name: "ZCL_EXISTING_CLASS"
+- test_source_code: [Your ABAP test code]
+- backup_existing: true (recommended)
+
+Step 2: CheckSyntax
+- object_name: "ZCL_EXISTING_CLASS" 
+- object_type: "CLAS"
+
+Step 3: RunClassTests
+- class_name: "ZCL_EXISTING_CLASS"
+```
+
+### Workflow 3: Replace Existing Class (with Backup)
+
+**Simple 3-Step Process:**
+1. **Replace Class** → Use `CreateClass` with backup enabled
+2. **Check Syntax** → Use `CheckSyntax` to validate the updated class
+3. **Test Compatibility** → Run existing tests to ensure they still work
+
+```
+Step 1: CreateClass
+- class_name: "ZCL_EXISTING_CLASS"
+- source_code: [Updated ABAP class code]
+- backup_existing: true (IMPORTANT!)
+
+Step 2: CheckSyntax
+- object_name: "ZCL_EXISTING_CLASS"
+- object_type: "CLAS"
+
+Step 3: RunClassTests (if tests exist)
+- class_name: "ZCL_EXISTING_CLASS"
+```
+
+## Important Notes
+
+### Backup Functionality
+- **CreateClass** now supports replacing existing classes with `backup_existing: true`
+- **CreateClassTests** supports backing up existing test classes with `backup_existing: true`
+- Always use backup when working with important classes
+- Backup includes timestamp and original content for recovery
+
+### Syntax Check Requirements
+- **Always run CheckSyntax** after creating or modifying classes/tests
+- Fix all syntax errors before proceeding to testing
+- Method names must be ≤30 characters (ABAP limitation)
+- SETUP methods should NOT have `FOR TESTING` attribute
+
 ## 1. Unit Testing & Coverage Analysis Prompts
 
 ### Prompt 1A: Analyze Test Coverage for ABAP Class

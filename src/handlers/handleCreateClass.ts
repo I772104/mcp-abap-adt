@@ -1,15 +1,28 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
+import { handleGetClass } from './handleGetClass';
 
 /**
  * Interface for class creation parameters
  */
-interface CreateLocalClassParams {
+interface CreateClassParams {
     class_name: string;
     source_code: string;
     description?: string;
     package?: string;
+    backup_existing?: boolean;
+}
+
+/**
+ * Interface for backup data
+ */
+interface ClassBackup {
+    class_name: string;
+    timestamp: string;
+    original_content: string;
+    package?: string;
+    description?: string;
 }
 
 /**
@@ -143,9 +156,35 @@ async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<
 }
 
 /**
+ * Creates a backup of existing class if requested
+ */
+async function backupExistingClass(className: string): Promise<ClassBackup | null> {
+    try {
+        const classResult = await handleGetClass({ class_name: className });
+        
+        // If getting class failed, we can't create a backup
+        if (classResult.isError) {
+            return null;
+        }
+        
+        // Extract the class content from the response
+        const classContent = classResult.content?.[0]?.text || '';
+        
+        return {
+            class_name: className,
+            timestamp: new Date().toISOString(),
+            original_content: classContent
+        };
+    } catch (error) {
+        // If backup fails, we'll proceed without backup but note it in the response
+        return null;
+    }
+}
+
+/**
  * Handles fallback when class creation succeeds but source upload fails due to syntax issues
  */
-async function handleFallbackSyntaxCheck(params: CreateLocalClassParams, originalError: any, baseUrl: string, encodedClassName: string): Promise<any> {
+async function handleFallbackSyntaxCheck(params: CreateClassParams, originalError: any, baseUrl: string, encodedClassName: string): Promise<any> {
     // Try to clean up the created class since upload failed
     try {
         await handleDeleteLocalClass({ class_name: params.class_name });
@@ -177,83 +216,120 @@ async function handleFallbackSyntaxCheck(params: CreateLocalClassParams, origina
 }
 
 /**
- * Main handler function for creating local ABAP classes
+ * Main handler function for creating ABAP classes
  */
-export async function handleCreateLocalClass(args: any): Promise<any> {
+export async function handleCreateClass(args: any): Promise<any> {
     try {
         // Validate required parameters
         if (!args?.class_name || !args?.source_code) {
             throw new McpError(ErrorCode.InvalidParams, 'class_name and source_code parameters are required');
         }
 
-        const params: CreateLocalClassParams = {
+        const params: CreateClassParams = {
             class_name: args.class_name.toUpperCase(),
             source_code: args.source_code,
             description: args.description || `Local class ${args.class_name}`,
-            package: args.package || '$TMP'
+            package: args.package || '$TMP',
+            backup_existing: args.backup_existing === true
         };
 
         // Validate inputs
         validateClassName(params.class_name);
         validateLocalPackage(params.package!);
 
-        // Proceed with class creation (let ADT handle syntax validation)
+        // Check if class already exists and handle accordingly
         const baseUrl = await getBaseUrl();
         const encodedClassName = encodeURIComponent(params.class_name);
-
-        const createUrl = `${baseUrl}/sap/bc/adt/oo/classes`;
-        const metadataPayload = createClassMetadataPayload(params.class_name, params.description!, params.package!);
-
-        const createHeaders = {
-            'Content-Type': 'application/vnd.sap.adt.oo.classes+xml',
-            'Accept': 'application/vnd.sap.adt.oo.classes+xml'
-        };
-
-        // Step 3: Create class metadata and upload source code
         const sourceUrl = `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}/source/main`;
-        let classCreated = false;
         
+        let backup: ClassBackup | null = null;
+        let isReplacing = false;
+        
+        // Check if class exists
         try {
-            // Create class metadata
-            await makeAdtRequest(createUrl, 'POST', 30000, metadataPayload, undefined, createHeaders);
-            classCreated = true;
-
-            // Upload custom source code
+            await makeAdtRequest(sourceUrl, 'GET', 10000);
+            isReplacing = true;
+            
+            // Create backup if requested
+            if (params.backup_existing) {
+                backup = await backupExistingClass(params.class_name);
+            }
+            
+            // If replacing, just upload new source code
             await uploadSourceCode(sourceUrl, params.source_code);
             
-        } catch (creationError: any) {
-            // Check for HTTP 412 ETag mismatch during source upload - likely due to syntax issues
-            // Be more flexible in error detection
-            const errorMessage = (creationError?.message || creationError?.toString?.() || String(creationError));
-            const isHttp412Error = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
-            
-            if (classCreated && isHttp412Error) {
-                // Don't cleanup the class, instead run fallback syntax check
-                return await handleFallbackSyntaxCheck(params, creationError, baseUrl, encodedClassName);
-            }
-            
-            // For other errors, try to clean up the created class using proper deletion
-            if (classCreated) {
+        } catch (getError: any) {
+            // Class doesn't exist, proceed with normal creation
+            if (getError.message?.includes('404') || getError.message?.includes('Not Found')) {
+                isReplacing = false;
+                
+                const createUrl = `${baseUrl}/sap/bc/adt/oo/classes`;
+                const metadataPayload = createClassMetadataPayload(params.class_name, params.description!, params.package!);
+
+                const createHeaders = {
+                    'Content-Type': 'application/vnd.sap.adt.oo.classes+xml',
+                    'Accept': 'application/vnd.sap.adt.oo.classes+xml'
+                };
+
+                let classCreated = false;
+                
                 try {
-                    await handleDeleteLocalClass({ class_name: params.class_name });
-                } catch (cleanupError) {
-                    // Cleanup failed, but don't mask the original error
-                    // This is expected for non-local classes or classes with dependencies
+                    // Create class metadata
+                    await makeAdtRequest(createUrl, 'POST', 30000, metadataPayload, undefined, createHeaders);
+                    classCreated = true;
+
+                    // Upload custom source code
+                    await uploadSourceCode(sourceUrl, params.source_code);
+                    
+                } catch (creationError: any) {
+                    // Check for HTTP 412 ETag mismatch during source upload - likely due to syntax issues
+                    const errorMessage = (creationError?.message || creationError?.toString?.() || String(creationError));
+                    const isHttp412Error = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
+                    
+                    if (classCreated && isHttp412Error) {
+                        // Don't cleanup the class, instead run fallback syntax check
+                        return await handleFallbackSyntaxCheck(params, creationError, baseUrl, encodedClassName);
+                    }
+                    
+                    // For other errors, try to clean up the created class using proper deletion
+                    if (classCreated) {
+                        try {
+                            await handleDeleteLocalClass({ class_name: params.class_name });
+                        } catch (cleanupError) {
+                            // Cleanup failed, but don't mask the original error
+                        }
+                    }
+                    throw creationError;
                 }
+            } else {
+                // Other error occurred during class check
+                throw getError;
             }
-            throw creationError;
         }
 
-        // Step 4: Prepare success response
-            const successResponse = {
+        // Prepare success response
+        const actionMessage = isReplacing ? 'replaced' : 'created';
+        const successResponse = {
             status: 'success',
-            message: `Local class ${params.class_name} created successfully`,
+            message: `Local class ${params.class_name} ${actionMessage} successfully`,
             details: {
                 className: params.class_name,
                 package: params.package,
                 description: params.description,
+                action: isReplacing ? 'replace' : 'create',
+                backup: backup ? {
+                    created: true,
+                    timestamp: backup.timestamp,
+                    message: 'Previous class content backed up'
+                } : params.backup_existing ? {
+                    created: false,
+                    message: 'Backup was requested but could not be created'
+                } : {
+                    created: false,
+                    message: 'No backup requested'
+                },
                 location: {
-                    metadataUrl: `${createUrl}/${encodedClassName}`,
+                    metadataUrl: `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}`,
                     sourceUrl: sourceUrl
                 }
             },
@@ -262,8 +338,8 @@ export async function handleCreateLocalClass(args: any): Promise<any> {
 
         const enhancedResponse = {
             data: JSON.stringify(successResponse, null, 2),
-            status: 201,
-            statusText: 'Created',
+            status: isReplacing ? 200 : 201,
+            statusText: isReplacing ? 'OK' : 'Created',
             headers: {},
             config: { headers: {} }
         } as any;
@@ -273,11 +349,8 @@ export async function handleCreateLocalClass(args: any): Promise<any> {
     } catch (error) {
         // Enhanced error handling for common scenarios
         if (error instanceof Error) {
-            if (error.message.includes('already exists') || error.message.includes('409')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, `Class ${args?.class_name} already exists. Use a different name or delete the existing class first.`));
-            }
             if (error.message.includes('authorization') || error.message.includes('403')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to create classes. Check S_DEVELOP authorization.'));
+                return return_error(new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to create/modify classes. Check S_DEVELOP authorization.'));
             }
         }
         

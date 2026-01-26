@@ -29,7 +29,7 @@ import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
-import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
+import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 
@@ -388,7 +388,7 @@ export class mcp_abap_adt_server {
             }
           },
           {
-            name: 'CreateLocalClass',
+            name: 'CreateClass',
             description: 'Create a new ABAP class in local package ($TMP) without transport assignment',
             inputSchema: {
               type: 'object',
@@ -493,8 +493,8 @@ export class mcp_abap_adt_server {
           return await handleGetClassUsages(request.params.arguments);
         case 'CheckSyntax':
           return await handleCheckSyntax(request.params.arguments);
-        case 'CreateLocalClass':
-          return await handleCreateLocalClass(request.params.arguments);
+        case 'CreateClass':
+          return await handleCreateClass(request.params.arguments);
         case 'DeleteLocalClass':
           return await handleDeleteLocalClass(request.params.arguments);
         case 'CreateClassTests':

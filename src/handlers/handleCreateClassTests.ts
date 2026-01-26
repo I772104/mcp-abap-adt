@@ -129,50 +129,7 @@ export async function handleCreateClassTests(args: any): Promise<any> {
         // Step 1: Validate parent class exists
         await validateParentClassExists(params.parent_class_name);
 
-        // Step 2: Optional syntax check of test source code
-        let syntaxCheckResult: any = null;
-        try {
-            const syntaxResult = await handleCheckSyntax({
-                source_code: params.test_source_code,
-                object_name: `${params.parent_class_name}_TEST`,
-                object_type: 'CLAS'
-            });
-
-            if (!syntaxResult.isError) {
-                const syntaxData = JSON.parse(syntaxResult.content[0].text);
-                
-                // If there are syntax errors, return them
-                if (syntaxData.syntaxCheck?.status === 'error' || 
-                    syntaxData.syntaxCheck?.errorCount > 0 ||
-                    (syntaxData.syntaxCheck?.errors && syntaxData.syntaxCheck.errors.length > 0)) {
-                    
-                    const enhancedSyntaxData = {
-                        ...syntaxData,
-                        testClassCreationStatus: {
-                            message: "Test class creation failed due to syntax errors",
-                            instructions: "Fix the syntax errors below and try creating the test class again"
-                        }
-                    };
-
-                    const enhancedResponse = {
-                        data: JSON.stringify(enhancedSyntaxData, null, 2),
-                        status: 400,
-                        statusText: 'Bad Request - Syntax Errors',
-                        headers: {},
-                        config: { headers: {} }
-                    } as any;
-
-                    return return_response(enhancedResponse);
-                }
-                
-                syntaxCheckResult = syntaxData.syntaxCheck;
-            }
-        } catch (syntaxError) {
-            // If syntax check fails, we'll proceed but note it in the response
-            syntaxCheckResult = { status: 'warning', message: 'Syntax check could not be performed' };
-        }
-
-        // Step 3: Create backup if requested
+        // Step 2: Create backup if requested (syntax check removed for local test classes)
         let backup: TestClassBackup | null = null;
         if (params.backup_existing) {
             backup = await backupExistingTests(params.parent_class_name);
@@ -200,7 +157,6 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             message: `Test classes for ${params.parent_class_name} created/updated successfully`,
             details: {
                 parentClass: params.parent_class_name,
-                syntaxCheck: syntaxCheckResult,
                 backup: backup ? {
                     created: true,
                     timestamp: backup.timestamp,

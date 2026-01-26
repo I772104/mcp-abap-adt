@@ -65,11 +65,11 @@ The CheckSyntax tool provides comprehensive ABAP source code syntax validation u
 
 ## Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `source_code` | string | Optional* | ABAP source code to check for syntax errors |
-| `object_name` | string | Optional* | Name of the ABAP object (existing or proposed) |
-| `object_type` | string | No | ABAP object type (CLAS, PROG, FUGR, etc.) - auto-detected if not provided |
+| Parameter     | Type    | Required  | Description                                                               |
+|---------------|---------|-----------|---------------------------------------------------------------------------|
+| `source_code` | string  | Optional* | ABAP source code to check for syntax errors                               |
+| `object_name` | string  | Optional* | Name of the ABAP object (existing or proposed)                            |
+| `object_type` | string  | No        | ABAP object type (CLAS, PROG, FUGR, etc.) - auto-detected if not provided |
 
 *At least one of `source_code` or `object_name` must be provided.
 
@@ -161,7 +161,7 @@ if (draftCheck.syntaxCheck.status === "success") {
   // 2. Create the actual class
   const createResult = await use_mcp_tool({
     server_name: "mcp-abap-adt-1",
-    tool_name: "CreateLocalClass",
+    tool_name: "CreateClass",
     arguments: {
       class_name: "ZCL_NEW_CLASS",
       source_code: myDraftCode,
@@ -400,7 +400,7 @@ const workflow = {
   create: syntax.syntaxCheck.status === "success" ? 
     await use_mcp_tool({
       server_name: "mcp-abap-adt-1",
-      tool_name: "CreateLocalClass",
+      tool_name: "CreateClass",
       arguments: {
         class_name: "ZCL_WORKFLOW_NEW",
         source_code: newClassCode
