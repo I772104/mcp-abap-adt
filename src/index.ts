@@ -31,6 +31,7 @@ import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
+import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -421,6 +422,29 @@ export class mcp_abap_adt_server {
               },
               required: ['class_name']
             }
+          },
+          {
+            name: 'CreateClassTests',
+            description: 'Create or replace test classes within an existing global ABAP class',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                parent_class_name: {
+                  type: 'string',
+                  description: 'Name of the existing ABAP class to add test classes to'
+                },
+                test_source_code: {
+                  type: 'string',
+                  description: 'Complete test class source code (local test classes implementation)'
+                },
+                backup_existing: {
+                  type: 'boolean',
+                  description: 'Optional: Create backup of existing test classes before replacing',
+                  default: false
+                }
+              },
+              required: ['parent_class_name', 'test_source_code']
+            }
           }
         ]
       };
@@ -469,6 +493,8 @@ export class mcp_abap_adt_server {
           return await handleCreateLocalClass(request.params.arguments);
         case 'DeleteLocalClass':
           return await handleDeleteLocalClass(request.params.arguments);
+        case 'CreateClassTests':
+          return await handleCreateClassTests(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
