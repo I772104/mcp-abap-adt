@@ -397,12 +397,17 @@ export async function handleCheckSyntax(args: any) {
             // Clean up: Delete the temporary class
             try {
                 console.error(`Deleting temporary class: ${tempResults.tempClassName}`);
-                await handleDeleteLocalClass({ class_name: tempResults.tempClassName });
-                console.error(`Temporary class ${tempResults.tempClassName} deleted successfully`);
+                const deleteResult = await handleDeleteLocalClass({ class_name: tempResults.tempClassName });
+                
+                if (deleteResult.isError) {
+                    console.error(`Warning: Failed to delete temporary class ${tempResults.tempClassName}:`, deleteResult.content);
+                } else {
+                    console.error(`Temporary class ${tempResults.tempClassName} deleted successfully`);
+                }
             } catch (deleteError) {
-                console.error(`Warning: Failed to delete temporary class ${tempResults.tempClassName}:`, deleteError);
+                console.error(`Warning: Exception during temporary class deletion ${tempResults.tempClassName}:`, deleteError);
                 // Don't fail the entire operation if cleanup fails
-            } 
+            }
         } else {
             // Use direct results
             syntaxResults = {

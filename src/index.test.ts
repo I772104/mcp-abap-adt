@@ -322,11 +322,14 @@ ENDCLASS.`;
         source_code: invalidCode
       });
       
-      expect(result.isError).toBe(false); // Handler returns success but with syntax errors
+      expect(result.isError).toBe(false); // Handler returns success but with error status
       expect(Array.isArray(result.content)).toBe(true);
       
       const syntaxResult = JSON.parse(result.content[0].text);
-      expect(syntaxResult.syntaxCheck).toBeDefined();
+      // The handler returns an error response structure when syntax validation fails
+      expect(syntaxResult.status).toBe('error');
+      expect(syntaxResult.details).toBeDefined();
+      expect(syntaxResult.details.recommendation).toContain('CheckSyntax tool');
     });
   });
 
