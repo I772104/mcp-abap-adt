@@ -17,7 +17,7 @@ import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
-import { handleCreateLocalClass } from './handlers/handleCreateLocalClass';
+import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
@@ -234,7 +234,7 @@ WRITE: lv_test.`;
     });
 
     it('should detect syntax errors in invalid ABAP code', async () => {
-      const invalidCode = `REPORT test.
+      const invalidCode = `
 DATA: lv_test TYPE string
 lv_test = 'Hello World'
 WRITE: lv_test.`;  // Missing periods
@@ -254,7 +254,7 @@ WRITE: lv_test.`;  // Missing periods
     });
   });
 
-  describe('handleCreateLocalClass', () => {
+  describe('handleCreateClass', () => {
     const testClassName = 'Z_TEST_CLASS_' + Date.now().toString().slice(-6);
     const validClassCode = `CLASS ${testClassName} DEFINITION
   PUBLIC
@@ -281,7 +281,7 @@ ENDCLASS.`;
     });
 
     it('should successfully create a local class', async () => {
-      const result = await handleCreateLocalClass({
+      const result = await handleCreateClass({
         class_name: testClassName,
         source_code: validClassCode,
         description: 'Test class for integration testing'
@@ -299,7 +299,7 @@ ENDCLASS.`;
     }, 30000); // Longer timeout for class creation
 
     it('should reject invalid class names', async () => {
-      const result = await handleCreateLocalClass({
+      const result = await handleCreateClass({
         class_name: 'INVALID_NAME', // Should start with Z or Y
         source_code: validClassCode
       });
@@ -317,7 +317,7 @@ ENDCLASS.`;
     METHODS: invalid_method RETURNING VALUE() TYPE string // Missing parameter name
 ENDCLASS.`;
 
-      const result = await handleCreateLocalClass({
+      const result = await handleCreateClass({
         class_name: 'Z_INVALID_' + Date.now().toString().slice(-6),
         source_code: invalidCode
       });

@@ -113,9 +113,9 @@ The `DeleteLocalClass` handler provides functionality to safely delete local ABA
 }
 ```
 
-## Integration with CreateLocalClass
+## Integration with CreateClass
 
-The DeleteLocalClass handler is integrated into the CreateLocalClass handler for improved error handling:
+The DeleteLocalClass handler is integrated into the CreateClass handler for improved error handling:
 
 - **Fallback Cleanup**: When class creation fails (non-HTTP 412 errors), proper deletion is attempted
 - **Safety First**: Uses the validated deletion process instead of simple HTTP DELETE
