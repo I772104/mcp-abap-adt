@@ -1,7 +1,8 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
-import { handleCheckSyntax } from './handleCheckSyntax';
+import { handleGetClass } from './handleGetClass';
 import { handleGetClassTests } from './handleGetClassTests';
+import { attemptClassActivation, createWorkflowResponse, WorkflowResult } from '../lib/activation-utils';
 
 /**
  * Interface for test class creation parameters
@@ -10,6 +11,8 @@ interface CreateClassTestsParams {
     parent_class_name: string;
     test_source_code: string;
     backup_existing?: boolean;
+    auto_activate?: boolean;
+    preaudit_requested?: boolean;
 }
 
 /**
@@ -123,7 +126,9 @@ export async function handleCreateClassTests(args: any): Promise<any> {
         const params: CreateClassTestsParams = {
             parent_class_name: args.parent_class_name.toUpperCase(),
             test_source_code: args.test_source_code,
-            backup_existing: args.backup_existing === true
+            backup_existing: args.backup_existing === true,
+            auto_activate: args.auto_activate !== false, // default to true
+            preaudit_requested: args.preaudit_requested !== false // default to true
         };
 
         // Step 1: Validate parent class exists
@@ -182,6 +187,33 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             headers: {},
             config: { headers: {} }
         } as any;
+
+        // Handle auto-activation if requested
+        if (params.auto_activate) {
+            console.log(`Auto-activation requested for parent class ${params.parent_class_name} after test creation`);
+            
+            const activationResult = await attemptClassActivation(
+                params.parent_class_name,
+                params.preaudit_requested || true
+            );
+            
+            // Create comprehensive workflow response
+            const workflowResponse = createWorkflowResponse(
+                enhancedResponse,
+                activationResult,
+                true
+            );
+            
+            const workflowResponseFormatted = {
+                data: JSON.stringify(workflowResponse, null, 2),
+                status: enhancedResponse.status,
+                statusText: enhancedResponse.statusText,
+                headers: {},
+                config: { headers: {} }
+            } as any;
+            
+            return return_response(workflowResponseFormatted);
+        }
 
         return return_response(enhancedResponse);
 

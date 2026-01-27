@@ -293,10 +293,19 @@ ENDCLASS.`;
       expect(result.content.length).toBeGreaterThan(0);
       expect(result.content[0].type).toBe('text');
       
-      // Parse the result
+      // Parse the result (now includes workflow response due to auto-activation)
       const createResult = JSON.parse(result.content[0].text);
-      expect(createResult.status).toBe('success');
-      expect(createResult.details.className).toBe(testClassName);
+      if (createResult.workflow) {
+        // New workflow response format with auto-activation
+        expect(createResult.workflow.overall_status).toBe('success');
+        expect(createResult.creation.details.className).toBe(testClassName);
+        expect(createResult.workflow.auto_activated).toBe(true);
+        expect(createResult.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(createResult.status).toBe('success');
+        expect(createResult.details.className).toBe(testClassName);
+      }
     }, 30000); // Longer timeout for class creation
 
     it('should reject invalid class names', async () => {
@@ -330,7 +339,10 @@ ENDCLASS.`;
       // The handler returns an error response structure when syntax validation fails
       expect(syntaxResult.status).toBe('error');
       expect(syntaxResult.details).toBeDefined();
-      expect(syntaxResult.details.recommendation).toContain('CheckSyntax tool');
+      expect(syntaxResult.details.errorType).toBeDefined();
+      // Check the improved recommendations array instead of single recommendation
+      expect(Array.isArray(syntaxResult.details.recommendations)).toBe(true);
+      expect(syntaxResult.details.recommendations.some((rec: string) => rec.includes('CheckSyntax tool'))).toBe(true);
     });
   });
 
@@ -593,7 +605,16 @@ ENDCLASS.`;
       
       expect(createResult.isError).toBe(false);
       const createData = JSON.parse(createResult.content[0].text);
-      expect(createData.status).toBe('success');
+      if (createData.workflow) {
+        // New workflow response format with auto-activation
+        expect(createData.workflow.overall_status).toBe('success');
+        expect(createData.creation.details.className).toBe(workflowClassName);
+        expect(createData.workflow.auto_activated).toBe(true);
+        expect(createData.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(createData.status).toBe('success');
+      }
       console.log(`✓ Class ${workflowClassName} created successfully`);
 
       // Step 2: Activate the newly created class
@@ -619,8 +640,17 @@ ENDCLASS.`;
       
       expect(modifyResult.isError).toBe(false);
       const modifyData = JSON.parse(modifyResult.content[0].text);
-      expect(modifyData.status).toBe('success');
-      expect(modifyData.details.action).toBe('replace');
+      if (modifyData.workflow) {
+        // New workflow response format with auto-activation
+        expect(modifyData.workflow.overall_status).toBe('success');
+        expect(modifyData.creation.details.action).toBe('replace');
+        expect(modifyData.workflow.auto_activated).toBe(true);
+        expect(modifyData.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(modifyData.status).toBe('success');
+        expect(modifyData.details.action).toBe('replace');
+      }
       console.log(`✓ Class ${workflowClassName} modified successfully`);
 
       // Step 4: Activate the modified class (required before it can be used or tested)

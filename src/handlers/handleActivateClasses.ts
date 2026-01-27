@@ -96,33 +96,59 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
     let warningCount = 0;
 
     try {
+        // Check if activation was cancelled or failed
+        const activationCancelled = responseData.includes('Activation was cancelled');
+        const activationFailed = responseData.includes('activationExecuted="false"');
+        
+        // Extract error and warning messages from XML
+        const errorMessages: string[] = [];
+        const warningMessages: string[] = [];
+        
+        // Parse XML messages with type="E" (Error) and type="W" (Warning)
+        const errorMatches = responseData.match(/<msg[^>]*type="E"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g);
+        const warningMatches = responseData.match(/<msg[^>]*type="W"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g);
+        
+        if (errorMatches) {
+            errorMatches.forEach(match => {
+                const textMatch = match.match(/<txt>(.*?)<\/txt>/);
+                if (textMatch) {
+                    errorMessages.push(textMatch[1]);
+                }
+            });
+        }
+        
+        if (warningMatches) {
+            warningMatches.forEach(match => {
+                const textMatch = match.match(/<txt>(.*?)<\/txt>/);
+                if (textMatch) {
+                    warningMessages.push(textMatch[1]);
+                }
+            });
+        }
+
+        // Determine status based on XML analysis
+        const hasErrors = errorMessages.length > 0;
+        const hasWarnings = warningMessages.length > 0;
+        const hasActivationIssues = activationCancelled || activationFailed;
+
         // For each class, determine activation status
         for (const className of classNames) {
             const uri = `/sap/bc/adt/oo/classes/${className.toLowerCase()}`;
             
-            // Check if response contains error information for this class
-            const hasError = responseData && (
-                responseData.includes(`${className}`) && responseData.includes('error') ||
-                responseData.includes('failed') ||
-                responseData.includes('Error')
-            );
-
-            // Check for warnings
-            const hasWarning = responseData && (
-                responseData.includes('warning') ||
-                responseData.includes('Warning')
-            );
-
             let status: 'success' | 'error' | 'warning';
             let message: string | undefined;
 
-            if (hasError) {
+            if (hasErrors || hasActivationIssues) {
                 status = 'error';
-                message = `Activation failed for class ${className}`;
+                if (errorMessages.length > 0) {
+                    message = `Activation failed for class ${className}: ${errorMessages.join('; ')}`;
+                } else {
+                    message = `Activation cancelled for class ${className}`;
+                }
                 errorCount++;
-            } else if (hasWarning) {
+            } else if (hasWarnings) {
                 status = 'warning';
-                message = `Activation completed with warnings for class ${className}`;
+                message = `Activation completed with warnings for class ${className}: ${warningMessages.join('; ')}`;
                 warningCount++;
             } else {
                 status = 'success';
@@ -158,7 +184,7 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
             className,
             uri: `/sap/bc/adt/oo/classes/${className.toLowerCase()}`,
             status: 'error' as const,
-            message: `Failed to parse activation result for class ${className}`
+            message: `Failed to parse activation result for class ${className}: ${error instanceof Error ? error.message : 'Unknown parsing error'}`
         }));
 
         return {

@@ -91,9 +91,11 @@ The handler returns a comprehensive response including:
 - ADT-compliant XML structure
 
 ### 3. Response Parsing
-- Intelligent parsing of activation results
-- Status determination (success/error/warning)
-- Detailed per-class activation status
+- Intelligent XML parsing of activation results from ADT system
+- Proper detection of activation cancellation and errors
+- Extraction of specific error messages from XML response
+- Status determination based on XML message types (E=Error, W=Warning)
+- Detailed per-class activation status with specific error messages
 
 ### 4. Error Handling
 - Comprehensive validation of input parameters
