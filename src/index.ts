@@ -32,6 +32,7 @@ import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
+import { handleActivateClasses } from './handlers/handleActivateClasses';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -328,6 +329,16 @@ export class mcp_abap_adt_server {
                 class_name: {
                   type: 'string',
                   description: 'Name of the ABAP class'
+                },
+                auto_activate: {
+                  type: 'boolean',
+                  description: 'Optional: Automatically activate the class before running tests (default: false)',
+                  default: false
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                  default: true
                 }
               },
               required: ['class_name']
@@ -342,6 +353,16 @@ export class mcp_abap_adt_server {
                 class_name: {
                   type: 'string',
                   description: 'Name of the ABAP class'
+                },
+                auto_activate: {
+                  type: 'boolean',
+                  description: 'Optional: Automatically activate the class before running coverage analysis (default: false)',
+                  default: false
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                  default: true
                 }
               },
               required: ['class_name']
@@ -408,6 +429,16 @@ export class mcp_abap_adt_server {
                 package: {
                   type: 'string',
                   description: 'Package name (defaults to $TMP, must be local package)'
+                },
+                auto_activate: {
+                  type: 'boolean',
+                  description: 'Optional: Automatically activate the class after creation (default: false)',
+                  default: false
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                  default: true
                 }
               },
               required: ['class_name', 'source_code']
@@ -445,9 +476,46 @@ export class mcp_abap_adt_server {
                   type: 'boolean',
                   description: 'Optional: Create backup of existing test classes before replacing',
                   default: false
+                },
+                auto_activate: {
+                  type: 'boolean',
+                  description: 'Optional: Automatically activate the parent class after adding tests (default: false)',
+                  default: false
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                  default: true
                 }
               },
               required: ['parent_class_name', 'test_source_code']
+            }
+          },
+          {
+            name: 'ActivateClasses',
+            description: 'Activate ABAP classes after creation or modification',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_names: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Array of ABAP class names to activate'
+                },
+                class_name: {
+                  type: 'string',
+                  description: 'Single ABAP class name to activate'
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Whether to request pre-audit (default: true)',
+                  default: true
+                }
+              },
+              anyOf: [
+                { required: ['class_names'] },
+                { required: ['class_name'] }
+              ]
             }
           }
         ]
@@ -499,6 +567,8 @@ export class mcp_abap_adt_server {
           return await handleDeleteLocalClass(request.params.arguments);
         case 'CreateClassTests':
           return await handleCreateClassTests(request.params.arguments);
+        case 'ActivateClasses':
+          return await handleActivateClasses(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

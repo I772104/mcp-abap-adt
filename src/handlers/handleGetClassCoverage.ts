@@ -1,6 +1,7 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
 import { randomBytes } from 'crypto';
+import { attemptClassActivation, ActivationAttemptResult } from '../lib/activation-utils';
 
 // Configuration constants
 const POLLING_CONFIG = {
@@ -394,7 +395,21 @@ export async function handleGetClassCoverage(args: any) {
         }
 
         const className = args.class_name;
+        const autoActivate = args.auto_activate === true;
+        const preauditRequested = args.preaudit_requested !== false; // default to true
         console.error(`Initiating coverage analysis for class: ${className}`);
+
+        // Auto-activate class before running coverage if requested
+        let activationResult: ActivationAttemptResult | null = null;
+        if (autoActivate) {
+            console.log(`Auto-activation requested before coverage analysis for class ${className}`);
+            activationResult = await attemptClassActivation(className, preauditRequested);
+            
+            // If activation failed critically, we might still want to try coverage analysis
+            if (activationResult.status === 'error') {
+                console.warn(`Auto-activation failed for class ${className}, but proceeding with coverage analysis`);
+            }
+        }
 
         // Setup run configuration
         const config: CoverageRunConfig = {

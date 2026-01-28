@@ -2,6 +2,7 @@ import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
 import { handleGetClass } from './handleGetClass';
+import { attemptClassActivation, createWorkflowResponse, WorkflowResult } from '../lib/activation-utils';
 
 /**
  * Interface for class creation parameters
@@ -12,6 +13,8 @@ interface CreateClassParams {
     description?: string;
     package?: string;
     backup_existing?: boolean;
+    auto_activate?: boolean;
+    preaudit_requested?: boolean;
 }
 
 /**
@@ -182,6 +185,64 @@ async function backupExistingClass(className: string): Promise<ClassBackup | nul
 }
 
 /**
+ * Creates a user-friendly error response for syntax/ETag related issues
+ */
+function createSyntaxErrorResponse(params: CreateClassParams, originalError: any, isReplacing: boolean): any {
+    const action = isReplacing ? 'replacement' : 'creation';
+    const errorMessage = originalError.message || String(originalError);
+    const isETagError = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
+    const isSyntaxRelated = isETagError || errorMessage.toLowerCase().includes('syntax') || errorMessage.toLowerCase().includes('invalid');
+    
+    let mainMessage: string;
+    let recommendations: string[];
+    
+    if (isReplacing && isETagError) {
+        mainMessage = `Class ${action} failed with ETag mismatch. This commonly occurs when there are syntax errors in the new source code.`;
+        recommendations = [
+            "Check your ABAP source code for syntax errors",
+            "The original class remains unchanged due to this error"
+        ];
+    } else if (isSyntaxRelated) {
+        mainMessage = `Class ${action} failed due to syntax errors in the provided source code.`;
+        recommendations = [
+            "Review your ABAP code for syntax errors",
+            "Use the CheckSyntax tool to validate your code before creating the class",
+            isReplacing ? "The original class remains unchanged" : "No class was created due to syntax errors"
+        ];
+    } else {
+        mainMessage = `Class ${action} failed due to an unexpected error.`;
+        recommendations = [
+            "Check system connectivity and authorization",
+            "Verify the class name follows naming conventions (Z*/Y*)",
+            "Ensure the package is a local package ($TMP, $LOCAL)",
+            "Try the operation again",
+            isReplacing ? "The original class remains unchanged" : "No class was created"
+        ];
+    }
+    
+    const errorResponse = {
+        status: 'error',
+        message: mainMessage,
+        details: {
+            className: params.class_name,
+            action: isReplacing ? 'replace' : 'create',
+            originalError: errorMessage,
+            errorType: isETagError ? 'ETag_Mismatch_Likely_Syntax' : (isSyntaxRelated ? 'Syntax_Error' : 'General_Error'),
+            recommendations: recommendations
+        },
+        timestamp: new Date().toISOString()
+    };
+
+    return {
+        data: JSON.stringify(errorResponse, null, 2),
+        status: 400,
+        statusText: isETagError ? 'Bad Request - ETag Mismatch (Likely Syntax Error)' : 'Bad Request - Syntax Error',
+        headers: {},
+        config: { headers: {} }
+    } as any;
+}
+
+/**
  * Handles fallback when class creation succeeds but source upload fails due to syntax issues
  */
 async function handleFallbackSyntaxCheck(params: CreateClassParams, originalError: any, baseUrl: string, encodedClassName: string): Promise<any> {
@@ -192,27 +253,8 @@ async function handleFallbackSyntaxCheck(params: CreateClassParams, originalErro
         // Cleanup failed, but continue with error reporting
     }
     
-    // Return the original error with context
-    const errorResponse = {
-        status: 'error',
-        message: `Class creation failed during source code upload. This is likely due to syntax errors in the provided code.`,
-        details: {
-            className: params.class_name,
-            originalError: originalError.message || String(originalError),
-            recommendation: "Use the CheckSyntax tool to validate your code before creating the class"
-        },
-        timestamp: new Date().toISOString()
-    };
-
-    const enhancedResponse = {
-        data: JSON.stringify(errorResponse, null, 2),
-        status: 400,
-        statusText: 'Bad Request',
-        headers: {},
-        config: { headers: {} }
-    } as any;
-
-    return return_response(enhancedResponse);
+    // Return improved error response
+    return return_response(createSyntaxErrorResponse(params, originalError, false));
 }
 
 /**
@@ -230,7 +272,9 @@ export async function handleCreateClass(args: any): Promise<any> {
             source_code: args.source_code,
             description: args.description || `Local class ${args.class_name}`,
             package: args.package || '$TMP',
-            backup_existing: args.backup_existing === true
+            backup_existing: args.backup_existing === true,
+            auto_activate: args.auto_activate !== false, // default to true
+            preaudit_requested: args.preaudit_requested !== false // default to true
         };
 
         // Validate inputs
@@ -255,8 +299,24 @@ export async function handleCreateClass(args: any): Promise<any> {
                 backup = await backupExistingClass(params.class_name);
             }
             
-            // If replacing, just upload new source code
-            await uploadSourceCode(sourceUrl, params.source_code);
+            // If replacing, upload new source code with enhanced error handling
+            try {
+                await uploadSourceCode(sourceUrl, params.source_code);
+            } catch (uploadError: any) {
+                // Enhanced error handling for class replacement failures
+                const uploadErrorMessage = uploadError?.message || String(uploadError);
+                const isETagError = uploadErrorMessage.includes('HTTP 412') || uploadErrorMessage.includes('412');
+                
+                if (isETagError) {
+                    // ETag mismatch during replacement - likely syntax errors
+                    console.log(`ETag mismatch during class replacement for ${params.class_name}, likely syntax error`);
+                    const errorResponse = createSyntaxErrorResponse(params, uploadError, true);
+                    return return_response(errorResponse);
+                }
+                
+                // Other upload errors during replacement
+                throw uploadError;
+            }
             
         } catch (getError: any) {
             // Class doesn't exist, proceed with normal creation
@@ -343,6 +403,33 @@ export async function handleCreateClass(args: any): Promise<any> {
             headers: {},
             config: { headers: {} }
         } as any;
+
+        // Handle auto-activation if requested
+        if (params.auto_activate) {
+            console.log(`Auto-activation requested for class ${params.class_name}`);
+            
+            const activationResult = await attemptClassActivation(
+                params.class_name,
+                params.preaudit_requested || true
+            );
+            
+            // Create comprehensive workflow response
+            const workflowResponse = createWorkflowResponse(
+                enhancedResponse,
+                activationResult,
+                true
+            );
+            
+            const workflowResponseFormatted = {
+                data: JSON.stringify(workflowResponse, null, 2),
+                status: enhancedResponse.status,
+                statusText: enhancedResponse.statusText,
+                headers: {},
+                config: { headers: {} }
+            } as any;
+            
+            return return_response(workflowResponseFormatted);
+        }
 
         return return_response(enhancedResponse);
 

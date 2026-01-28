@@ -21,6 +21,7 @@ import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
+import { handleActivateClasses } from './handlers/handleActivateClasses';
 import { cleanup } from './lib/utils';
 
 describe('mcp_abap_adt_server - Integration Tests', () => {
@@ -292,10 +293,19 @@ ENDCLASS.`;
       expect(result.content.length).toBeGreaterThan(0);
       expect(result.content[0].type).toBe('text');
       
-      // Parse the result
+      // Parse the result (now includes workflow response due to auto-activation)
       const createResult = JSON.parse(result.content[0].text);
-      expect(createResult.status).toBe('success');
-      expect(createResult.details.className).toBe(testClassName);
+      if (createResult.workflow) {
+        // New workflow response format with auto-activation
+        expect(createResult.workflow.overall_status).toBe('success');
+        expect(createResult.creation.details.className).toBe(testClassName);
+        expect(createResult.workflow.auto_activated).toBe(true);
+        expect(createResult.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(createResult.status).toBe('success');
+        expect(createResult.details.className).toBe(testClassName);
+      }
     }, 30000); // Longer timeout for class creation
 
     it('should reject invalid class names', async () => {
@@ -329,7 +339,10 @@ ENDCLASS.`;
       // The handler returns an error response structure when syntax validation fails
       expect(syntaxResult.status).toBe('error');
       expect(syntaxResult.details).toBeDefined();
-      expect(syntaxResult.details.recommendation).toContain('CheckSyntax tool');
+      expect(syntaxResult.details.errorType).toBeDefined();
+      // Check the improved recommendations array instead of single recommendation
+      expect(Array.isArray(syntaxResult.details.recommendations)).toBe(true);
+      expect(syntaxResult.details.recommendations.some((rec: string) => rec.includes('CheckSyntax tool'))).toBe(true);
     });
   });
 
@@ -412,5 +425,352 @@ ENDCLASS.`;
       // Coverage tests might fail due to system configuration, but should return a result
       expect(Array.isArray(result.content)).toBe(true);
     }, 30000); // Longer timeout for coverage analysis
+  });
+
+  describe('handleActivateClasses', () => {
+    it('should reject when no class names are provided', async () => {
+      const result = await handleActivateClasses({});
+      expect(result.isError).toBe(true);
+    });
+
+    it('should reject empty class names', async () => {
+      const result = await handleActivateClasses({ 
+        class_names: [''] 
+      });
+      expect(result.isError).toBe(true);
+    });
+
+    it('should reject class names that are too long', async () => {
+      const result = await handleActivateClasses({ 
+        class_name: 'Z_THIS_IS_A_VERY_LONG_CLASS_NAME_THAT_EXCEEDS_THIRTY_CHARACTERS' 
+      });
+      expect(result.isError).toBe(true);
+    });
+
+    it('should successfully activate single class by name', async () => {
+      const result = await handleActivateClasses({
+        class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE',
+        preaudit_requested: true
+      });
+      
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      // Parse the activation result
+      const activationResult = JSON.parse(result.content[0].text);
+      expect(activationResult.activation).toBeDefined();
+      expect(activationResult.activation.activatedClasses).toHaveLength(1);
+      expect(activationResult.activation.activatedClasses[0].className).toBe('CL_DEMO_CR_CAR_RENTAL_SERVICE');
+      expect(activationResult.activation.summary.totalClasses).toBe(1);
+      expect(activationResult.request.preauditRequested).toBe(true);
+    }, 15000);
+
+    it('should successfully activate multiple classes by names array', async () => {
+      const result = await handleActivateClasses({
+        class_names: ['CL_DEMO_CR_CAR_RENTAL_SERVICE', 'CL_WB_PGEDITOR_INITIAL_SCREEN'],
+        preaudit_requested: false
+      });
+      
+      expect(result.isError).toBe(false);
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      // Parse the activation result
+      const activationResult = JSON.parse(result.content[0].text);
+      expect(activationResult.activation).toBeDefined();
+      expect(activationResult.activation.activatedClasses).toHaveLength(2);
+      expect(activationResult.activation.summary.totalClasses).toBe(2);
+      expect(activationResult.request.preauditRequested).toBe(false);
+      
+      // Check that both classes are in the result
+      const classNames = activationResult.activation.activatedClasses.map((c: any) => c.className);
+      expect(classNames).toContain('CL_DEMO_CR_CAR_RENTAL_SERVICE');
+      expect(classNames).toContain('CL_WB_PGEDITOR_INITIAL_SCREEN');
+    }, 20000);
+
+    it('should default preaudit_requested to true when not specified', async () => {
+      const result = await handleActivateClasses({
+        class_name: 'CL_DEMO_CR_CAR_RENTAL_SERVICE'
+      });
+      
+      if (!result.isError) {
+        const activationResult = JSON.parse(result.content[0].text);
+        expect(activationResult.request.preauditRequested).toBe(true);
+      }
+    }, 15000);
+
+    it('should handle non-existent classes gracefully', async () => {
+      const result = await handleActivateClasses({
+        class_name: 'Z_NON_EXISTENT_CLASS_12345'
+      });
+      
+      // This might succeed or fail depending on how ADT handles non-existent classes
+      // but it should return a proper response structure
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+    }, 15000);
+  });
+
+  describe('Complete Class Development Workflow', () => {
+    const workflowClassName = 'Z_WORKFLOW_TEST_' + Date.now().toString().slice(-6);
+    const originalClassCode = `CLASS ${workflowClassName} DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS: calculate IMPORTING iv_a TYPE i
+                                 iv_b TYPE i
+                       RETURNING VALUE(rv_result) TYPE i.
+ENDCLASS.
+
+CLASS ${workflowClassName} IMPLEMENTATION.
+  METHOD calculate.
+    rv_result = iv_a + iv_b.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    const modifiedClassCode = `CLASS ${workflowClassName} DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS: calculate IMPORTING iv_a TYPE i
+                                 iv_b TYPE i
+                       RETURNING VALUE(rv_result) TYPE i,
+             multiply IMPORTING iv_a TYPE i
+                                iv_b TYPE i
+                      RETURNING VALUE(rv_result) TYPE i.
+ENDCLASS.
+
+CLASS ${workflowClassName} IMPLEMENTATION.
+  METHOD calculate.
+    rv_result = iv_a + iv_b.
+  ENDMETHOD.
+  
+  METHOD multiply.
+    rv_result = iv_a * iv_b.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    const testClassCode = `CLASS ltcl_test DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA: cut TYPE REF TO ${workflowClassName}.
+    METHODS: setup FOR TESTING,
+             test_calculate FOR TESTING,
+             test_multiply FOR TESTING.
+ENDCLASS.
+
+CLASS ltcl_test IMPLEMENTATION.
+  METHOD setup.
+    CREATE OBJECT cut.
+  ENDMETHOD.
+  
+  METHOD test_calculate.
+    DATA(result) = cut->calculate( iv_a = 5 iv_b = 3 ).
+    cl_abap_unit_assert=>assert_equals( exp = 8 act = result ).
+  ENDMETHOD.
+  
+  METHOD test_multiply.
+    DATA(result) = cut->multiply( iv_a = 5 iv_b = 3 ).
+    cl_abap_unit_assert=>assert_equals( exp = 15 act = result ).
+  ENDMETHOD.
+ENDCLASS.`;
+
+    afterAll(async () => {
+      // Clean up: attempt to delete the test class
+      try {
+        await handleDeleteLocalClass({ class_name: workflowClassName });
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    });
+
+    it('should complete full development workflow: create → activate → modify → activate → add tests → activate → run tests', async () => {
+      // Step 1: Create initial class
+      console.log(`Step 1: Creating class ${workflowClassName}...`);
+      const createResult = await handleCreateClass({
+        class_name: workflowClassName,
+        source_code: originalClassCode,
+        description: 'Workflow test class for activation testing'
+      });
+      
+      expect(createResult.isError).toBe(false);
+      const createData = JSON.parse(createResult.content[0].text);
+      if (createData.workflow) {
+        // New workflow response format with auto-activation
+        expect(createData.workflow.overall_status).toBe('success');
+        expect(createData.creation.details.className).toBe(workflowClassName);
+        expect(createData.workflow.auto_activated).toBe(true);
+        expect(createData.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(createData.status).toBe('success');
+      }
+      console.log(`✓ Class ${workflowClassName} created successfully`);
+
+      // Step 2: Activate the newly created class
+      console.log(`Step 2: Activating class ${workflowClassName}...`);
+      const activateResult1 = await handleActivateClasses({
+        class_name: workflowClassName,
+        preaudit_requested: true
+      });
+      
+      expect(activateResult1.isError).toBe(false);
+      const activateData1 = JSON.parse(activateResult1.content[0].text);
+      expect(activateData1.activation.activatedClasses).toHaveLength(1);
+      expect(activateData1.activation.activatedClasses[0].className).toBe(workflowClassName);
+      console.log(`✓ Class ${workflowClassName} activated successfully`);
+
+      // Step 3: Modify the class (add multiply method)
+      console.log(`Step 3: Modifying class ${workflowClassName}...`);
+      const modifyResult = await handleCreateClass({
+        class_name: workflowClassName,
+        source_code: modifiedClassCode,
+        description: 'Modified workflow test class'
+      });
+      
+      expect(modifyResult.isError).toBe(false);
+      const modifyData = JSON.parse(modifyResult.content[0].text);
+      if (modifyData.workflow) {
+        // New workflow response format with auto-activation
+        expect(modifyData.workflow.overall_status).toBe('success');
+        expect(modifyData.creation.details.action).toBe('replace');
+        expect(modifyData.workflow.auto_activated).toBe(true);
+        expect(modifyData.workflow.creation_successful).toBe(true);
+      } else {
+        // Fallback for old format (if auto_activate was explicitly set to false)
+        expect(modifyData.status).toBe('success');
+        expect(modifyData.details.action).toBe('replace');
+      }
+      console.log(`✓ Class ${workflowClassName} modified successfully`);
+
+      // Step 4: Activate the modified class (required before it can be used or tested)
+      console.log(`Step 4: Activating modified class ${workflowClassName}...`);
+      const activateResult2 = await handleActivateClasses({
+        class_name: workflowClassName,
+        preaudit_requested: true
+      });
+      
+      expect(activateResult2.isError).toBe(false);
+      const activateData2 = JSON.parse(activateResult2.content[0].text);
+      expect(activateData2.activation.activatedClasses).toHaveLength(1);
+      expect(activateData2.activation.activatedClasses[0].className).toBe(workflowClassName);
+      console.log(`✓ Modified class ${workflowClassName} activated successfully`);
+
+      // Step 5: Add test classes to the activated class
+      console.log(`Step 5: Adding test classes to ${workflowClassName}...`);
+      const testResult = await handleCreateClassTests({
+        parent_class_name: workflowClassName,
+        test_source_code: testClassCode,
+        backup_existing: false
+      });
+      
+      // Test creation might fail due to permissions or system restrictions
+      // but we should get a response structure
+      expect(Array.isArray(testResult.content)).toBe(true);
+      if (!testResult.isError) {
+        console.log(`✓ Test classes added to ${workflowClassName} successfully`);
+        
+        // Step 6: Activate the class again (with test classes)
+        console.log(`Step 6: Activating class with tests ${workflowClassName}...`);
+        const activateResult3 = await handleActivateClasses({
+          class_name: workflowClassName,
+          preaudit_requested: false // Skip preaudit for faster test execution
+        });
+        
+        expect(activateResult3.isError).toBe(false);
+        console.log(`✓ Class with tests ${workflowClassName} activated successfully`);
+
+        // Step 7: Run the tests (only if previous steps succeeded)
+        console.log(`Step 7: Running tests for ${workflowClassName}...`);
+        const runTestResult = await handleRunClassTests({
+          class_name: workflowClassName
+        });
+        
+        expect(Array.isArray(runTestResult.content)).toBe(true);
+        if (!runTestResult.isError) {
+          console.log(`✓ Tests completed for ${workflowClassName}`);
+          const testDataText = runTestResult.content[0].text;
+          expect(testDataText).toBeDefined();
+          expect(testDataText.length).toBeGreaterThan(0);
+        }
+      } else {
+        console.log(`⚠ Test class creation failed (possibly due to permissions), but workflow validation successful`);
+      }
+
+      // Verify final class state
+      console.log(`Step 8: Verifying final class state...`);
+      const finalClassResult = await handleGetClass({ class_name: workflowClassName });
+      expect(finalClassResult.isError).toBe(false);
+      const finalClassCode = finalClassResult.content[0].text;
+      expect(finalClassCode).toContain('multiply'); // Should contain the new method
+      console.log(`✓ Final class verification completed - class contains modifications`);
+
+    }, 120000); // Extended timeout for the complete workflow
+
+    it('should handle batch activation of multiple classes in workflow', async () => {
+      // Create a second test class for batch testing
+      const batchClassName = 'Z_BATCH_TEST_' + Date.now().toString().slice(-6);
+      const batchClassCode = `CLASS ${batchClassName} DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS: get_name RETURNING VALUE(rv_name) TYPE string.
+ENDCLASS.
+
+CLASS ${batchClassName} IMPLEMENTATION.
+  METHOD get_name.
+    rv_name = '${batchClassName}'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+      try {
+        // Create the batch test class
+        console.log(`Creating batch test class ${batchClassName}...`);
+        const createBatchResult = await handleCreateClass({
+          class_name: batchClassName,
+          source_code: batchClassCode,
+          description: 'Batch activation test class'
+        });
+        
+        expect(createBatchResult.isError).toBe(false);
+
+        // Activate both classes in a single batch operation
+        console.log(`Batch activating classes ${workflowClassName} and ${batchClassName}...`);
+        const batchActivateResult = await handleActivateClasses({
+          class_names: [workflowClassName, batchClassName],
+          preaudit_requested: true
+        });
+        
+        expect(batchActivateResult.isError).toBe(false);
+        const batchData = JSON.parse(batchActivateResult.content[0].text);
+        expect(batchData.activation.activatedClasses).toHaveLength(2);
+        expect(batchData.activation.summary.totalClasses).toBe(2);
+        
+        const classNames = batchData.activation.activatedClasses.map((c: any) => c.className);
+        expect(classNames).toContain(workflowClassName);
+        expect(classNames).toContain(batchClassName);
+        console.log(`✓ Batch activation successful for ${classNames.join(', ')}`);
+
+      } finally {
+        // Clean up batch test class
+        try {
+          await handleDeleteLocalClass({ class_name: batchClassName });
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      }
+    }, 60000);
   });
 });
