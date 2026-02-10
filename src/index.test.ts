@@ -191,24 +191,125 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
   });
 
   describe('handleGetTableContents', () => {
-    it('should successfully retrieve table contents', async () => {
+    it('should successfully retrieve table contents with default settings', async () => {
       const result = await handleGetTableContents({ table_name: 'DD02L', max_rows: 5 });
-      // Table contents might fail due to permissions, but should return a result structure
       expect(Array.isArray(result.content)).toBe(true);
-      if (!result.isError) {
-        expect(result.content.length).toBeGreaterThan(0);
-        expect(result.content[0].type).toBe('text');
-      }
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0].type).toBe('text');
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.table).toBe('DD02L');
+      expect(parsedResult.rows).toBeDefined();
+      expect(Array.isArray(parsedResult.rows)).toBe(true);
+      expect(parsedResult.stats).toBeDefined();
+      expect(parsedResult.pagination).toBeDefined();
+      // Column metadata should NOT be included by default
+      expect(parsedResult.columns).toBeUndefined();
     });
 
-    it('should use default max_rows when not specified', async () => {
-      const result = await handleGetTableContents({ table_name: 'DD02L' });
-      // Table contents might fail due to permissions, but should return a result structure
-      expect(Array.isArray(result.content)).toBe(true);
-      if (!result.isError) {
-        expect(result.content.length).toBeGreaterThan(0);
-        expect(result.content[0].type).toBe('text');
-      }
+    it('should include column metadata when requested', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        max_rows: 3,
+        include_column_metadata: true
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.columns).toBeDefined();
+      expect(Array.isArray(parsedResult.columns)).toBe(true);
+      expect(parsedResult.columns.length).toBeGreaterThan(0);
+    });
+    
+    it('should retrieve table contents with specific columns', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        columns: ['TABNAME', 'AS4LOCAL'],
+        max_rows: 3
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.rows.length).toBeGreaterThan(0);
+      // Check that only requested columns are present
+      const firstRow = parsedResult.rows[0];
+      expect(Object.keys(firstRow).length).toBe(2);
+      expect(firstRow.TABNAME).toBeDefined();
+      expect(firstRow.AS4LOCAL).toBeDefined();
+    });
+    
+    it('should support pagination with offset', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        max_rows: 5,
+        offset: 2
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.pagination.offset).toBe(2);
+      expect(parsedResult.pagination.limit).toBe(5);
+      expect(parsedResult.pagination.has_more).toBeDefined();
+    });
+    
+    it('should support enhanced WHERE conditions with operators', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        columns: ['TABNAME'],
+        where_conditions: {
+          AS4LOCAL: { eq: 'A' }
+        },
+        max_rows: 10
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.rows).toBeDefined();
+      expect(parsedResult.stats).toBeDefined();
+    });
+    
+    it('should support batch queries', async () => {
+      const result = await handleGetTableContents({
+        queries: [
+          {
+            id: 'tables',
+            table_name: 'DD02L',
+            columns: ['TABNAME'],
+            max_rows: 3
+          },
+          {
+            id: 'texts',
+            table_name: 'DD02T',
+            columns: ['TABNAME', 'DDTEXT'],
+            max_rows: 3
+          }
+        ]
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.batch_results).toBeDefined();
+      expect(parsedResult.batch_results.tables).toBeDefined();
+      expect(parsedResult.batch_results.texts).toBeDefined();
+      expect(parsedResult.stats.total_queries).toBe(2);
+    });
+    
+    it('should reject max_rows exceeding limit', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        max_rows: 1000
+      });
+      
+      expect(result.content[0].text).toContain('500');
+    });
+    
+    it('should include query statistics in response', async () => {
+      const result = await handleGetTableContents({ 
+        table_name: 'DD02L',
+        max_rows: 5
+      });
+      
+      const parsedResult = JSON.parse(result.content[0].text);
+      expect(parsedResult.stats).toBeDefined();
+      expect(parsedResult.stats.metadata_fetch_ms).toBeGreaterThan(0);
+      expect(parsedResult.stats.query_time_ms).toBeGreaterThan(0);
+      expect(parsedResult.stats.total_time_ms).toBeGreaterThan(0);
+      expect(parsedResult.stats.rows_returned).toBeDefined();
     });
   });
 

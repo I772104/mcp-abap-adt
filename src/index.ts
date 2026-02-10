@@ -200,21 +200,84 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'GetTableContents',
-            description: 'Retrieve contents of an ABAP table',
+            description: 'Retrieve contents of an ABAP table with advanced filtering, pagination, and batch query support',
             inputSchema: {
               type: 'object',
               properties: {
                 table_name: {
                   type: 'string',
-                  description: 'Name of the ABAP table'
+                  description: 'Name of the ABAP table (required for single query mode)'
+                },
+                columns: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Specific columns to retrieve (default: all columns). Column names are validated against table metadata.'
                 },
                 max_rows: {
                   type: 'number',
-                  description: 'Maximum number of rows to retrieve',
+                  description: 'Optional: Maximum number of rows to retrieve (default: 100, max: 500)',
                   default: 100
+                },
+                where_conditions: {
+                  type: 'object',
+                  description: 'Optional: WHERE conditions for filtering. Simple: {"MATNR": "ABC123", "MTART": "FERT"}. Advanced: {"MATNR": {"eq": "ABC123"}}. Note: ADT Data Preview API only supports equality (=) operator.',
+                  additionalProperties: true
+                },
+                order_by: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Column names for sorting results. Column names are validated against table metadata.'
+                },
+                offset: {
+                  type: 'number',
+                  description: 'Optional: Number of rows to skip for pagination (default: 0)',
+                  default: 0
+                },
+                include_column_metadata: {
+                  type: 'boolean',
+                  description: 'Optional: Include column type and description in response (default: false)',
+                  default: false
+                },
+                queries: {
+                  type: 'array',
+                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 10). Each query supports all single-query parameters.',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: {
+                        type: 'string',
+                        description: 'Optional identifier for this query in batch results'
+                      },
+                      table_name: {
+                        type: 'string',
+                        description: 'Name of the ABAP table'
+                      },
+                      columns: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      max_rows: {
+                        type: 'number'
+                      },
+                      where_conditions: {
+                        type: 'object'
+                      },
+                      order_by: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      offset: {
+                        type: 'number'
+                      }
+                    },
+                    required: ['table_name']
+                  }
                 }
               },
-              required: ['table_name']
+              anyOf: [
+                { required: ['table_name'] },
+                { required: ['queries'] }
+              ]
             }
           },
           {
