@@ -139,9 +139,10 @@ function validateColumns(requestedColumns: string[], availableColumns: ColumnMet
     
     for (const col of requestedColumns) {
         if (!availableColumnNames.has(col)) {
+            const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
                 ErrorCode.InvalidParams, 
-                `Invalid column name: ${col}. Available columns: ${Array.from(availableColumnNames).join(', ')}`
+                `Invalid column name: ${col}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
     }
@@ -158,9 +159,10 @@ function validateWhereConditions(
     
     for (const col of Object.keys(conditions)) {
         if (!availableColumnNames.has(col)) {
+            const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
                 ErrorCode.InvalidParams, 
-                `Invalid column in WHERE condition: ${col}`
+                `Invalid column in WHERE condition: ${col}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
     }
