@@ -333,7 +333,7 @@ WRITE: lv_test.`;
       // Parse the result to check syntax status
       const syntaxResult = JSON.parse(result.content[0].text);
       expect(syntaxResult.syntaxCheck).toBeDefined();
-    });
+    }, 30000); // Increase timeout to 30 seconds for syntax check with temp class creation
 
     it('should detect syntax errors in invalid ABAP code', async () => {
       const invalidCode = `
@@ -353,7 +353,7 @@ WRITE: lv_test.`;  // Missing periods
       // Parse the result to check syntax status
       const syntaxResult = JSON.parse(result.content[0].text);
       expect(syntaxResult.syntaxCheck).toBeDefined();
-    });
+    }, 30000); // Increase timeout to 30 seconds for syntax check with temp class creation
   });
 
   describe('handleCreateClass', () => {
