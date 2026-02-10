@@ -5,8 +5,12 @@
 > This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
 > The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
 >
+> Find an [Example AGENTS.md file](Example_AGENTS.md) for ABAP projects. Place it as AGENTS.md in the root folder of an ABAP project. See [agents.md](https://agents.md/) for reference. 
+>
+> [Enhancement proposals for the MCP server are collected here.](Enhancement%20Proposal.md)
+>
 > Found a bug or have a feature request? Please check our [GitHub Issues](https://github.tools.sap/D020426/mcp-abap-adt/issues) page to report issues or request new features.
-
+---
 
 # mcp-abap-adt: Your Gateway to ABAP Development Tools (ADT)
 [![smithery badge](https://smithery.ai/badge/@mario-andreschak/mcp-abap-adt)](https://smithery.ai/server/@mario-andreschak/mcp-abap-adt)
