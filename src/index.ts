@@ -26,6 +26,7 @@ import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleRunClassTests } from './handlers/handleRunClassTests';
+import { handleRunPackageTests } from './handlers/handleRunPackageTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
@@ -433,6 +434,20 @@ export class mcp_abap_adt_server {
             }
           },
           {
+            name: 'RunPackageTests',
+            description: 'Run unit tests for all test-enabled objects in a package and retrieve aggregated results',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                package_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP package'
+                }
+              },
+              required: ['package_name']
+            }
+          },
+          {
             name: 'GetClassCoverage',
             description: 'Run unit tests for a class and retrieve test coverage results',
             inputSchema: {
@@ -645,6 +660,8 @@ export class mcp_abap_adt_server {
           return await handleGetClassTests(request.params.arguments);
         case 'RunClassTests':
           return await handleRunClassTests(request.params.arguments);
+        case 'RunPackageTests':
+          return await handleRunPackageTests(request.params.arguments);
         case 'GetClassCoverage':
           return await handleGetClassCoverage(request.params.arguments);
         case 'GetClassUsages':
