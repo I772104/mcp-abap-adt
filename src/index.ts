@@ -19,6 +19,7 @@ import { handleGetTable } from './handlers/handleGetTable';
 import { handleGetStructure } from './handlers/handleGetStructure';
 import { handleGetTableContents } from './handlers/handleGetTableContents';
 import { handleGetPackage } from './handlers/handleGetPackage';
+import { handleGetPackageContents } from './handlers/handleGetPackageContents';
 import { handleGetInclude } from './handlers/handleGetInclude';
 import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
@@ -282,13 +283,37 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'GetPackage',
-            description: 'Retrieve ABAP package details',
+            description: 'Retrieve comprehensive ABAP package information including metadata, attributes, hierarchy (super/sub-packages), transport details, application component, and package interfaces',
             inputSchema: {
               type: 'object',
               properties: {
                 package_name: {
                   type: 'string',
                   description: 'Name of the ABAP package'
+                }
+              },
+              required: ['package_name']
+            }
+          },
+          {
+            name: 'GetPackageContents',
+            description: 'Retrieve objects and contents within an ABAP package, with optional recursive sub-package exploration',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                package_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP package'
+                },
+                include_subpackages: {
+                  type: 'boolean',
+                  description: 'Optional: Include sub-packages in the results (default: true)',
+                  default: true
+                },
+                recursive: {
+                  type: 'boolean',
+                  description: 'Optional: Recursively retrieve contents of sub-packages (default: false)',
+                  default: false
                 }
               },
               required: ['package_name']
@@ -604,6 +629,8 @@ export class mcp_abap_adt_server {
           return await handleGetTableContents(request.params.arguments);
         case 'GetPackage':
           return await handleGetPackage(request.params.arguments);
+        case 'GetPackageContents':
+          return await handleGetPackageContents(request.params.arguments);
         case 'GetTypeInfo':
           return await handleGetTypeInfo(request.params.arguments);
         case 'GetInclude':
