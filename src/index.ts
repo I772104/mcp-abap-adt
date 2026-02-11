@@ -33,6 +33,13 @@ import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 import { handleActivateClasses } from './handlers/handleActivateClasses';
+import { handleGetCDSView } from './handlers/handleGetCDSView';
+import { handleGetBehaviorDefinition } from './handlers/handleGetBehaviorDefinition';
+import { handleGetServiceDefinition } from './handlers/handleGetServiceDefinition';
+import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
+import { handleGetCDSViewDependencies } from './handlers/handleGetCDSViewDependencies';
+import { handleGetMetadataExtension } from './handlers/handleGetMetadataExtension';
+import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -580,6 +587,109 @@ export class mcp_abap_adt_server {
                 { required: ['class_name'] }
               ]
             }
+          },
+          {
+            name: 'GetCDSView',
+            description: 'Retrieve CDS view source code and metadata',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                view_name: {
+                  type: 'string',
+                  description: 'Name of the CDS view entity'
+                },
+                include_annotations: {
+                  type: 'boolean',
+                  description: 'Include CDS annotations in response (default: true)',
+                  default: true
+                }
+              },
+              required: ['view_name']
+            }
+          },
+          {
+            name: 'GetBehaviorDefinition',
+            description: 'Retrieve RAP behavior definition source code and metadata',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                cds_view_name: {
+                  type: 'string',
+                  description: 'Name of the root CDS view entity'
+                }
+              },
+              required: ['cds_view_name']
+            }
+          },
+          {
+            name: 'GetServiceDefinition',
+            description: 'Retrieve RAP service definition source code and metadata',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                service_name: {
+                  type: 'string',
+                  description: 'Name of the service definition'
+                }
+              },
+              required: ['service_name']
+            }
+          },
+          {
+            name: 'GetServiceBinding',
+            description: 'Retrieve RAP service binding details and configuration',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                binding_name: {
+                  type: 'string',
+                  description: 'Name of the service binding'
+                }
+              },
+              required: ['binding_name']
+            }
+          },
+          {
+            name: 'GetCDSViewDependencies',
+            description: 'Analyze CDS view dependencies and associations',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                view_name: {
+                  type: 'string',
+                  description: 'Name of the CDS view to analyze'
+                }
+              },
+              required: ['view_name']
+            }
+          },
+          {
+            name: 'GetMetadataExtension',
+            description: 'Retrieve metadata extension (UI annotations) source code',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                extension_name: {
+                  type: 'string',
+                  description: 'Name of the metadata extension'
+                }
+              },
+              required: ['extension_name']
+            }
+          },
+          {
+            name: 'GetAccessControl',
+            description: 'Retrieve access control (DCL) definition source code',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                dcl_name: {
+                  type: 'string',
+                  description: 'Name of the access control definition'
+                }
+              },
+              required: ['dcl_name']
+            }
           }
         ]
       };
@@ -632,6 +742,20 @@ export class mcp_abap_adt_server {
           return await handleCreateClassTests(request.params.arguments);
         case 'ActivateClasses':
           return await handleActivateClasses(request.params.arguments);
+        case 'GetCDSView':
+          return await handleGetCDSView(request.params.arguments);
+        case 'GetBehaviorDefinition':
+          return await handleGetBehaviorDefinition(request.params.arguments);
+        case 'GetServiceDefinition':
+          return await handleGetServiceDefinition(request.params.arguments);
+        case 'GetServiceBinding':
+          return await handleGetServiceBinding(request.params.arguments);
+        case 'GetCDSViewDependencies':
+          return await handleGetCDSViewDependencies(request.params.arguments);
+        case 'GetMetadataExtension':
+          return await handleGetMetadataExtension(request.params.arguments);
+        case 'GetAccessControl':
+          return await handleGetAccessControl(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
