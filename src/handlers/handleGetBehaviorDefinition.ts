@@ -9,56 +9,41 @@ export async function handleGetBehaviorDefinition(args: any) {
 
         const encodedViewName = encodeURIComponent(args.cds_view_name);
         
-        // Try different ADT endpoints for behavior definitions
+        // Use the correct ADT endpoint for behavior definitions
         const baseUrl = await getBaseUrl();
-        const endpoints = [
-            `/sap/bc/adt/bo/behaviors/${encodedViewName}`, // Behavior definition endpoint
-            `/sap/bc/adt/ddic/behaviors/${encodedViewName}`, // Alternative endpoint
-            `/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedViewName}&objectType=BDEF/BH`
-        ];
+        const endpoint = `/sap/bc/adt/bo/behaviordefinitions/${encodedViewName}`;
 
-        let lastError: any;
+        const url = `${baseUrl}${endpoint}`;
+        const response = await makeAdtRequest(url, 'GET', 30000);
         
-        for (const endpoint of endpoints) {
-            try {
-                const url = `${baseUrl}${endpoint}`;
-                const response = await makeAdtRequest(url, 'GET', 30000);
-                
-                // If we got a successful response, parse and enhance it
-                if (response.data) {
-                    let result = {
-                        cds_view_name: args.cds_view_name,
-                        source_code: response.data,
-                        implementation_type: extractImplementationType(response.data),
-                        implementation_class: extractImplementationClass(response.data),
-                        strict_mode: extractStrictMode(response.data),
-                        draft_enabled: extractDraftEnabled(response.data),
-                        operations: extractOperations(response.data),
-                        actions: extractActions(response.data),
-                        determinations: extractDeterminations(response.data),
-                        validations: extractValidations(response.data),
-                        authorization: extractAuthorization(response.data),
-                        side_effects: extractSideEffects(response.data),
-                        field_controls: extractFieldControls(response.data)
-                    };
-                    
-                    return {
-                        isError: false,
-                        content: [{
-                            type: 'text',
-                            text: JSON.stringify(result, null, 2)
-                        }]
-                    };
-                }
-            } catch (error) {
-                lastError = error;
-                // Continue to next endpoint
-                continue;
-            }
+        // If we got a successful response, parse and enhance it
+        if (response.data) {
+            let result = {
+                cds_view_name: args.cds_view_name,
+                source_code: response.data,
+                implementation_type: extractImplementationType(response.data),
+                implementation_class: extractImplementationClass(response.data),
+                strict_mode: extractStrictMode(response.data),
+                draft_enabled: extractDraftEnabled(response.data),
+                operations: extractOperations(response.data),
+                actions: extractActions(response.data),
+                determinations: extractDeterminations(response.data),
+                validations: extractValidations(response.data),
+                authorization: extractAuthorization(response.data),
+                side_effects: extractSideEffects(response.data),
+                field_controls: extractFieldControls(response.data)
+            };
+            
+            return {
+                isError: false,
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
         }
         
-        // If all endpoints failed, throw the last error
-        throw lastError || new Error('Failed to retrieve behavior definition from any endpoint');
+        throw new Error('No data received from behavior definition endpoint');
         
     } catch (error) {
         return return_error(error);
