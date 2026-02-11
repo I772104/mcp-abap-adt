@@ -6,7 +6,8 @@
     "test": "jest",
     "build": "tsc -p tsconfig.json",
     "start": "node ./dist/index.js",
-    "dev": "npx @modelcontextprotocol/inspector node ./dist/index.js"
+    "dev": "npx @modelcontextprotocol/inspector node ./dist/index.js",
+    "updated": "npm i && npm run build"
   },
   "keywords": [
     "abap",
