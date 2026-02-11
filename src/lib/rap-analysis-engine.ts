@@ -1,7 +1,6 @@
 import { handleGetBehaviorForRapBo } from '../handlers/handleGetBehaviorForRapBo';
 import { handleGetBehaviorDefinition } from '../handlers/handleGetBehaviorDefinition';
 import { handleGetCDSView } from '../handlers/handleGetCDSView';
-import { handleGetCDSViewDependencies } from '../handlers/handleGetCDSViewDependencies';
 import { handleGetServiceDefinition } from '../handlers/handleGetServiceDefinition';
 import { handleGetServiceBinding } from '../handlers/handleGetServiceBinding';
 import { handleGetAccessControl } from '../handlers/handleGetAccessControl';
@@ -286,34 +285,11 @@ export class RapAnalysisEngine {
 
     /**
      * Phase 3a: Analyze dependencies
+     * Note: Dependency analysis is currently disabled as GetCDSViewDependencies tool has been removed
      */
     private async analyzeDependencies(result: RapBoAnalysisResult): Promise<void> {
-        const allViews = [...result.cds_views.root_views, ...result.cds_views.projection_views];
-        const dependencyPromises: Promise<void>[] = [];
-
-        for (const view of allViews) {
-            if (view.view_name) {
-                dependencyPromises.push(this.analyzeSingleViewDependencies(view.view_name, result));
-            }
-        }
-
-        await Promise.allSettled(dependencyPromises);
-    }
-
-    /**
-     * Analyze dependencies for a single view
-     */
-    private async analyzeSingleViewDependencies(viewName: string, result: RapBoAnalysisResult): Promise<void> {
-        try {
-            const depResponse = await handleGetCDSViewDependencies({ view_name: viewName });
-            
-            if (depResponse.content && depResponse.content[0]) {
-                const depData = JSON.parse(depResponse.content[0].text);
-                result.cds_views.dependencies.push(depData);
-            }
-        } catch (error: any) {
-            this.warnings.push(`Failed to analyze dependencies for ${viewName}: ${error.message}`);
-        }
+        this.warnings.push("Dependency analysis is currently disabled - GetCDSViewDependencies tool not available");
+        // Dependencies array remains empty but structure is preserved
     }
 
     /**

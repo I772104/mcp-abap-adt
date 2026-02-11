@@ -125,33 +125,7 @@ Retrieves RAP service binding configuration and deployment details.
 GetServiceBinding binding_name=ZUI_SALESORDER_O4_02
 ```
 
-### 5. GetCDSViewDependencies
-
-Analyzes CDS view dependencies and builds dependency trees.
-
-**Usage:**
-```json
-{
-  "view_name": "C_SalesOrderTP"
-}
-```
-
-**Returns:**
-- Base views and database tables
-- Association targets
-- Used-by analysis (where available)
-- Function dependencies
-- Parameter definitions
-- Multi-level dependency tree
-- Dependency classification
-
-**Example:**
-```bash
-# Analyze CDS view dependencies
-GetCDSViewDependencies view_name=C_SalesOrderTP
-```
-
-### 6. GetMetadataExtension
+### 5. GetMetadataExtension
 
 Retrieves metadata extension source code and analyzes UI annotations.
 

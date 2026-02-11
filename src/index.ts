@@ -39,7 +39,6 @@ import { handleGetCDSView } from './handlers/handleGetCDSView';
 import { handleGetBehaviorDefinition } from './handlers/handleGetBehaviorDefinition';
 import { handleGetServiceDefinition } from './handlers/handleGetServiceDefinition';
 import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
-import { handleGetCDSViewDependencies } from './handlers/handleGetCDSViewDependencies';
 import { handleGetMetadataExtension } from './handlers/handleGetMetadataExtension';
 import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
@@ -655,20 +654,6 @@ export class mcp_abap_adt_server {
             }
           },
           {
-            name: 'GetCDSViewDependencies',
-            description: 'Analyze CDS view dependencies and associations',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                view_name: {
-                  type: 'string',
-                  description: 'Name of the CDS view to analyze'
-                }
-              },
-              required: ['view_name']
-            }
-          },
-          {
             name: 'GetMetadataExtension',
             description: 'Retrieve metadata extension (UI annotations) source code',
             inputSchema: {
@@ -769,8 +754,6 @@ export class mcp_abap_adt_server {
           return await handleGetServiceDefinition(request.params.arguments);
         case 'GetServiceBinding':
           return await handleGetServiceBinding(request.params.arguments);
-        case 'GetCDSViewDependencies':
-          return await handleGetCDSViewDependencies(request.params.arguments);
         case 'GetMetadataExtension':
           return await handleGetMetadataExtension(request.params.arguments);
         case 'GetAccessControl':
