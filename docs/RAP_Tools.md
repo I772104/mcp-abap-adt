@@ -203,6 +203,46 @@ Retrieves access control (DCL) definition and analyzes authorization rules.
 GetAccessControl dcl_name=R_SalesOrderTP
 ```
 
+### 8. GetBehaviorForRapBo
+
+Retrieves interface behavior definition for RAP Business Objects by searching the RONT_NODE table.
+
+**Usage:**
+```json
+{
+  "rap_bo_name": "SalesOrder"
+}
+```
+
+**Returns:**
+- RAP BO name (input parameter)
+- Search term used (uppercase conversion)
+- Number of matches found
+- Array of behavior definitions containing:
+  - RONT_NAME (exact match from table)
+  - INTERFACE_BEHAVIOR_DEFINITION (behavior definition content)
+
+**Features:**
+- Automatic uppercase conversion of search term
+- Searches RONT_NODE table using LIKE pattern matching
+- Filters results to only return non-empty behavior definitions
+- Provides structured JSON response with match statistics
+
+**Example:**
+```bash
+# Find behavior definitions for SalesOrder RAP BO
+GetBehaviorForRapBo rap_bo_name=SalesOrder
+
+# Search for custom RAP BO
+GetBehaviorForRapBo rap_bo_name=MyCustomBO
+```
+
+**Use Cases:**
+- Discover behavior definitions when you only know the business object name
+- Find interface behavior definitions stored in RONT_NODE table
+- Analyze RAP BO implementations across the system
+- Support for both standard SAP and custom RAP business objects
+
 ## RAP Business Object Analysis Workflow
 
 ### Complete RAP BO Analysis
@@ -319,6 +359,7 @@ Tools attempt multiple ADT endpoints and provide fallback mechanisms where possi
 | GetServiceBinding | `/sap/bc/adt/businessservices/bindings/{name}` | Multiple OData-specific endpoints |
 | GetMetadataExtension | `/sap/bc/adt/ddic/ddlx/sources/{name}` | `/sap/bc/adt/ddic/extensions/{name}` |
 | GetAccessControl | `/sap/bc/adt/ddic/dcls/sources/{name}` | `/sap/bc/adt/ddic/accesscontrols/{name}` |
+| GetBehaviorForRapBo | `/sap/bc/adt/datapreview/ddic` (POST with SQL) | RONT_NODE table query |
 
 ### Source Code Analysis
 

@@ -40,6 +40,7 @@ import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
 import { handleGetCDSViewDependencies } from './handlers/handleGetCDSViewDependencies';
 import { handleGetMetadataExtension } from './handlers/handleGetMetadataExtension';
 import { handleGetAccessControl } from './handlers/handleGetAccessControl';
+import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -690,6 +691,20 @@ export class mcp_abap_adt_server {
               },
               required: ['dcl_name']
             }
+          },
+          {
+            name: 'GetBehaviorForRapBo',
+            description: 'Retrieve interface behavior definition for RAP Business Object from RONT_NODE table',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                rap_bo_name: {
+                  type: 'string',
+                  description: 'Name of the RAP Business Object to search for'
+                }
+              },
+              required: ['rap_bo_name']
+            }
           }
         ]
       };
@@ -756,6 +771,8 @@ export class mcp_abap_adt_server {
           return await handleGetMetadataExtension(request.params.arguments);
         case 'GetAccessControl':
           return await handleGetAccessControl(request.params.arguments);
+        case 'GetBehaviorForRapBo':
+          return await handleGetBehaviorForRapBo(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
