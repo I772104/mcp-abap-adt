@@ -42,6 +42,7 @@ import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
 import { handleGetMetadataExtension } from './handlers/handleGetMetadataExtension';
 import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
+import { handleSearchRapBo } from './handlers/handleSearchRapBo';
 import { handleRapBoAnalysisResource, listRapBoAnalysisResources } from './handlers/handleRapBoAnalysisResource';
 
 // Import shared utility functions and types
@@ -694,6 +695,20 @@ export class mcp_abap_adt_server {
               },
               required: ['rap_bo_name']
             }
+          },
+          {
+            name: 'SearchRapBo',
+            description: 'Search for RAP Business Objects by description and return the best matching technical name',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                search_term: {
+                  type: 'string',
+                  description: 'Search term to find RAP Business Objects by description'
+                }
+              },
+              required: ['search_term']
+            }
           }
         ]
       };
@@ -760,6 +775,8 @@ export class mcp_abap_adt_server {
           return await handleGetAccessControl(request.params.arguments);
         case 'GetBehaviorForRapBo':
           return await handleGetBehaviorForRapBo(request.params.arguments);
+        case 'SearchRapBo':
+          return await handleSearchRapBo(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

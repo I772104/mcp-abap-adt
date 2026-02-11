@@ -177,7 +177,59 @@ Retrieves access control (DCL) definition and analyzes authorization rules.
 GetAccessControl dcl_name=R_SalesOrderTP
 ```
 
-### 8. GetBehaviorForRapBo
+### 8. SearchRapBo
+
+Searches for RAP Business Objects by description using fuzzy search and returns the best matching technical name.
+
+**Usage:**
+```json
+{
+  "search_term": "Sales Order"
+}
+```
+
+**Returns:**
+- RAP BO technical name (RONT_NAME) of the best match
+- Error if no matches found
+
+**Features:**
+- Fuzzy search on RONT_HEADER_T table DESCRIPTION field
+- Case-insensitive wildcard matching
+- Results ordered by description length (best matches first)
+- Returns technical RAP BO names that can be used with other tools
+
+**Example:**
+```bash
+# Search for Sales Order RAP BO
+SearchRapBo search_term="Sales Order"
+
+# Search for Purchase Order
+SearchRapBo search_term="Purchase"
+
+# Search for custom business objects
+SearchRapBo search_term="Customer Master"
+```
+
+**Use Cases:**
+- Find technical RAP BO names when you only know the business description
+- Discover available RAP Business Objects in the system
+- Get the correct RONT_NAME for use with GetBehaviorForRapBo
+- Explore RAP BOs by business domain or functionality
+
+**Workflow Integration:**
+```bash
+# 1. Search for RAP BO by description
+SearchRapBo search_term="Sales Order"
+# Returns: best_match.ront_name = "SalesOrder"
+
+# 2. Use the technical name to get behavior definition
+GetBehaviorForRapBo rap_bo_name="SalesOrder"
+
+# 3. Analyze the complete RAP BO structure
+GetBehaviorDefinition cds_view_name="R_SalesOrderTP"
+```
+
+### 9. GetBehaviorForRapBo
 
 Retrieves interface behavior definition for RAP Business Objects by searching the RONT_NODE table.
 
