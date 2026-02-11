@@ -11,7 +11,7 @@ export async function handleGetBehaviorDefinition(args: any) {
         
         // Use the correct ADT endpoint for behavior definitions
         const baseUrl = await getBaseUrl();
-        const endpoint = `/sap/bc/adt/bo/behaviordefinitions/${encodedViewName}`;
+        const endpoint = `/sap/bc/adt/bo/behaviordefinitions/${encodedViewName}/source/main`;
 
         const url = `${baseUrl}${endpoint}`;
         const response = await makeAdtRequest(url, 'GET', 30000);
