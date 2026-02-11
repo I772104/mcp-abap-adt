@@ -10,50 +10,34 @@ export async function handleGetCDSView(args: any) {
         const encodedViewName = encodeURIComponent(args.view_name);
         const includeAnnotations = args.include_annotations !== false; // Default to true
         
-        // Try different ADT endpoints for CDS views
+        // Use the specific ADT endpoint for CDS views
         const baseUrl = await getBaseUrl();
-        const endpoints = [
-            `/sap/bc/adt/ddic/ddlx/sources/${encodedViewName}`, // CDS view source with annotations
-            `/sap/bc/adt/ddic/ddls/sources/${encodedViewName}`, // CDS view source
-            `/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedViewName}&objectType=DDLS/DF`
-        ];
-
-        let lastError: any;
+        const endpoint = `/sap/bc/adt/ddic/ddl/sources/${encodedViewName}/source/main`;
         
-        for (const endpoint of endpoints) {
-            try {
-                const url = `${baseUrl}${endpoint}`;
-                const response = await makeAdtRequest(url, 'GET', 30000);
-                
-                // If we got a successful response, try to parse and enhance it
-                if (response.data) {
-                    let result = {
-                        view_name: args.view_name,
-                        source_code: response.data,
-                        view_type: detectViewType(response.data),
-                        annotations: includeAnnotations ? extractAnnotations(response.data) : [],
-                        associations: extractAssociations(response.data),
-                        parameters: extractParameters(response.data),
-                        base_entity: extractBaseEntity(response.data)
-                    };
-                    
-                    return {
-                        isError: false,
-                        content: [{
-                            type: 'text',
-                            text: JSON.stringify(result, null, 2)
-                        }]
-                    };
-                }
-            } catch (error) {
-                lastError = error;
-                // Continue to next endpoint
-                continue;
-            }
+        const url = `${baseUrl}${endpoint}`;
+        const response = await makeAdtRequest(url, 'GET', 30000);
+        
+        if (!response.data) {
+            throw new McpError(ErrorCode.InvalidRequest, `CDS view ${args.view_name} not found or no access`);
         }
+
+        let result = {
+            view_name: args.view_name,
+            source_code: response.data,
+            view_type: detectViewType(response.data),
+            annotations: includeAnnotations ? extractAnnotations(response.data) : [],
+            associations: extractAssociations(response.data),
+            parameters: extractParameters(response.data),
+            base_entity: extractBaseEntity(response.data)
+        };
         
-        // If all endpoints failed, throw the last error
-        throw lastError || new Error('Failed to retrieve CDS view from any endpoint');
+        return {
+            isError: false,
+            content: [{
+                type: 'text',
+                text: JSON.stringify(result, null, 2)
+            }]
+        };
         
     } catch (error) {
         return return_error(error);

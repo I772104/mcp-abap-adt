@@ -353,7 +353,7 @@ Tools attempt multiple ADT endpoints and provide fallback mechanisms where possi
 
 | Tool | Primary Endpoint | Fallback Endpoints |
 |------|------------------|-------------------|
-| GetCDSView | `/sap/bc/adt/ddic/ddlx/sources/{name}` | `/sap/bc/adt/ddic/ddls/sources/{name}` |
+| GetCDSView | `/sap/bc/adt/ddic/ddl/sources/{name}/source/main` | None (single endpoint) |
 | GetBehaviorDefinition | `/sap/bc/adt/bo/behaviors/{name}` | `/sap/bc/adt/ddic/behaviors/{name}` |
 | GetServiceDefinition | `/sap/bc/adt/businessservices/odatav4/{name}` | `/sap/bc/adt/businessservices/odatav2/{name}` |
 | GetServiceBinding | `/sap/bc/adt/businessservices/bindings/{name}` | Multiple OData-specific endpoints |
