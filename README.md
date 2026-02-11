@@ -261,3 +261,15 @@ Advanced tools for unit testing and code quality analysis:
 | `GetClassCoverage`  | Run unit tests and retrieve test coverage results.| `class_name` (string): Name of the ABAP class.                     | `@tool GetClassCoverage class_name=ZCL_MY_CLASS`           |
 | `GetClassUsages`    | Retrieve usages for an ABAP class.                | `class_name` (string): Name of the ABAP class.                     | `@tool GetClassUsages class_name=ZCL_MY_CLASS`             |
 | `CheckSyntax`       | Check ABAP code syntax validation.                | Various parameters for syntax checking                             | `@tool CheckSyntax` (see CheckSyntax.md for details)       |
+
+### RAP (RESTful ABAP Programming) Tools
+
+| Tool Name                | Description                                        | Input Parameters                                                   | Example Usage (in Cline)                                   |
+| ------------------------ | -------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `GetCDSView`            | Retrieve CDS view source code and metadata.        | `view_name` (string), `include_annotations` (boolean, optional)    | `@tool GetCDSView view_name=I_SalesOrder`                  |
+| `GetBehaviorDefinition` | Retrieve RAP behavior definition and metadata.     | `cds_view_name` (string): Name of the root CDS view entity         | `@tool GetBehaviorDefinition cds_view_name=R_SalesOrderTP` |
+| `GetServiceDefinition`  | Retrieve RAP service definition and metadata.      | `service_name` (string): Name of the service definition            | `@tool GetServiceDefinition service_name=ZUI_SALESORDER_O4`|
+| `GetServiceBinding`     | Retrieve RAP service binding details.              | `binding_name` (string): Name of the service binding               | `@tool GetServiceBinding binding_name=ZUI_SALESORDER_O4_02`|
+| `GetCDSViewDependencies`| Analyze CDS view dependencies and associations.    | `view_name` (string): Name of the CDS view to analyze              | `@tool GetCDSViewDependencies view_name=C_SalesOrderTP`    |
+| `GetMetadataExtension`  | Retrieve metadata extension (UI annotations).      | `extension_name` (string): Name of the metadata extension          | `@tool GetMetadataExtension extension_name=C_SalesOrderTP` |
+| `GetAccessControl`      | Retrieve access control (DCL) definition.          | `dcl_name` (string): Name of the access control definition         | `@tool GetAccessControl dcl_name=R_SalesOrderTP`           |
