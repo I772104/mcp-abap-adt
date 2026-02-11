@@ -5,6 +5,8 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
@@ -41,6 +43,7 @@ import { handleGetCDSViewDependencies } from './handlers/handleGetCDSViewDepende
 import { handleGetMetadataExtension } from './handlers/handleGetMetadataExtension';
 import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
+import { handleRapBoAnalysisResource, listRapBoAnalysisResources } from './handlers/handleRapBoAnalysisResource';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -99,7 +102,8 @@ export class mcp_abap_adt_server {
       },
       {
         capabilities: {
-          tools: {}, // Initially, no tools are registered
+          tools: {}, // Tools are registered
+          resources: {}, // Resources are registered
         },
       }
     );
@@ -779,6 +783,27 @@ export class mcp_abap_adt_server {
             `Unknown tool: ${request.params.name}`
           );
       }
+    });
+
+    // Setup resource handlers
+
+    // Handler for ListResourcesRequest
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return listRapBoAnalysisResources();
+    });
+
+    // Handler for ReadResourceRequest
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const uri = request.params.uri;
+      
+      if (uri.startsWith('rap-bo-analysis:///')) {
+        return await handleRapBoAnalysisResource(uri);
+      }
+      
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        `Unknown resource URI: ${uri}`
+      );
     });
 
     // Handle server shutdown on SIGINT (Ctrl+C)
