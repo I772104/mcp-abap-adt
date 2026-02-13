@@ -1,5 +1,30 @@
 # Cline Rules for MCP ABAP ADT Server
 
+## Available MCP Resources (Token-Efficient Navigation)
+
+### Static Resources (No Parameters - Cacheable)
+- **abap://packages/top-level** - Full list of top-level packages (~35K tokens)
+  - Use ONCE per session, then cache results
+  - Returns: name, description, objectCount, uri for all 757 packages
+  
+- **abap://packages/top-level/names** - Lightweight package names (~5K tokens)
+  - Use for quick discovery and autocomplete
+  - Returns: Simple array of package names only
+  - **PREFERRED** for initial exploration
+
+### Resource Templates (With Parameters - Customizable)
+- **abap://package/{package_name}** - Individual package details
+  - Get comprehensive package information
+  - Example: `abap://package/APPL`
+  
+- **abap://packages/top-level?fields={fields}&limit={limit}&offset={offset}&prefix={prefix}&minObjects={minObjects}**
+  - GraphQL-style customizable queries
+  - **MOST TOKEN-EFFICIENT** for targeted searches
+  - Examples:
+    - `?fields=name&limit=50` - First 50 names only (~2K tokens)
+    - `?prefix=APPL&fields=name,objectCount` - APPL* packages (~500 tokens)
+    - `?minObjects=10000&fields=name,objectCount` - Large packages only (~500 tokens)
+
 ## Available MCP Tools (25 total)
 
 ### Retrieval Tools
@@ -131,6 +156,73 @@ GetTableContents:
    - Examples: `ZCL_*`, `Z*`, `*INVOICE*`
 2. **GetPackageContents** - Explore package contents
 3. Get specific object details as needed
+
+### Pattern 7: Token-Efficient Package Navigation (NEW - ALWAYS USE THIS)
+
+**Recommended Workflow for Package Discovery:**
+
+**Step 1: Get Package Names/Descriptions** (~5K tokens or less)
+```
+Option A - Names only (lightest):
+  Resource: abap://packages/top-level/names
+  → Returns: ["APPL", "BASIS", "ABA", ...]
+  → Use when: You just need to know what packages exist
+
+Option B - Names + Descriptions (still light):
+  Resource: abap://packages/top-level?fields=name,description&limit=100
+  → Returns: name and description for first 100 packages
+  → Use when: You need context about packages
+```
+
+**Step 2: Filter to Relevant Packages** (~500 tokens)
+```
+By prefix:
+  Resource: abap://packages/top-level?prefix=FIN&fields=name,description
+  → Find all FIN* packages with descriptions
+
+By size:
+  Resource: abap://packages/top-level?minObjects=1000&fields=name,objectCount
+  → Find packages with 1000+ objects
+```
+
+**Step 3: Get Detailed Package Info** (when needed)
+```
+Resource: abap://package/FINANCIAL_BASIS
+→ Full metadata: hierarchy, transport, interfaces, etc.
+→ Only use after identifying the target package
+```
+
+**Step 4: Explore Package Contents**
+```
+Tool: GetPackageContents with package_name="FINANCIAL_BASIS"
+→ List all objects in the package
+→ Use include_subpackages: true for complete view
+```
+
+**Complete Example:**
+```
+User: "Find and explore financial packages"
+
+Step 1: abap://packages/top-level?fields=name,description&limit=50
+        → Browse first 50 packages with descriptions (~2K tokens)
+        → Identify: "FINANCIAL_BASIS" looks relevant
+
+Step 2: abap://package/FINANCIAL_BASIS
+        → Get full package details
+        → See: 4206 objects, structure package
+
+Step 3: GetPackageContents with package_name="FINANCIAL_BASIS"
+        → List all classes, tables, functions in package
+        → Identify specific objects to explore
+
+Step 4: GetClass with class_name="CL_FINANCIAL_PROCESSOR"
+        → Get source code of specific class
+```
+
+**Token Usage Comparison:**
+- ❌ Old way: GetPackage for each → 757 calls, massive tokens
+- ✅ New way: Resource → filter → GetPackage → ~7K tokens total
+- **Savings: 90%+ reduction in token usage**
 
 ## Critical Best Practices (NEVER skip these)
 

@@ -5,6 +5,9 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ReadResourceRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
@@ -35,6 +38,9 @@ import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 import { handleActivateClasses } from './handlers/handleActivateClasses';
+
+// Import resource handlers
+import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -94,6 +100,7 @@ export class mcp_abap_adt_server {
       {
         capabilities: {
           tools: {}, // Initially, no tools are registered
+          resources: {}, // Resource support enabled
         },
       }
     );
@@ -106,6 +113,23 @@ export class mcp_abap_adt_server {
    * @private
    */
   private setupHandlers() {
+    // Setup resource handlers
+    
+    // Handler for ListResourceTemplatesRequest
+    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      return await listResourceTemplates();
+    });
+
+    // Handler for ListResourcesRequest
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return await listResources();
+    });
+
+    // Handler for ReadResourceRequest
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      return await readResource(request.params.uri);
+    });
+
     // Setup tool handlers
 
     // Handler for ListToolsRequest
