@@ -162,6 +162,7 @@ export class RapAnalysisEngine {
 
     /**
      * Phase 1: Discover interface behaviors from RONT_NODE table
+     * If not found, try direct behavior definition lookup
      */
     private async discoverInterfaceBehaviors(rapBoName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
@@ -172,11 +173,49 @@ export class RapAnalysisEngine {
                 result.behavior_definitions.interface_behaviors = behaviorData.behavior_definitions || [];
                 
                 if (behaviorData.matches_found === 0) {
-                    this.warnings.push(`No interface behaviors found for RAP BO: ${rapBoName}`);
+                    this.warnings.push(`No interface behaviors found in RONT_NODE for: ${rapBoName}`);
+                    // Try direct behavior definition lookup as fallback
+                    await this.tryDirectBehaviorLookup(rapBoName, result);
                 }
             }
         } catch (error: any) {
-            this.errors.push(`Failed to discover interface behaviors: ${error.message}`);
+            this.warnings.push(`Failed to discover interface behaviors: ${error.message}`);
+            // Try direct behavior definition lookup as fallback
+            await this.tryDirectBehaviorLookup(rapBoName, result);
+        }
+    }
+
+    /**
+     * Fallback: Try direct behavior definition lookup when RONT_NODE search fails
+     */
+    private async tryDirectBehaviorLookup(rapBoName: string, result: RapBoAnalysisResult): Promise<void> {
+        try {
+            // Try to get behavior definition directly with the provided name
+            const behaviorResponse = await handleGetBehaviorDefinition({ cds_view_name: rapBoName });
+            
+            if (behaviorResponse.content && behaviorResponse.content[0]) {
+                const behaviorData = JSON.parse(behaviorResponse.content[0].text);
+                
+                // Add to behavior definitions
+                result.behavior_definitions.behavior_definitions.push(behaviorData);
+                
+                // Extract implementation class
+                if (behaviorData.implementation_class) {
+                    result.behavior_definitions.implementation_classes.push(behaviorData.implementation_class);
+                }
+                
+                // Summarize operations
+                if (behaviorData.operations) {
+                    result.behavior_definitions.operations_summary = {
+                        ...result.behavior_definitions.operations_summary,
+                        [rapBoName]: behaviorData.operations
+                    };
+                }
+                
+                this.warnings.push(`Found behavior definition directly for: ${rapBoName}`);
+            }
+        } catch (error: any) {
+            this.warnings.push(`Direct behavior lookup also failed for ${rapBoName}: ${error.message}`);
         }
     }
 
@@ -236,6 +275,9 @@ export class RapAnalysisEngine {
      */
     private async analyzeCdsViews(result: RapBoAnalysisResult): Promise<void> {
         const viewNames = new Set<string>();
+        
+        // Always try the original RAP BO name first
+        viewNames.add(result.analysis_metadata.rap_bo_name);
         
         // Collect view names from behavior definitions
         for (const behavior of result.behavior_definitions.behavior_definitions) {

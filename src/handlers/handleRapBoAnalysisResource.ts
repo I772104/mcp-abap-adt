@@ -50,27 +50,21 @@ export async function handleRapBoAnalysisResource(uri: string) {
 /**
  * List available RAP BO Analysis resources
  * 
- * This provides a template/example of how to access the resource
+ * This provides static example resources for common RAP BOs
  */
 export function listRapBoAnalysisResources() {
     return {
         resources: [
             {
-                uri: 'rap-bo-analysis:///SalesOrder',
-                name: 'RAP BO Analysis: SalesOrder',
-                description: 'Comprehensive analysis of SalesOrder RAP Business Object',
+                uri: 'rap-bo-analysis:///I_SalesOrder',
+                name: 'RAP BO Analysis: Sales Order',
+                description: 'Comprehensive analysis of Sales Order RAP Business Object (I_SalesOrder)',
                 mimeType: 'application/json'
             },
             {
-                uri: 'rap-bo-analysis:///PurchaseOrder',
-                name: 'RAP BO Analysis: PurchaseOrder', 
-                description: 'Comprehensive analysis of PurchaseOrder RAP Business Object',
-                mimeType: 'application/json'
-            },
-            {
-                uri: 'rap-bo-analysis:///{rap_bo_name}',
-                name: 'RAP BO Analysis Template',
-                description: 'Template for analyzing any RAP Business Object. Replace {rap_bo_name} with actual BO name.',
+                uri: 'rap-bo-analysis:///I_PurchaseOrder',
+                name: 'RAP BO Analysis: Purchase Order', 
+                description: 'Comprehensive analysis of Purchase Order RAP Business Object (I_PurchaseOrder)',
                 mimeType: 'application/json'
             }
         ]
