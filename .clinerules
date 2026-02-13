@@ -1,0 +1,365 @@
+# Cline Rules for MCP ABAP ADT Server
+
+## Available MCP Resources (Token-Efficient Navigation)
+
+### Static Resources (No Parameters - Cacheable)
+- **abap://packages/top-level** - Full list of top-level packages (~35K tokens)
+  - Use ONCE per session, then cache results
+  - Returns: name, description, objectCount, uri for all 757 packages
+  
+- **abap://packages/top-level/names** - Lightweight package names (~5K tokens)
+  - Use for quick discovery and autocomplete
+  - Returns: Simple array of package names only
+  - **PREFERRED** for initial exploration
+
+### Resource Templates (With Parameters - Customizable)
+- **abap://package/{package_name}** - Individual package details
+  - Get comprehensive package information
+  - Example: `abap://package/APPL`
+  
+- **abap://packages/top-level?fields={fields}&limit={limit}&offset={offset}&prefix={prefix}&minObjects={minObjects}**
+  - GraphQL-style customizable queries
+  - **MOST TOKEN-EFFICIENT** for targeted searches
+  - Examples:
+    - `?fields=name&limit=50` - First 50 names only (~2K tokens)
+    - `?prefix=APPL&fields=name,objectCount` - APPL* packages (~500 tokens)
+    - `?minObjects=10000&fields=name,objectCount` - Large packages only (~500 tokens)
+
+## Available MCP Tools (25 total)
+
+### Retrieval Tools
+- **GetProgram** - Retrieve ABAP program source code
+- **GetClass** - Retrieve ABAP class source code
+- **GetFunction** - Retrieve function module details
+- **GetFunctionGroup** - Retrieve function group details
+- **GetStructure** - Retrieve structure/type definitions
+- **GetTable** - Retrieve database table structure
+- **GetTableContents** - Query table data with filtering
+- **GetPackage** - Retrieve package metadata
+- **GetPackageContents** - List objects in a package
+- **GetTypeInfo** - Get type information
+- **GetInclude** - Retrieve include program source
+- **GetInterface** - Retrieve interface definition
+- **GetTransaction** - Retrieve transaction details
+- **GetClassTests** - Retrieve unit test code for a class
+
+### Search Tools
+- **SearchObject** - Find objects using wildcards (e.g., ZCL_*, Z*)
+
+### Testing Tools
+- **RunClassTests** - Execute unit tests for a class
+- **RunPackageTests** - Execute all tests in a package
+- **GetClassCoverage** - Get test coverage metrics
+
+### Analysis Tools
+- **CheckSyntax** - Validate ABAP source code syntax
+- **GetClassUsages** - Find where a class is used
+
+### Creation Tools
+- **CreateClass** - Create or update ABAP class
+- **CreateClassTests** - Create or update unit tests
+- **ActivateClasses** - Activate classes after testing
+
+### Deletion Tools
+- **DeleteLocalClass** - Delete local classes from $TMP
+
+## Mandatory Workflow Patterns
+
+### Pattern 1: Create and Test Class (ALWAYS follow this sequence)
+
+**Steps:**
+1. **CheckSyntax** - Validate the class source code BEFORE creation
+   - Catches syntax errors early
+   - Prevents creating broken classes
+   
+2. **CreateClass** - Create the class with source_code
+   - Use `auto_activate: false` during development
+   - Package: $TMP for local development
+   
+3. **CheckSyntax** - Validate the test source code
+   - Ensure test code is syntactically correct
+   
+4. **CreateClassTests** - Add unit tests to the class
+   - Use `auto_activate: false` during development
+   - Include setup, positive, and negative test cases
+   
+5. **RunClassTests** - Execute tests to verify functionality
+   - All tests must pass before activation
+   
+6. **ActivateClasses** - Activate the class only after tests pass
+   - Final step in the workflow
+
+**Example:**
+```
+User: "Create a calculator class"
+
+Step 1: CheckSyntax with calculator class code
+Step 2: CreateClass with class_name="ZCL_CALCULATOR", auto_activate=false
+Step 3: CheckSyntax with test class code
+Step 4: CreateClassTests with parent_class_name="ZCL_CALCULATOR", auto_activate=false
+Step 5: RunClassTests with class_name="ZCL_CALCULATOR"
+Step 6: ActivateClasses with class_name="ZCL_CALCULATOR"
+```
+
+### Pattern 2: Analyze Package
+
+**Steps:**
+1. **GetPackage** - Retrieve package metadata and hierarchy
+2. **GetPackageContents** - List all objects in the package
+   - Use `include_subpackages: true` for complete view
+3. **RunPackageTests** - Execute all unit tests in the package
+4. Analyze results - Review test results and coverage
+
+### Pattern 3: Refactor Class
+
+**Steps:**
+1. **GetClass** - Retrieve current class source code
+2. **GetClassTests** - Retrieve existing unit tests
+3. **CheckSyntax** - Validate modified source code
+4. Update class source (via CreateClass with backup_existing: true)
+5. **RunClassTests** - Verify tests still pass
+6. **GetClassCoverage** - Check test coverage
+7. **ActivateClasses** - Activate if all checks pass
+
+### Pattern 4: Explore Object Dependencies
+
+**Steps:**
+1. **GetClass/GetTable/GetFunction** - Retrieve object details
+2. **GetClassUsages** - Find where the object is used
+3. **GetPackage** - Understand package context
+4. **SearchObject** - Find related objects
+
+### Pattern 5: Data Analysis
+
+**Steps:**
+1. **GetTable** - Understand table structure and fields
+2. **GetTableContents** - Query data with where_conditions
+   - Use `columns` parameter to select specific fields
+   - Use `where_conditions` for filtering
+   - Use `max_rows` to limit results
+   - Set `include_column_metadata: true` for field info
+
+**Example:**
+```
+GetTable: table_name="MARA"
+GetTableContents: 
+  table_name="MARA"
+  columns=["MATNR", "MTART", "MATKL"]
+  where_conditions={"MTART": "FERT"}
+  max_rows=50
+```
+
+### Pattern 6: Search and Discover
+
+**Steps:**
+1. **SearchObject** - Use wildcards to find objects
+   - Examples: `ZCL_*`, `Z*`, `*INVOICE*`
+2. **GetPackageContents** - Explore package contents
+3. Get specific object details as needed
+
+### Pattern 7: Token-Efficient Package Navigation (NEW - ALWAYS USE THIS)
+
+**Recommended Workflow for Package Discovery:**
+
+**Step 1: Get Package Names/Descriptions** (~5K tokens or less)
+```
+Option A - Names only (lightest):
+  Resource: abap://packages/top-level/names
+  → Returns: ["APPL", "BASIS", "ABA", ...]
+  → Use when: You just need to know what packages exist
+
+Option B - Names + Descriptions (still light):
+  Resource: abap://packages/top-level?fields=name,description&limit=100
+  → Returns: name and description for first 100 packages
+  → Use when: You need context about packages
+```
+
+**Step 2: Filter to Relevant Packages** (~500 tokens)
+```
+By prefix:
+  Resource: abap://packages/top-level?prefix=FIN&fields=name,description
+  → Find all FIN* packages with descriptions
+
+By size:
+  Resource: abap://packages/top-level?minObjects=1000&fields=name,objectCount
+  → Find packages with 1000+ objects
+```
+
+**Step 3: Get Detailed Package Info** (when needed)
+```
+Resource: abap://package/FINANCIAL_BASIS
+→ Full metadata: hierarchy, transport, interfaces, etc.
+→ Only use after identifying the target package
+```
+
+**Step 4: Explore Package Contents**
+```
+Tool: GetPackageContents with package_name="FINANCIAL_BASIS"
+→ List all objects in the package
+→ Use include_subpackages: true for complete view
+```
+
+**Complete Example:**
+```
+User: "Find and explore financial packages"
+
+Step 1: abap://packages/top-level?fields=name,description&limit=50
+        → Browse first 50 packages with descriptions (~2K tokens)
+        → Identify: "FINANCIAL_BASIS" looks relevant
+
+Step 2: abap://package/FINANCIAL_BASIS
+        → Get full package details
+        → See: 4206 objects, structure package
+
+Step 3: GetPackageContents with package_name="FINANCIAL_BASIS"
+        → List all classes, tables, functions in package
+        → Identify specific objects to explore
+
+Step 4: GetClass with class_name="CL_FINANCIAL_PROCESSOR"
+        → Get source code of specific class
+```
+
+**Token Usage Comparison:**
+- ❌ Old way: GetPackage for each → 757 calls, massive tokens
+- ✅ New way: Resource → filter → GetPackage → ~7K tokens total
+- **Savings: 90%+ reduction in token usage**
+
+## Critical Best Practices (NEVER skip these)
+
+### 1. Syntax Validation First
+- **ALWAYS** use CheckSyntax before CreateClass or CreateClassTests
+- Catches errors early and prevents broken objects
+- Validates both class code and test code separately
+
+### 2. Test Before Activation
+- **NEVER** activate without running tests first
+- Use `auto_activate: false` during development
+- Only activate after RunClassTests confirms all tests pass
+
+### 3. Coverage Checking
+- Use GetClassCoverage to ensure adequate test coverage
+- Target: >70% statement coverage minimum
+- Check coverage before final activation
+
+### 4. Backup Important Classes
+- Use `backup_existing: true` when updating existing classes
+- Backup includes timestamp and original content
+- Essential for safe refactoring
+
+### 5. Wildcard Search
+- SearchObject supports `*` wildcards
+- Examples: `ZCL_*` (all Z classes), `*INVOICE*` (contains invoice)
+- Use for discovery and exploration
+
+### 6. Batch Queries
+- GetTableContents supports multiple table queries
+- More efficient than individual queries
+- Use `queries` parameter for batch operations
+
+## Tool Usage Guidelines
+
+### When Creating Classes:
+```
+ALWAYS follow this sequence:
+1. CheckSyntax (validate class code)
+2. CreateClass (auto_activate: false)
+3. CheckSyntax (validate test code)
+4. CreateClassTests (auto_activate: false)
+5. RunClassTests (verify all pass)
+6. ActivateClasses (only after tests pass)
+```
+
+### When Refactoring:
+```
+ALWAYS follow this sequence:
+1. GetClass (get current code)
+2. GetClassTests (get existing tests)
+3. CheckSyntax (validate changes)
+4. CreateClass (with backup_existing: true)
+5. RunClassTests (verify tests still pass)
+6. GetClassCoverage (check coverage)
+7. ActivateClasses (if all checks pass)
+```
+
+### When Analyzing:
+```
+Start with broad view, then drill down:
+1. SearchObject or GetPackageContents (discover)
+2. GetClass/GetTable/GetFunction (details)
+3. GetClassUsages (dependencies)
+4. RunClassTests or GetClassCoverage (quality)
+```
+
+## Common Mistakes to Avoid
+
+1. ❌ Creating class without CheckSyntax first
+   ✅ Always validate syntax before creation
+
+2. ❌ Using auto_activate: true during development
+   ✅ Use auto_activate: false, activate after testing
+
+3. ❌ Activating without running tests
+   ✅ Run tests first, activate only if they pass
+
+4. ❌ Updating classes without backup
+   ✅ Use backup_existing: true for safety
+
+5. ❌ Ignoring test coverage
+   ✅ Check coverage with GetClassCoverage
+
+6. ❌ Creating tests without syntax validation
+   ✅ Use CheckSyntax for test code too
+
+## SAP System Information
+
+- **URL**: https://ldcser1.wdf.sap.corp:44300
+- **Client**: 001
+- **Package for Development**: $TMP (local objects)
+
+## Feature Flags
+
+- ✅ Batch Queries Supported
+- ✅ Syntax Checking Available
+- ✅ Unit Testing Enabled
+- ✅ Code Coverage Available
+- ✅ Class Creation Enabled
+- ✅ Auto-Activation Supported
+
+## Quick Reference
+
+### Most Common Workflow
+```
+User asks to create a class:
+→ CheckSyntax (class code)
+→ CreateClass (auto_activate: false)
+→ CheckSyntax (test code)
+→ CreateClassTests (auto_activate: false)
+→ RunClassTests
+→ ActivateClasses
+```
+
+### Most Common Analysis
+```
+User asks to analyze a package:
+→ GetPackage
+→ GetPackageContents
+→ RunPackageTests
+```
+
+### Most Common Search
+```
+User asks to find objects:
+→ SearchObject (with wildcards like ZCL_*)
+→ GetClass/GetTable/etc (for details)
+```
+
+## Important Notes
+
+- All workflows start with syntax validation
+- Never skip testing before activation
+- Use $TMP package for local development
+- Always check coverage for quality assurance
+- Backup existing classes before updates
+- Follow the patterns exactly as specified
+- Method names must be ≤30 characters (ABAP limitation)
+- SETUP methods should NOT have `FOR TESTING` attribute

@@ -6,6 +6,7 @@ import {
   ErrorCode,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -46,6 +47,9 @@ import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
 import { handleSearchRapBo } from './handlers/handleSearchRapBo';
 import { handleRapBoAnalysisResource, listRapBoAnalysisResources } from './handlers/handleRapBoAnalysisResource';
+
+// Import resource handlers
+import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -118,6 +122,23 @@ export class mcp_abap_adt_server {
    * @private
    */
   private setupHandlers() {
+    // Setup resource handlers
+    
+    // Handler for ListResourceTemplatesRequest
+    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      return await listResourceTemplates();
+    });
+
+    // Handler for ListResourcesRequest
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return await listResources();
+    });
+
+    // Handler for ReadResourceRequest
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      return await readResource(request.params.uri);
+    });
+
     // Setup tool handlers
 
     // Handler for ListToolsRequest
