@@ -852,17 +852,37 @@ export class mcp_abap_adt_server {
 
     // Setup resource handlers
 
+    // Handler for ListResourceTemplatesRequest
+    this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      return await listResourceTemplates();
+    });
+
     // Handler for ListResourcesRequest
     this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
-      return listRapBoAnalysisResources();
+      // Combine resources from different handlers
+      const packageResources = await listResources();
+      const rapBoResources = listRapBoAnalysisResources();
+      
+      return {
+        resources: [
+          ...packageResources.resources,
+          ...rapBoResources.resources
+        ]
+      };
     });
 
     // Handler for ReadResourceRequest
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const uri = request.params.uri;
       
+      // Handle RAP BO analysis resources
       if (uri.startsWith('rap-bo-analysis:///')) {
         return await handleRapBoAnalysisResource(uri);
+      }
+      
+      // Handle all abap:// resources (server, package, packages)
+      if (uri.startsWith('abap://')) {
+        return await readResource(uri);
       }
       
       throw new McpError(
