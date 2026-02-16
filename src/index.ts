@@ -41,6 +41,7 @@ import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
 import { handleActivateClasses } from './handlers/handleActivateClasses';
 import { handleGetCDSView } from './handlers/handleGetCDSView';
+import { handleGetCDSViewContents } from './handlers/handleGetCDSViewContents';
 import { handleGetBehaviorDefinition } from './handlers/handleGetBehaviorDefinition';
 import { handleGetServiceDefinition } from './handlers/handleGetServiceDefinition';
 import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
@@ -716,6 +717,97 @@ export class mcp_abap_adt_server {
             }
           },
           {
+            name: 'GetCDSViewContents',
+            description: 'Query CDS view data with filtering, pagination, parameter support, and batch queries',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                view_name: {
+                  type: 'string',
+                  description: 'Name of the CDS view (required for single query mode)'
+                },
+                parameters: {
+                  type: 'object',
+                  description: 'Optional: CDS view parameters as key-value pairs (e.g., {"p_date": "2024-01-01"})',
+                  additionalProperties: { type: 'string' }
+                },
+                columns: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Specific columns to retrieve (default: all columns). Column names are validated against view metadata.'
+                },
+                max_rows: {
+                  type: 'number',
+                  description: 'Optional: Maximum number of rows to retrieve (default: 100, max: 500)',
+                  default: 100
+                },
+                where_conditions: {
+                  type: 'object',
+                  description: 'Optional: WHERE conditions for filtering. Simple: {"SalesOrderType": "OR"}. Advanced: {"SalesOrderType": {"eq": "OR"}}. Note: ADT Data Preview API only supports equality (=) operator.',
+                  additionalProperties: true
+                },
+                order_by: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Column names for sorting results. Column names are validated against view metadata.'
+                },
+                offset: {
+                  type: 'number',
+                  description: 'Optional: Number of rows to skip for pagination (default: 0). Warning: CDS views recalculate on each query.',
+                  default: 0
+                },
+                include_column_metadata: {
+                  type: 'boolean',
+                  description: 'Optional: Include column type and description in response (default: false)',
+                  default: false
+                },
+                queries: {
+                  type: 'array',
+                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 5 for CDS views). Each query supports all single-query parameters.',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: {
+                        type: 'string',
+                        description: 'Optional identifier for this query in batch results'
+                      },
+                      view_name: {
+                        type: 'string',
+                        description: 'Name of the CDS view'
+                      },
+                      parameters: {
+                        type: 'object',
+                        additionalProperties: { type: 'string' }
+                      },
+                      columns: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      max_rows: {
+                        type: 'number'
+                      },
+                      where_conditions: {
+                        type: 'object'
+                      },
+                      order_by: {
+                        type: 'array',
+                        items: { type: 'string' }
+                      },
+                      offset: {
+                        type: 'number'
+                      }
+                    },
+                    required: ['view_name']
+                  }
+                }
+              },
+              anyOf: [
+                { required: ['view_name'] },
+                { required: ['queries'] }
+              ]
+            }
+          },
+          {
             name: 'GetBehaviorDefinition',
             description: 'Retrieve RAP behavior definition source code and metadata',
             inputSchema: {
@@ -870,6 +962,8 @@ export class mcp_abap_adt_server {
           return await handleActivateClasses(request.params.arguments);
         case 'GetCDSView':
           return await handleGetCDSView(request.params.arguments);
+        case 'GetCDSViewContents':
+          return await handleGetCDSViewContents(request.params.arguments);
         case 'GetBehaviorDefinition':
           return await handleGetBehaviorDefinition(request.params.arguments);
         case 'GetServiceDefinition':
@@ -924,6 +1018,11 @@ export class mcp_abap_adt_server {
       
       // Handle all abap:// resources (server, package, packages)
       if (uri.startsWith('abap://')) {
+        return await readResource(uri);
+      }
+      
+      // Handle CDS view data resources
+      if (uri.startsWith('cds-view-data:///')) {
         return await readResource(uri);
       }
       

@@ -2,6 +2,7 @@ import { handleGetPackage } from '../handleGetPackage';
 import { handleListTopLevelPackages } from '../handleListTopLevelPackages';
 import { handleRapBoAnalysisResource } from '../handleRapBoAnalysisResource';
 import { handleGetCDSView } from '../handleGetCDSView';
+import { handleGetCDSViewContents } from '../handleGetCDSViewContents';
 import { handleGetClass } from '../handleGetClass';
 import { handleGetTable } from '../handleGetTable';
 import { listAgentGuideResources, getAgentGuide, detectAgentType } from './agentGuides';
@@ -39,6 +40,12 @@ export async function listResourceTemplates() {
         uriTemplate: 'abap://cds/{view_name}',
         name: 'CDS View',
         description: 'Retrieve CDS view source code, annotations, associations, and metadata. The view_name parameter is required in the URI path.',
+        mimeType: 'application/json'
+      },
+      {
+        uriTemplate: 'cds-view-data:///{view_name}?columns={columns}&max_rows={max_rows}&where={where}&order_by={order_by}&offset={offset}&parameters={parameters}&include_metadata={include_metadata}',
+        name: 'CDS View Data',
+        description: 'Query CDS view data with filtering, pagination, and parameter support. Parameters: columns (comma-separated), max_rows (default: 100, max: 500), where (FIELD1:VALUE1,FIELD2:VALUE2), order_by (comma-separated), offset (pagination), parameters (CDS parameters as PARAM1:VALUE1,PARAM2:VALUE2), include_metadata (true/false). All parameters are optional.',
         mimeType: 'application/json'
       },
       {
@@ -264,6 +271,76 @@ export async function readResource(uri: string) {
       throw new Error(`Failed to retrieve table ${tableName}: ${JSON.stringify(result.content)}`);
     }
     
+    const jsonContent = result.content[0].text;
+    
+    return {
+      contents: [
+        {
+          uri: uri,
+          mimeType: 'application/json',
+          text: jsonContent
+        }
+      ]
+    };
+  }
+  
+  // Handle CDS View Data queries
+  if (uri.startsWith('cds-view-data:///')) {
+    // Parse the URI manually since URL() doesn't handle custom schemes well
+    const uriWithoutScheme = uri.substring('cds-view-data:///'.length);
+    const [pathPart, queryPart] = uriWithoutScheme.split('?');
+    
+    if (!pathPart) {
+      throw new Error('Invalid CDS view data URI format: missing view name');
+    }
+    
+    const viewName = decodeURIComponent(pathPart);
+    const queryParams: any = { view_name: viewName };
+    
+    // Parse query parameters if present
+    if (queryPart) {
+      const searchParams = new URLSearchParams(queryPart);
+      
+      if (searchParams.has('columns')) {
+        queryParams.columns = searchParams.get('columns')!.split(',').map(c => c.trim());
+      }
+      if (searchParams.has('max_rows')) {
+        queryParams.max_rows = parseInt(searchParams.get('max_rows')!);
+      }
+      if (searchParams.has('offset')) {
+        queryParams.offset = parseInt(searchParams.get('offset')!);
+      }
+      if (searchParams.has('where')) {
+        const whereStr = searchParams.get('where')!;
+        queryParams.where_conditions = {};
+        whereStr.split(',').forEach(pair => {
+          const [key, value] = pair.split(':').map(s => s.trim());
+          if (key && value) {
+            queryParams.where_conditions[key] = value;
+          }
+        });
+      }
+      if (searchParams.has('order_by')) {
+        queryParams.order_by = searchParams.get('order_by')!.split(',').map(c => c.trim());
+      }
+      if (searchParams.has('parameters')) {
+        const paramsStr = searchParams.get('parameters')!;
+        queryParams.parameters = {};
+        paramsStr.split(',').forEach(pair => {
+          const [key, value] = pair.split(':').map(s => s.trim());
+          if (key && value) {
+            queryParams.parameters[key] = value;
+          }
+        });
+      }
+      if (searchParams.has('include_metadata')) {
+        queryParams.include_column_metadata = searchParams.get('include_metadata') === 'true';
+      }
+    }
+    
+    const result = await handleGetCDSViewContents(queryParams);
+    
+    // handleGetCDSViewContents always returns content array, no isError property
     const jsonContent = result.content[0].text;
     
     return {
