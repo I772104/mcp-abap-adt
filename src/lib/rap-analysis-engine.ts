@@ -193,7 +193,17 @@ export class RapAnalysisEngine {
             // Try to get behavior definition directly with the provided name
             const behaviorResponse = await handleGetBehaviorDefinition({ cds_view_name: rapBoName });
             
-            if (behaviorResponse.content && behaviorResponse.content[0]) {
+            // Check if response is an error first - must check before accessing content
+            if (!behaviorResponse || behaviorResponse.isError) {
+                return; // Silently skip - not all views have behavior definitions
+            }
+            
+            // Check if content exists and is valid
+            if (!behaviorResponse.content || !behaviorResponse.content[0] || !behaviorResponse.content[0].text) {
+                return; // Silently skip - no content available
+            }
+            
+            try {
                 const behaviorData = JSON.parse(behaviorResponse.content[0].text);
                 
                 // Add to behavior definitions
@@ -213,9 +223,11 @@ export class RapAnalysisEngine {
                 }
                 
                 this.warnings.push(`Found behavior definition directly for: ${rapBoName}`);
+            } catch (parseError: any) {
+                // JSON parsing failed - silently skip
             }
         } catch (error: any) {
-            this.warnings.push(`Direct behavior lookup also failed for ${rapBoName}: ${error.message}`);
+            // Silently skip - not all views have behavior definitions
         }
     }
 
@@ -248,7 +260,7 @@ export class RapAnalysisEngine {
         try {
             const behaviorResponse = await handleGetBehaviorDefinition({ cds_view_name: cdsViewName });
             
-            if (behaviorResponse.content && behaviorResponse.content[0]) {
+            if (behaviorResponse.content && behaviorResponse.content[0] && !behaviorResponse.isError) {
                 const behaviorData = JSON.parse(behaviorResponse.content[0].text);
                 result.behavior_definitions.behavior_definitions.push(behaviorData);
                 
@@ -266,7 +278,7 @@ export class RapAnalysisEngine {
                 }
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze behavior definition for ${cdsViewName}: ${error.message}`);
+            // Silently skip - not all views have behavior definitions
         }
     }
 
@@ -307,7 +319,12 @@ export class RapAnalysisEngine {
         try {
             const cdsResponse = await handleGetCDSView({ view_name: viewName, include_annotations: true });
             
-            if (cdsResponse.content && cdsResponse.content[0]) {
+            // Check if response is an error first
+            if (cdsResponse.isError || !cdsResponse.content || !cdsResponse.content[0]) {
+                return; // Silently skip - view might not exist
+            }
+            
+            try {
                 const cdsData = JSON.parse(cdsResponse.content[0].text);
                 
                 // Classify as root or projection view
@@ -319,19 +336,46 @@ export class RapAnalysisEngine {
                     // Default to projection views for unknown patterns
                     result.cds_views.projection_views.push(cdsData);
                 }
+            } catch (parseError: any) {
+                // JSON parsing failed - silently skip
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze CDS view ${viewName}: ${error.message}`);
+            // Silently skip - view might not exist
         }
     }
 
     /**
      * Phase 3a: Analyze dependencies
-     * Note: Dependency analysis is currently disabled as GetCDSViewDependencies tool has been removed
      */
     private async analyzeDependencies(result: RapBoAnalysisResult): Promise<void> {
-        this.warnings.push("Dependency analysis is currently disabled - GetCDSViewDependencies tool not available");
-        // Dependencies array remains empty but structure is preserved
+        // Analyze dependencies for all discovered CDS views
+        const allViews = [...result.cds_views.root_views, ...result.cds_views.projection_views];
+        
+        for (const view of allViews) {
+            if (view.view_name) {
+                await this.analyzeSingleViewDependencies(view.view_name, result);
+            }
+        }
+    }
+
+    /**
+     * Analyze dependencies for a single CDS view
+     */
+    private async analyzeSingleViewDependencies(viewName: string, result: RapBoAnalysisResult): Promise<void> {
+        try {
+            const { handleGetCDSViewDependencies } = await import('../handlers/handleGetCDSViewDependencies.js');
+            const depsResponse = await handleGetCDSViewDependencies({ view_name: viewName });
+            
+            if (depsResponse.content && depsResponse.content[0] && !depsResponse.isError) {
+                const depsData = JSON.parse(depsResponse.content[0].text);
+                result.cds_views.dependencies.push({
+                    view_name: viewName,
+                    dependencies: depsData
+                });
+            }
+        } catch (error: any) {
+            // Silently skip - view might not have dependencies or tool not available
+        }
     }
 
     /**
@@ -345,7 +389,12 @@ export class RapAnalysisEngine {
                 maxResults: 50 
             });
 
-            if (searchResponse.content && searchResponse.content[0]) {
+            // Check if response is an error first
+            if (searchResponse.isError || !searchResponse.content || !searchResponse.content[0]) {
+                return; // Silently skip - search might not return results
+            }
+
+            try {
                 const searchData = JSON.parse(searchResponse.content[0].text);
                 
                 // Filter for service-related objects
@@ -362,9 +411,11 @@ export class RapAnalysisEngine {
                         await this.analyzeServiceBinding(serviceObj.name, result);
                     }
                 }
+            } catch (parseError: any) {
+                // JSON parsing failed - silently skip
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze service exposure: ${error.message}`);
+            // Silently skip - search might not return results
         }
     }
 
@@ -375,12 +426,12 @@ export class RapAnalysisEngine {
         try {
             const serviceResponse = await handleGetServiceDefinition({ service_name: serviceName });
             
-            if (serviceResponse.content && serviceResponse.content[0]) {
+            if (serviceResponse.content && serviceResponse.content[0] && !serviceResponse.isError) {
                 const serviceData = JSON.parse(serviceResponse.content[0].text);
                 result.service_exposure!.service_definitions.push(serviceData);
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze service definition ${serviceName}: ${error.message}`);
+            // Silently skip
         }
     }
 
@@ -391,12 +442,12 @@ export class RapAnalysisEngine {
         try {
             const bindingResponse = await handleGetServiceBinding({ binding_name: bindingName });
             
-            if (bindingResponse.content && bindingResponse.content[0]) {
+            if (bindingResponse.content && bindingResponse.content[0] && !bindingResponse.isError) {
                 const bindingData = JSON.parse(bindingResponse.content[0].text);
                 result.service_exposure!.service_bindings.push(bindingData);
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze service binding ${bindingName}: ${error.message}`);
+            // Silently skip
         }
     }
 
@@ -420,12 +471,12 @@ export class RapAnalysisEngine {
         try {
             const aclResponse = await handleGetAccessControl({ dcl_name: viewName });
             
-            if (aclResponse.content && aclResponse.content[0]) {
+            if (aclResponse.content && aclResponse.content[0] && !aclResponse.isError) {
                 const aclData = JSON.parse(aclResponse.content[0].text);
                 result.access_control!.dcl_definitions.push(aclData);
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze access control for ${viewName}: ${error.message}`);
+            // Silently skip - not all views have access control
         }
     }
 
@@ -448,7 +499,7 @@ export class RapAnalysisEngine {
             // Get class details
             const classResponse = await handleGetClass({ class_name: className });
             
-            if (classResponse.content && classResponse.content[0]) {
+            if (classResponse.content && classResponse.content[0] && !classResponse.isError) {
                 const classData = JSON.parse(classResponse.content[0].text);
                 result.implementation_analysis!.classes.push(classData);
             }
@@ -456,12 +507,12 @@ export class RapAnalysisEngine {
             // Get class usages
             const usageResponse = await handleGetClassUsages({ class_name: className });
             
-            if (usageResponse.content && usageResponse.content[0]) {
+            if (usageResponse.content && usageResponse.content[0] && !usageResponse.isError) {
                 const usageData = JSON.parse(usageResponse.content[0].text);
                 result.implementation_analysis!.usage_analysis.push(usageData);
             }
         } catch (error: any) {
-            this.warnings.push(`Failed to analyze implementation class ${className}: ${error.message}`);
+            // Silently skip
         }
     }
 

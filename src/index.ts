@@ -8,6 +8,8 @@ import {
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
@@ -50,6 +52,9 @@ import { handleRapBoAnalysisResource, listRapBoAnalysisResources } from './handl
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
+
+// Import prompt handlers
+import { listWorkflowPrompts, getWorkflowPrompt } from './prompts/workflows';
 
 // Import shared utility functions and types
 import { getBaseUrl, getAuthHeaders, createAxiosInstance, makeAdtRequest, return_error, return_response } from './lib/utils';
@@ -110,6 +115,7 @@ export class mcp_abap_adt_server {
         capabilities: {
           tools: {}, // Tools are registered
           resources: {}, // Resources are registered
+          prompts: {}, // Prompts are registered
         },
       }
     );
@@ -122,6 +128,42 @@ export class mcp_abap_adt_server {
    * @private
    */
   private setupHandlers() {
+    // Setup prompt handlers
+    
+    // Handler for ListPromptsRequest
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+      return {
+        prompts: listWorkflowPrompts()
+      };
+    });
+
+    // Handler for GetPromptRequest
+    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      const promptName = request.params.name;
+      const args = request.params.arguments || {};
+      
+      try {
+        const content = getWorkflowPrompt(promptName, args);
+        
+        return {
+          messages: [
+            {
+              role: 'user',
+              content: {
+                type: 'text',
+                text: content
+              }
+            }
+          ]
+        };
+      } catch (error) {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Failed to get prompt: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    });
+
     // Setup resource handlers
     
     // Handler for ListResourceTemplatesRequest
@@ -882,6 +924,11 @@ export class mcp_abap_adt_server {
       
       // Handle all abap:// resources (server, package, packages)
       if (uri.startsWith('abap://')) {
+        return await readResource(uri);
+      }
+      
+      // Handle agent guide resources
+      if (uri.startsWith('agent-guide://')) {
         return await readResource(uri);
       }
       
