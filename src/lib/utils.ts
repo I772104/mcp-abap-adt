@@ -116,6 +116,11 @@ export async function getAuthHeaders() {
 async function fetchCsrfToken(url: string): Promise<string> {
     const baseUrl = await getBaseUrl();
     
+    // Get SAP client for URL parameter
+    if (!config) {
+        config = getConfig();
+    }
+    
     // Try multiple endpoints to fetch CSRF token
     const csrfEndpoints = [
         `${baseUrl}/sap/bc/adt/core/discovery`,  // ADT discovery endpoint (most reliable)
@@ -131,6 +136,9 @@ async function fetchCsrfToken(url: string): Promise<string> {
                 headers: {
                     ...(await getAuthHeaders()),
                     'x-csrf-token': 'fetch'
+                },
+                params: {
+                    'sap-client': config.client
                 }
             });
 
@@ -191,29 +199,36 @@ export async function makeAdtRequest(url: string, method: string, timeout: numbe
         requestHeaders['Cookie'] = cookies;
     }
 
-    const config: any = {
+    // Add SAP client as URL parameter (required for some SAP systems)
+    if (!config) {
+        config = getConfig();
+    }
+    const requestParams = params || {};
+    requestParams['sap-client'] = config.client;
+
+    const requestConfig: any = {
         method,
         url,
         headers: requestHeaders,
         timeout,
-        params: params
+        params: requestParams
     };
 
     // Include data in the request configuration if provided
     if (data) {
-        config.data = data;
+        requestConfig.data = data;
     }
 
     try {
-        const response = await createAxiosInstance()(config);
+        const response = await createAxiosInstance()(requestConfig);
         return response;
     } catch (error) {
         // If we get a 403 with "CSRF token validation failed", try to fetch a new token and retry
         if (error instanceof AxiosError && error.response?.status === 403 &&
             error.response.data?.includes('CSRF')) {
             csrfToken = await fetchCsrfToken(url);
-            config.headers['x-csrf-token'] = csrfToken;
-            return await createAxiosInstance()(config);
+            requestConfig.headers['x-csrf-token'] = csrfToken;
+            return await createAxiosInstance()(requestConfig);
         }
         throw error;
     }
