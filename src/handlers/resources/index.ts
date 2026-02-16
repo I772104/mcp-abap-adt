@@ -4,6 +4,7 @@ import { handleRapBoAnalysisResource } from '../handleRapBoAnalysisResource';
 import { handleGetCDSView } from '../handleGetCDSView';
 import { handleGetClass } from '../handleGetClass';
 import { handleGetTable } from '../handleGetTable';
+import { listAgentGuideResources, getAgentGuide, detectAgentType } from './agentGuides';
 
 /**
  * MCP Resource handler for ABAP objects
@@ -51,6 +52,12 @@ export async function listResourceTemplates() {
         name: 'Database Table',
         description: 'Retrieve database table structure including fields, data elements, domains, and technical settings. The table_name parameter is required in the URI path.',
         mimeType: 'application/json'
+      },
+      {
+        uriTemplate: 'agent-guide://{agent_type}',
+        name: 'Agent-Specific Guide',
+        description: 'Get optimized guide for specific AI agent (cline, claude, cursor, opencode, universal). Use agent-guide://auto for automatic detection.',
+        mimeType: 'text/markdown'
       }
     ]
   };
@@ -74,7 +81,8 @@ export async function listResources() {
         name: 'Top-Level Package Names (Lightweight)',
         description: 'Retrieve only the names of top-level packages as a simple array. Much lighter than the full list (~5K tokens vs 35K). Useful for quick discovery and autocomplete scenarios.',
         mimeType: 'application/json'
-      }
+      },
+      ...listAgentGuideResources()
     ]
   };
 }
@@ -138,6 +146,33 @@ export async function readResource(uri: string) {
   // Handle RAP BO Analysis
   if (uri.startsWith('rap-bo-analysis:///')) {
     return await handleRapBoAnalysisResource(uri);
+  }
+  
+  // Handle Agent Guides
+  if (uri.startsWith('agent-guide://')) {
+    const agentMatch = uri.match(/^agent-guide:\/\/(.+)$/);
+    if (agentMatch) {
+      let agentType = decodeURIComponent(agentMatch[1]);
+      
+      // Auto-detect agent type if requested
+      if (agentType === 'auto') {
+        // In a real implementation, you would detect from request headers
+        // For now, default to universal
+        agentType = 'universal';
+      }
+      
+      const guideContent = getAgentGuide(agentType);
+      
+      return {
+        contents: [
+          {
+            uri: uri,
+            mimeType: 'text/markdown',
+            text: guideContent
+          }
+        ]
+      };
+    }
   }
   
   // Parse the URI to extract the package name

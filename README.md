@@ -5,7 +5,14 @@
 > This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
 > The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
 >
-> Find an [Example AGENTS.md file](Example_AGENTS.md) for ABAP projects. Place it as AGENTS.md in the root folder of an ABAP project. See [agents.md](https://agents.md/) for reference. 
+> **For AI Agents**: See [AGENTS.md](AGENTS.md) for comprehensive guidance on using this MCP server with AI coding assistants. Agent-specific quick reference files in the `agents/` folder:
+> - **Cline**: [agents/.clinerules](agents/.clinerules)
+> - **Claude Desktop**: [agents/CLAUDE.md](agents/CLAUDE.md)
+> - **Cursor**: [agents/.cursorrules](agents/.cursorrules)
+> - **OpenCode**: [agents/.opencoderules](agents/.opencoderules)
+> - **All Others**: Use [AGENTS.md](AGENTS.md) directly
+> 
+> Find an [Example AGENTS.md file](Example_AGENTS.md) for ABAP projects. Place it as AGENTS.md in the root folder of an ABAP project. See [agents.md](https://agents.md/) for reference.
 >
 > [Enhancement proposals for the MCP server are collected here.](Enhancement%20Proposal.md)
 >
@@ -205,9 +212,44 @@ Cline is a VS Code extension that uses MCP servers to provide language support. 
     *   Check that the required ADT services are activated in transaction `SICF`.
     *   If you're using self-signed certificates or there is an issue with your SAP systems http config, make sure to set TLS_REJECT_UNAUTHORIZED as described above!
 
-## 6. Available Tools
+## 6. AI Agent Integration
 
-This server provides the following tools, which can be used through Cline (or any other MCP client):
+### Quick Start for AI Agents
+
+This server provides **universal support for AI coding assistants** through the Model Context Protocol (MCP).
+
+**📚 Read the [AGENTS.md](AGENTS.md) guide** for:
+- Complete resource and tool catalog
+- Token-efficient workflows
+- Agent-specific optimizations (Cline, Claude Desktop, Cursor, OpenCode)
+- Best practices and patterns
+
+### Agent-Specific Guides (MCP Resources)
+
+Access optimized guides directly through MCP resources:
+
+```
+# Auto-detect your agent type
+access_mcp_resource: uri=agent-guide://auto
+
+# Or get specific guide
+access_mcp_resource: uri=agent-guide://cline
+access_mcp_resource: uri=agent-guide://claude
+access_mcp_resource: uri=agent-guide://cursor
+access_mcp_resource: uri=agent-guide://opencode
+```
+
+### Key Features for AI Agents
+
+- **🌟 Resources First**: Cacheable, token-efficient access to ABAP objects
+- **📦 Package Discovery**: Lightweight package navigation (~5K tokens)
+- **🔍 RAP BO Analysis**: Complete business object structure in one call
+- **✅ Mandatory Workflows**: Structured class creation with testing
+- **☁️ Cloud Compliance**: ABAP Cloud (Tier 1) guidance built-in
+
+## 7. Available Tools
+
+This server provides the following tools, which can be used through any MCP-compatible client:
 
 ### Core ABAP Object Retrieval
 These tools allow you to retrieve source code and definitions from your ABAP system:
