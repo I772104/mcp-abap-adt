@@ -141,14 +141,30 @@ access_mcp_resource:
 | Resource URI | Description | Replaces Tool |
 |--------------|-------------|---------------|
 | `abap://cds/{view_name}` | CDS view source and metadata | GetCDSView |
+| `cds-view-data:///{view_name}?params` | CDS view data with filtering | GetCDSViewContents |
 | `abap://class/{class_name}` | ABAP class source code | GetClass |
 | `abap://table/{table_name}` | Database table structure | GetTable |
 
+**CDS View Data Query Parameters**:
+- `columns` - Comma-separated column names
+- `max_rows` - Maximum rows (default: 100, max: 500)
+- `where` - Filter conditions (FIELD1:VALUE1,FIELD2:VALUE2)
+- `order_by` - Sort columns (comma-separated)
+- `offset` - Pagination offset
+- `parameters` - CDS parameters (PARAM1:VALUE1,PARAM2:VALUE2)
+- `include_metadata` - Include column metadata (true/false)
+
 **Example**:
 ```
+# Get CDS view source
 access_mcp_resource:
   server_name: mcp-abap-adt-1
-  uri: abap://class/CL_ABAP_TYPEDESCR
+  uri: abap://cds/I_Currency
+
+# Query CDS view data
+access_mcp_resource:
+  server_name: mcp-abap-adt-1
+  uri: cds-view-data:///I_Currency?columns=CURRENCY,DECIMALS&max_rows=10&where=DECIMALS:2
 ```
 
 ---
@@ -172,6 +188,7 @@ access_mcp_resource:
 |-----------|-------------|----------------|
 | `GetTable` | Retrieve table structure | `table_name` |
 | `GetTableContents` | Query table data | `table_name`, `max_rows`, `where_conditions` |
+| `GetCDSViewContents` | Query CDS view data | `view_name`, `columns`, `where_conditions`, `parameters` |
 | `GetStructure` | Retrieve DDIC structure | `structure_name` |
 | `GetTypeInfo` | Retrieve type information | `type_name` |
 
@@ -346,6 +363,53 @@ access_mcp_resource:
 ```
 
 **Note**: ADT Data Preview API only supports equality (=) operator in WHERE conditions.
+
+---
+
+### Pattern 6: Query CDS View Data
+
+**Goal**: Retrieve and analyze data from CDS views with parameters and filtering.
+
+**Steps**:
+```
+1. Understand CDS view structure
+   → access_mcp_resource: uri=abap://cds/I_SalesOrder
+   → Returns: Source code, annotations, associations
+
+2. Query data with filtering (prefer resource template)
+   → access_mcp_resource: uri=cds-view-data:///I_SalesOrder?columns=SalesOrder,SalesOrderType&max_rows=10&where=SalesOrderType:OR
+   → Returns: Filtered data, cacheable
+
+3. Query with CDS parameters (use tool for complex queries)
+   → use_mcp_tool: GetCDSViewContents
+     - view_name: "I_SalesOrderWithParameters"
+     - parameters: {"p_date": "2024-01-01"}
+     - columns: ["SalesOrder", "CreationDate"]
+     - where_conditions: {"SalesOrderType": "OR"}
+     - max_rows: 50
+     - include_column_metadata: true
+
+4. Batch queries (multiple CDS views)
+   → use_mcp_tool: GetCDSViewContents
+     - queries: [
+         {view_name: "I_SalesOrder", max_rows: 20},
+         {view_name: "I_Customer", max_rows: 20}
+       ]
+```
+
+**Key Features**:
+- ✅ Automatic column validation (fetches metadata first)
+- ✅ CDS parameter support
+- ✅ WHERE conditions (equality only)
+- ✅ ORDER BY support
+- ✅ Pagination with offset (includes performance warning)
+- ✅ Batch queries (up to 5 CDS views)
+- ✅ Resource template for cacheable queries
+
+**Performance Notes**:
+- CDS views recalculate on each query
+- Use WHERE conditions instead of offset when possible
+- Resource template queries are cacheable by MCP clients
 
 ---
 
