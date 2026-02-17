@@ -35,6 +35,7 @@ import { handleRunPackageTests } from './handlers/handleRunPackageTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
+import { handleGetObjectUsages } from './handlers/handleGetObjectUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
@@ -548,8 +549,73 @@ export class mcp_abap_adt_server {
             }
           },
           {
+            name: 'GetObjectUsages',
+            description: 'Retrieve comprehensive where-used list for ABAP objects (classes, interfaces, programs, function groups, type groups). Supports filtering by object types and usage grades.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object'
+                },
+                object_type: {
+                  type: 'string',
+                  description: 'Type of object: class, interface, program, function_group, type_group, cds, behavior, table, structure (default: class)',
+                  default: 'class'
+                },
+                include_object_types: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Specific object types to search in (e.g., ["class", "interface", "program"]). If not specified, searches in default types (class, interface, program, function_group, type_group)'
+                },
+                include_definitions: {
+                  type: 'boolean',
+                  description: 'Include definition usages (default: true)',
+                  default: true
+                },
+                include_elements: {
+                  type: 'boolean',
+                  description: 'Include element usages like methods and attributes (default: true)',
+                  default: true
+                },
+                include_indirect: {
+                  type: 'boolean',
+                  description: 'Include indirect references (default: true)',
+                  default: true
+                },
+                local_usage_only: {
+                  type: 'boolean',
+                  description: 'Limit search to local package only (default: false)',
+                  default: false
+                },
+                max_results: {
+                  type: 'number',
+                  description: 'Optional: Maximum number of results to return (default: 500, min: 1, max: 500)',
+                  default: 500
+                },
+                summary_only: {
+                  type: 'boolean',
+                  description: 'Optional: Return summary with aggregated counts instead of full usage list (default: false)',
+                  default: false
+                },
+                include_metadata: {
+                  type: 'boolean',
+                  description: 'Optional: Include full metadata (URIs, responsible, package) in results (default: true)',
+                  default: true
+                },
+                group_by: {
+                  type: 'string',
+                  description: 'Optional: Group results by package or type (values: none, package, type; default: none)',
+                  enum: ['none', 'package', 'type'],
+                  default: 'none'
+                }
+              },
+              required: ['object_name']
+            }
+          },
+          {
             name: 'GetClassUsages',
-            description: 'Retrieve usages for an ABAP class',
+            description: '[DEPRECATED - Use GetObjectUsages instead] Retrieve usages for an ABAP class. This tool is deprecated and will be removed in a future version.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -948,6 +1014,8 @@ export class mcp_abap_adt_server {
           return await handleRunPackageTests(request.params.arguments);
         case 'GetClassCoverage':
           return await handleGetClassCoverage(request.params.arguments);
+        case 'GetObjectUsages':
+          return await handleGetObjectUsages(request.params.arguments);
         case 'GetClassUsages':
           return await handleGetClassUsages(request.params.arguments);
         case 'CheckSyntax':
