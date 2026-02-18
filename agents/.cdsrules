@@ -1,0 +1,369 @@
+# CDS Creator Agent Rules
+
+> **📚 COMPLETE GUIDES**: 
+> - **CDS Performance**: See [docs/CDS_View_Performance.md](../docs/CDS_View_Performance.md)
+> - **ABAP Standards**: See [docs/ABAP_Standards.md](../docs/ABAP_Standards.md)
+> - **Universal Guide**: See [AGENTS.md](../AGENTS.md)
+>
+> This file contains **CDS-specific quick references** for CDS view creation agents.
+
+---
+
+## Quick Access
+
+### Get CDS Performance Guide
+```
+access_mcp_resource:
+  server_name: mcp-abap-adt-1
+  uri: docs/CDS_View_Performance.md
+```
+
+### Get Complete Documentation
+- **CDS Performance**: [docs/CDS_View_Performance.md](../docs/CDS_View_Performance.md)
+- **ABAP Standards**: [docs/ABAP_Standards.md](../docs/ABAP_Standards.md)
+- **VDM CDS Naming**: Section 3 in ABAP_Standards.md
+
+---
+
+## Critical Rules for CDS Creation
+
+### 1. Performance Annotations (MANDATORY)
+
+✅ **ALWAYS add these annotations**:
+```cds
+@ObjectModel.usageType: {
+  serviceQuality: #A,        // A, B, C, D, X, P
+  sizeCategory: #L,          // S, M, L, XL, XXL
+  dataClass: #TRANSACTIONAL  // MASTER, TRANSACTIONAL, ORGANIZATIONAL, CUSTOMIZING
+}
+```
+
+### 2. Complexity Limits (NEVER EXCEED)
+
+❌ **NEVER create CDS views with > 100 underlying tables**
+
+✅ **Follow service quality limits**:
+- Service Quality A: ~10 tables (high-volume transactions)
+- Service Quality B: ~20 tables (transactional Fiori apps)
+- Service Quality C: ~50 tables (analytical queries)
+
+### 3. Golden Rules (ALWAYS FOLLOW)
+
+✅ **PERF-13**: Response time must be independent of data volume
+
+✅ **Start Small, Keep Simple**:
+- Prefer "tailor-made" views for specific purposes
+- Avoid "all in one" views
+- Expose only required fields
+
+✅ **Test with Realistic Data**:
+- Create production-like test data
+- Test from takt 1 (early development)
+- Measure response times (ST05, SUPA)
+
+---
+
+## CDS View Naming (Quick Reference)
+
+📚 **Full Guidelines**: See [docs/ABAP_Standards.md](../docs/ABAP_Standards.md) Section 3
+
+### View Prefixes
+```
+I_<name>     Interface view (reusable, stable)
+C_<name>     Consumption view (UI-specific)
+A_<name>     External API view (published)
+R_<name>     Restricted reuse view (with auth)
+E_<name>     Extension include view
+X_<name>     View extension
+D_<name>     Abstract entity
+```
+
+### View Suffixes
+```
+Cube, C       Analytical cube
+Query, Q      Analytical query
+VH            Value help
+Text, T       Text view
+TP            Transactional processing
+Draft, D      Draft view
+HierNode, HN  Hierarchy node
+```
+
+### Naming Rules
+- ✅ Use CamelCase (e.g., I_SalesOrder)
+- ✅ Use singular form (not plural)
+- ✅ No underscores between words
+- ✅ Business semantic names
+- ✅ Approved abbreviations only
+
+---
+
+## Anti-Patterns to AVOID
+
+### ❌ 1. NOT NULL Preserving Left Outer Join (NNPLOJ)
+```cds
+// ❌ BAD: ELSE clause prevents null preservation
+case
+  when col3 = 'x' then 'y'
+  else 'z'  // ❌ Forces join execution
+end
+
+// ✅ GOOD: No ELSE - allows null preservation
+case
+  when col3 = 'x' then 'y'
+  // ✅ No ELSE
+end
+```
+
+### ❌ 2. Union ALL in Left Outer Join (UALOJ)
+```cds
+// ❌ BAD: UNION in view used in LEFT OUTER JOIN
+define view A as select from tbl1 { ... }
+union all select from tbl2 { ... }  // ❌
+
+// ✅ GOOD: Avoid UNION in joined views
+```
+
+### ❌ 3. Cyclic Joins
+```cds
+// ❌ BAD: Creates cycle
+left outer join tbl2 on ...
+inner join tbl3 on tbl3.col = tbl1.col
+               and tbl3.col = tbl2.col  // ❌ Cycle
+
+// ✅ GOOD: Use hint or restructure
+@Consumption.dbHints: ['NO_CYCLIC_JOIN']
+```
+
+### ❌ 4. Calculated Fields in Wrong Places
+```cds
+// ❌ BAD: Calculated field in WHERE
+where case when field2 = 'X' then 'Active' end = 'Active'
+
+// ✅ GOOD: Filter on base field
+where field2 = 'X'
+```
+
+### ❌ 5. Wrong Association Cardinality
+```cds
+// ❌ BAD: Wrong cardinality
+association [0..*] to I_Customer  // Forces execution
+
+// ✅ GOOD: Correct cardinality
+association [0..1] to I_Customer  // Allows optimization
+```
+
+---
+
+## Best Practices
+
+### 1. View Structure
+
+✅ **Build result set first, then join auxiliary data**:
+```cds
+// Step 1: Core data with filters
+define view I_SalesOrderCore as select from vbak
+{
+  key vbeln as SalesOrder,
+  erdat as CreationDate
+}
+where auart = 'OR';  // ✅ Filter early
+
+// Step 2: Add auxiliary data via associations
+define view I_SalesOrder as select from I_SalesOrderCore
+  association [0..1] to I_Customer as _Customer
+    on $projection.SoldToParty = _Customer.Customer
+{
+  key SalesOrder,
+  CreationDate,
+  _Customer.CustomerName  // ✅ Join auxiliary data last
+}
+```
+
+### 2. Field Exposure
+
+✅ **Expose only required fields**:
+```cds
+// ❌ BAD
+{ * }  // Exposes all fields
+
+// ✅ GOOD
+{
+  key matnr as Material,
+  mtart as MaterialType,
+  matkl as MaterialGroup
+  // Only fields actually needed
+}
+```
+
+### 3. Associations
+
+✅ **Use associations for optional fields**:
+```cds
+association [0..1] to I_Customer as _Customer
+  on $projection.Customer = _Customer.Customer
+  and $projection.SalesOrg = _Customer.SalesOrg  // ✅ All shared fields
+```
+
+✅ **Always specify cardinality**:
+- Prefer `[0..1]` over `[0..*]`
+- Use `[1..1]` for mandatory relationships
+- Use `[0..*]` only when truly many
+
+### 4. Calculated Fields
+
+✅ **Use calculated fields only as projected fields**:
+```cds
+{
+  key field1,
+  field2,
+  // ✅ Calculated field as projection
+  case
+    when field2 = 'X' then 'Active'
+    else 'Inactive'
+  end as Status
+}
+where field2 = 'X';  // ✅ Filter on base field, not calculated
+```
+
+---
+
+## Performance Checklist
+
+### Before Creating CDS View
+- [ ] Performance annotations defined (@ObjectModel.usageType)
+- [ ] Complexity < 100 tables (< 10 for Quality A)
+- [ ] Only required fields exposed
+- [ ] Associations used for optional fields
+- [ ] No calculated fields in keys/filters/joins
+- [ ] Naming follows VDM CDS guidelines
+
+### During Development
+- [ ] Test with realistic data volumes
+- [ ] Measure response times (< 100ms for Quality A)
+- [ ] Check for anti-patterns
+- [ ] Validate with ATC checks (BC_CDS_PF1, PFCDS_QLTY)
+- [ ] Analyze with PlanViz if needed
+
+### Before Production
+- [ ] All tests passing
+- [ ] Performance thresholds met
+- [ ] No anti-patterns detected
+- [ ] Documentation complete
+- [ ] ATC checks clean
+
+---
+
+## Service Quality Guidelines
+
+### Quality A (Excellent)
+**Use For**: High-volume transactions, frequent access
+- Max ~10 underlying tables
+- Response time: < 100ms
+- Memory: < 1 GB
+- Test with production volumes
+
+### Quality B (Good)
+**Use For**: Transactional Fiori apps, moderate volume
+- Max ~20 underlying tables
+- Response time: < 500ms
+- Memory: < 2 GB
+- Test with realistic data
+
+### Quality C (Acceptable)
+**Use For**: Analytical queries, lower volume
+- Max ~50 underlying tables
+- Response time: < 2s
+- Memory: < 5 GB
+- Test with representative data
+
+---
+
+## CDS View Template
+
+```cds
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'Sales Order'
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+  serviceQuality: #A,        // ✅ Choose based on use case
+  sizeCategory: #L,          // ✅ Based on data volume
+  dataClass: #TRANSACTIONAL  // ✅ Based on data type
+}
+define view entity I_SalesOrder
+  as select from vbak
+  association [0..1] to I_Customer as _Customer
+    on $projection.SoldToParty = _Customer.Customer
+{
+  key vbeln as SalesOrder,
+  erdat as CreationDate,
+  kunnr as SoldToParty,
+  netwr as NetAmount,
+  
+  // Associations
+  _Customer
+}
+where auart = 'OR'  // ✅ Filter early
+```
+
+---
+
+## Analysis Tools
+
+### ST05 - SQL Trace
+- Trace SQL statements
+- Analyze execution times
+- Export to PlanViz
+
+### SUPA - SQL Performance Analysis
+- Automated analysis
+- Identifies expensive statements
+- Optimization recommendations
+
+### PlanViz - Plan Visualizer
+- Visualize execution plans
+- Analyze filter push-down
+- Identify materialization
+
+### CDS Model Analyzer
+- Detect anti-patterns
+- Analyze complexity
+- Check annotations
+
+### ADT Dependency Analyzer
+- Track complexity
+- Count underlying tables
+- Analyze stack depth
+
+---
+
+## Key Metrics
+
+**Complexity**:
+- Quality A: ~10 tables
+- Quality B: ~20 tables
+- Quality C: ~50 tables
+- Maximum: 100 tables
+
+**Response Times**:
+- Quality A: < 100ms
+- Quality B: < 500ms
+- Quality C: < 2s
+
+**Memory**:
+- Target: < 5 GB
+- Maximum: < 40 GB
+
+---
+
+## Documentation Links
+
+- **CDS Performance**: [docs/CDS_View_Performance.md](../docs/CDS_View_Performance.md)
+- **ABAP Standards**: [docs/ABAP_Standards.md](../docs/ABAP_Standards.md)
+- **Universal Guide**: [AGENTS.md](../AGENTS.md)
+- **RAP Tools**: [docs/RAP_Tools.md](../docs/RAP_Tools.md)
+
+---
+
+*For complete CDS performance guidelines, anti-patterns, and testing strategies, always refer to [docs/CDS_View_Performance.md](../docs/CDS_View_Performance.md)*

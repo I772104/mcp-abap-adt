@@ -35,6 +35,7 @@ import { handleRunPackageTests } from './handlers/handleRunPackageTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
+import { handleGetObjectUsages } from './handlers/handleGetObjectUsages';
 import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
@@ -278,13 +279,13 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'GetTableContents',
-            description: 'Retrieve contents of an ABAP table with advanced filtering, pagination, and batch query support',
+            description: 'Retrieve contents of an ABAP table with advanced filtering, pagination, and batch query support. Either provide table_name for a single query, or provide queries array for batch mode.',
             inputSchema: {
               type: 'object',
               properties: {
                 table_name: {
                   type: 'string',
-                  description: 'Name of the ABAP table (required for single query mode)'
+                  description: 'Name of the ABAP table (required for single query mode, omit when using queries array)'
                 },
                 columns: {
                   type: 'array',
@@ -318,7 +319,7 @@ export class mcp_abap_adt_server {
                 },
                 queries: {
                   type: 'array',
-                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 10). Each query supports all single-query parameters.',
+                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 10, omit when using table_name). Each query supports all single-query parameters.',
                   items: {
                     type: 'object',
                     properties: {
@@ -351,11 +352,7 @@ export class mcp_abap_adt_server {
                     required: ['table_name']
                   }
                 }
-              },
-              anyOf: [
-                { required: ['table_name'] },
-                { required: ['queries'] }
-              ]
+              }
             }
           },
           {
@@ -548,8 +545,73 @@ export class mcp_abap_adt_server {
             }
           },
           {
+            name: 'GetObjectUsages',
+            description: 'Retrieve comprehensive where-used list for ABAP objects (classes, interfaces, programs, function groups, type groups). Supports filtering by object types and usage grades.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object'
+                },
+                object_type: {
+                  type: 'string',
+                  description: 'Type of object: class, interface, program, function_group, type_group, cds, behavior, table, structure (default: class)',
+                  default: 'class'
+                },
+                include_object_types: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Optional: Specific object types to search in (e.g., ["class", "interface", "program"]). If not specified, searches in default types (class, interface, program, function_group, type_group)'
+                },
+                include_definitions: {
+                  type: 'boolean',
+                  description: 'Include definition usages (default: true)',
+                  default: true
+                },
+                include_elements: {
+                  type: 'boolean',
+                  description: 'Include element usages like methods and attributes (default: true)',
+                  default: true
+                },
+                include_indirect: {
+                  type: 'boolean',
+                  description: 'Include indirect references (default: true)',
+                  default: true
+                },
+                local_usage_only: {
+                  type: 'boolean',
+                  description: 'Limit search to local package only (default: false)',
+                  default: false
+                },
+                max_results: {
+                  type: 'number',
+                  description: 'Optional: Maximum number of results to return (default: 500, min: 1, max: 500)',
+                  default: 500
+                },
+                summary_only: {
+                  type: 'boolean',
+                  description: 'Optional: Return summary with aggregated counts instead of full usage list (default: false)',
+                  default: false
+                },
+                include_metadata: {
+                  type: 'boolean',
+                  description: 'Optional: Include full metadata (URIs, responsible, package) in results (default: true)',
+                  default: true
+                },
+                group_by: {
+                  type: 'string',
+                  description: 'Optional: Group results by package or type (values: none, package, type; default: none)',
+                  enum: ['none', 'package', 'type'],
+                  default: 'none'
+                }
+              },
+              required: ['object_name']
+            }
+          },
+          {
             name: 'GetClassUsages',
-            description: 'Retrieve usages for an ABAP class',
+            description: '[DEPRECATED - Use GetObjectUsages instead] Retrieve usages for an ABAP class. This tool is deprecated and will be removed in a future version.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -563,28 +625,23 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'CheckSyntax',
-            description: 'Check ABAP source code syntax and return detailed error information',
+            description: 'Check ABAP source code syntax and return detailed error information. Either provide source_code directly, or provide object_name to check an existing object.',
             inputSchema: {
               type: 'object',
               properties: {
                 source_code: {
                   type: 'string',
-                  description: 'ABAP source code to check for syntax errors (optional if object_name is provided - will fetch from existing class)'
+                  description: 'ABAP source code to check for syntax errors (provide this OR object_name)'
                 },
                 object_name: {
                   type: 'string',
-                  description: 'Name of the ABAP object. If source_code is not provided, will attempt to fetch source from this existing class'
+                  description: 'Name of the ABAP object. If source_code is not provided, will attempt to fetch source from this existing class (provide this OR source_code)'
                 },
                 object_type: {
                   type: 'string',
                   description: 'Optional ABAP object type (CLAS, PROG, FUGR, etc. - auto-detected if not provided)'
                 }
-              },
-              required: [],
-              anyOf: [
-                { required: ['source_code'] },
-                { required: ['object_name'] }
-              ]
+              }
             }
           },
           {
@@ -672,29 +729,25 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'ActivateClasses',
-            description: 'Activate ABAP classes after creation or modification',
+            description: 'Activate ABAP classes after creation or modification. Provide either class_name for a single class or class_names array for multiple classes.',
             inputSchema: {
               type: 'object',
               properties: {
                 class_names: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: 'Array of ABAP class names to activate'
+                  description: 'Array of ABAP class names to activate (provide this OR class_name)'
                 },
                 class_name: {
                   type: 'string',
-                  description: 'Single ABAP class name to activate'
+                  description: 'Single ABAP class name to activate (provide this OR class_names)'
                 },
                 preaudit_requested: {
                   type: 'boolean',
                   description: 'Whether to request pre-audit (default: true)',
                   default: true
                 }
-              },
-              anyOf: [
-                { required: ['class_names'] },
-                { required: ['class_name'] }
-              ]
+              }
             }
           },
           {
@@ -718,13 +771,13 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'GetCDSViewContents',
-            description: 'Query CDS view data with filtering, pagination, parameter support, and batch queries',
+            description: 'Query CDS view data with filtering, pagination, parameter support, and batch queries. Either provide view_name for a single query, or provide queries array for batch mode.',
             inputSchema: {
               type: 'object',
               properties: {
                 view_name: {
                   type: 'string',
-                  description: 'Name of the CDS view (required for single query mode)'
+                  description: 'Name of the CDS view (required for single query mode, omit when using queries array)'
                 },
                 parameters: {
                   type: 'object',
@@ -763,7 +816,7 @@ export class mcp_abap_adt_server {
                 },
                 queries: {
                   type: 'array',
-                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 5 for CDS views). Each query supports all single-query parameters.',
+                  description: 'Optional: Batch mode - execute multiple queries in one call (max: 5 for CDS views, omit when using view_name). Each query supports all single-query parameters.',
                   items: {
                     type: 'object',
                     properties: {
@@ -800,11 +853,7 @@ export class mcp_abap_adt_server {
                     required: ['view_name']
                   }
                 }
-              },
-              anyOf: [
-                { required: ['view_name'] },
-                { required: ['queries'] }
-              ]
+              }
             }
           },
           {
@@ -948,6 +997,8 @@ export class mcp_abap_adt_server {
           return await handleRunPackageTests(request.params.arguments);
         case 'GetClassCoverage':
           return await handleGetClassCoverage(request.params.arguments);
+        case 'GetObjectUsages':
+          return await handleGetObjectUsages(request.params.arguments);
         case 'GetClassUsages':
           return await handleGetClassUsages(request.params.arguments);
         case 'CheckSyntax':

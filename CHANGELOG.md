@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Improved `create-class-workflow` to use object_name validation after class creation
+  - Step 3 now validates the created class using `CheckSyntax` with `object_name` parameter
+  - More efficient than re-providing source code
+  - Ensures class was created successfully before adding tests
+  - Updated workflow from 5 steps to 7 steps for better clarity
+  - Updated comparison table: Standard workflow now 7 steps vs Quick workflow 4 steps (43% savings)
+
 ### Added
 - New RAP (RESTful ABAP Programming) tools support:
   - `GetCDSView` tool to retrieve CDS view source code and metadata
