@@ -1046,12 +1046,113 @@ All workflows follow the same optimization principles:
 
 ---
 
+## ABAP Development Standards
+
+### Complete Standards Documentation
+
+📚 **ALWAYS access standards via MCP resources for cacheable, token-efficient access:**
+
+```
+# Complete ABAP standards (all sections)
+access_mcp_resource: uri=abap://standards/complete
+
+# Naming conventions only
+access_mcp_resource: uri=abap://standards/naming
+
+# Code formatting rules
+access_mcp_resource: uri=abap://standards/formatting
+
+# VDM CDS naming guidelines
+access_mcp_resource: uri=abap://standards/vdm-cds
+
+# CDS view performance best practices
+access_mcp_resource: uri=abap://standards/cds-performance
+```
+
+📚 **See [docs/ABAP_Standards.md](docs/ABAP_Standards.md)** for comprehensive standards including:
+
+📊 **See [docs/CDS_View_Performance.md](docs/CDS_View_Performance.md)** for CDS-specific performance guidelines including:
+- Performance annotations (serviceQuality, sizeCategory, dataClass)
+- Anti-patterns and solutions (NNPLOJ, UALOJ, Cyclic Joins, etc.)
+- Testing strategies and analysis tools
+- Complexity limits and response time targets
+- Join optimization and best practices
+
+### Standards Overview
+
+**ABAP Standards** (`docs/ABAP_Standards.md`):
+
+1. **Naming Conventions**
+   - Classes, interfaces, methods
+   - Variables, parameters, constants
+   - CDS views and global field names
+   - VDM CDS naming guidelines
+
+2. **Code Formatting**
+   - Indentation rules
+   - Method call formatting
+   - VALUE statement alignment
+   - Case conversion (keywords vs identifiers)
+
+3. **VDM CDS Guidelines**
+   - Business semantic names
+   - View prefixes and suffixes
+   - Global field name patterns
+   - Abbreviations and versioning
+
+4. **ABAP Cloud Compliance**
+   - Released APIs only
+   - RAP development patterns
+   - Forbidden constructs
+
+5. **Best Practices & Validation**
+   - Common mistakes to avoid
+   - Validation checklists
+   - Quick reference guides
+
+### Quick Reference
+
+**Classes**:
+```
+CL_<module>_<name>          Standard class
+CL_<module>_<name>_DB       Database access
+CL_<module>_<name>_BL       Business logic
+IF_<module>_<name>          Interface
+```
+
+**CDS Views**:
+```
+I_<name>     Interface view
+C_<name>     Consumption view
+A_<name>     External API view
+R_<name>     Restricted view
+```
+
+**Methods**:
+```
+SET_<attr>   Setter
+GET_<attr>   Getter
+IS_<adj>     Boolean
+CHECK_<obj>  Validation
+```
+
+**Parameters**:
+```
+IV_<name>    Import
+EV_<name>    Export
+CV_<name>    Changing
+RV_<name>    Returning
+```
+
+---
+
 ## Critical Best Practices
 
 ### 1. Syntax Validation First
 - **ALWAYS** use CheckSyntax before CreateClass or CreateClassTests
 - Catches errors early and prevents broken objects
 - Validates both class code and test code separately
+- **Validates naming conventions** against ABAP standards
 
 ### 2. Test Before Activation
 - **NEVER** activate without running tests first

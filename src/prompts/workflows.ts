@@ -140,9 +140,28 @@ function getCreateClassWorkflow(args: Record<string, string>): string {
 
 💡 **Tip**: For experienced users, consider using \`quick-class-workflow\` (40% faster)
 
+## Prerequisites: Review ABAP Standards
+
+**⭐ ALWAYS Access Standards Before Coding:**
+\`\`\`
+# Complete ABAP standards (recommended for first-time users)
+Resource: abap://standards/complete
+
+# Or specific sections for quick reference
+Resource: abap://standards/naming      # Class, method, parameter naming
+Resource: abap://standards/formatting  # Code formatting rules
+\`\`\`
+
+**Key Standards to Check:**
+- ✅ Class naming: CL_<module>_<name> (e.g., CL_FIN_CALCULATOR)
+- ✅ Method naming: SET_*, GET_*, IS_*, CHECK_*
+- ✅ Parameter prefixes: IV_*, EV_*, CV_*, RV_*
+- ✅ Code formatting: UPPERCASE keywords, proper indentation
+- ✅ ABAP Cloud compliance: Use released APIs only
+
 ## Mandatory Steps (ALWAYS follow this exact sequence)
 
-### Step 1/6: Validate Class Source Code ⏱️ ~15 seconds
+### Step 1/7: Validate Class Source Code ⏱️ ~15 seconds
 \`\`\`
 Tool: CheckSyntax
 Purpose: Validate class source code BEFORE creation
@@ -164,22 +183,35 @@ Parameters:
 
 **Important**: Use auto_activate: false during development.
 
-### Step 3: Validate Test Source Code
+### Step 3: Validate Existing Class
 \`\`\`
 Tool: CheckSyntax
-Purpose: Validate test class source code
-Action: Check the test class implementation for syntax errors
+Parameters:
+  - object_name: "${className}"
+  - object_type: "CLAS"
+Purpose: Validate the created class exists and is syntactically correct
 \`\`\`
 
-**Critical**: Do NOT proceed to Step 4 if syntax errors are found. Fix them first.
+**Optimization**: Uses object_name instead of re-providing source code
+**Critical**: Ensures class was created successfully before adding tests
 
-### Step 4: Create Unit Tests
+### Step 4: Validate Test Source Code
+\`\`\`
+Tool: CheckSyntax
+Parameters:
+  - source_code: <test class implementation>
+Purpose: Validate test code syntax before creation
+\`\`\`
+
+**Critical**: Do NOT proceed to Step 5 if syntax errors are found. Fix them first.
+
+### Step 5: Create Unit Tests
 \`\`\`
 Tool: CreateClassTests
 Parameters:
   - parent_class_name: "${className}"
-  - test_source_code: <validated test code from Step 3>
-  - auto_activate: false
+  - test_source_code: <validated test code from Step 4>
+  - auto_activate: true
 \`\`\`
 
 **Test Requirements**:
@@ -188,17 +220,16 @@ Parameters:
 - Test negative scenarios (error cases)
 - Test edge cases
 
-### Step 5: Run Unit Tests
+### Step 6: Run Unit Tests
 \`\`\`
 Tool: RunClassTests
 Parameters:
   - class_name: "${className}"
 \`\`\`
 
-**Critical**: ALL tests must pass before proceeding to Step 6.
-If tests fail, fix the issues and re-run from Step 1.
+**Critical**: ALL tests must pass before proceeding to Step 7.
 
-### Step 6: Activate the Class
+### Step 7: Activate the Class
 \`\`\`
 Tool: ActivateClasses
 Parameters:
@@ -241,6 +272,23 @@ function getQuickClassWorkflow(args: Record<string, string>): string {
 **Workflow Type**: Optimized (for experienced users)
 
 ⚡ **Optimization**: Batch validation upfront, then auto-activate during creation
+
+## Prerequisites: Review ABAP Standards
+
+**⭐ Quick Standards Check (for experienced users):**
+\`\`\`
+# Naming conventions (quick reference)
+Resource: abap://standards/naming
+
+# Or complete standards if needed
+Resource: abap://standards/complete
+\`\`\`
+
+**Quick Checklist:**
+- ✅ Class naming: CL_<module>_<name>
+- ✅ Method naming: SET_*, GET_*, IS_*, CHECK_*
+- ✅ Parameter prefixes: IV_*, EV_*, CV_*, RV_*
+- ✅ ABAP Cloud compliance
 
 ## Streamlined Steps
 
@@ -300,9 +348,9 @@ Parameters:
 
 | Workflow | Steps | Time | API Calls |
 |----------|-------|------|-----------|
-| Standard | 6 steps | 3-5 min | 6 calls |
+| Standard | 7 steps | 3-5 min | 7 calls |
 | Quick | 4 steps | 2-3 min | 4 calls |
-| **Savings** | **-33%** | **-40%** | **-33%** |
+| **Savings** | **-43%** | **-40%** | **-43%** |
 
 ## When to Use Quick Workflow
 
@@ -583,6 +631,26 @@ function getRefactorClassWorkflow(args: Record<string, string>): string {
   return `# Safe Class Refactoring Workflow
 
 ## Target: ${className}
+
+## Prerequisites: Review ABAP Standards
+
+**⭐ Check Standards for Refactoring:**
+\`\`\`
+# Naming conventions (if renaming methods/parameters)
+Resource: abap://standards/naming
+
+# Code formatting (ensure consistency)
+Resource: abap://standards/formatting
+
+# ABAP Cloud compliance (if modernizing)
+Resource: abap://standards/complete
+\`\`\`
+
+**Refactoring Checklist:**
+- ✅ Maintain naming conventions
+- ✅ Preserve ABAP Cloud compliance
+- ✅ Follow formatting standards
+- ✅ Update documentation
 
 ## Mandatory Steps (ALWAYS follow this sequence)
 

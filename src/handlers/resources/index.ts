@@ -7,11 +7,26 @@ import { handleGetClass } from '../handleGetClass';
 import { handleGetTable } from '../handleGetTable';
 import { handleGetObjectUsages } from '../handleGetObjectUsages';
 import { listAgentGuideResources, getAgentGuide, detectAgentType } from './agentGuides';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * MCP Resource handler for ABAP objects
  * Provides cacheable access to ABAP packages, RAP BOs, CDS views, classes, and tables via URI scheme
+ * Also provides static resources for ABAP development standards and guidelines
  */
+
+/**
+ * Load static documentation files
+ */
+function loadStaticResource(filename: string): string {
+  try {
+    const filePath = join(__dirname, '..', '..', 'docs', filename);
+    return readFileSync(filePath, 'utf-8');
+  } catch (error) {
+    throw new Error(`Failed to load static resource ${filename}: ${error}`);
+  }
+}
 
 /**
  * List all available resource templates
@@ -101,6 +116,36 @@ export async function listResources() {
         name: 'Top-Level Package Names (Lightweight)',
         description: 'Retrieve only the names of top-level packages as a simple array. Much lighter than the full list (~5K tokens vs 35K). Useful for quick discovery and autocomplete scenarios.',
         mimeType: 'application/json'
+      },
+      {
+        uri: 'abap://standards/naming',
+        name: 'ABAP Naming Conventions',
+        description: 'Complete ABAP naming conventions including classes, methods, parameters, variables, and VDM CDS naming guidelines. Essential reference for all ABAP development.',
+        mimeType: 'text/markdown'
+      },
+      {
+        uri: 'abap://standards/formatting',
+        name: 'ABAP Code Formatting Standards',
+        description: 'ABAP code formatting rules including indentation, case conversion, method call formatting, and VALUE statement alignment.',
+        mimeType: 'text/markdown'
+      },
+      {
+        uri: 'abap://standards/vdm-cds',
+        name: 'VDM CDS Naming Guidelines',
+        description: 'SAP Virtual Data Model (VDM) CDS naming guidelines including view prefixes, global field names, representation terms, and abbreviations.',
+        mimeType: 'text/markdown'
+      },
+      {
+        uri: 'abap://standards/cds-performance',
+        name: 'CDS View Performance Best Practices',
+        description: 'Performance guidelines for CDS view development including anti-patterns, join optimization, performance annotations, and testing strategies.',
+        mimeType: 'text/markdown'
+      },
+      {
+        uri: 'abap://standards/complete',
+        name: 'Complete ABAP Development Standards',
+        description: 'Complete ABAP development standards document including all naming conventions, formatting rules, VDM CDS guidelines, and ABAP Cloud compliance.',
+        mimeType: 'text/markdown'
       },
       ...listAgentGuideResources()
     ]
@@ -309,6 +354,52 @@ export async function readResource(uri: string) {
             uri: uri,
             mimeType: 'text/markdown',
             text: guideContent
+          }
+        ]
+      };
+    }
+  }
+  
+  // Handle ABAP Standards Resources
+  if (uri.startsWith('abap://standards/')) {
+    const standardsMatch = uri.match(/^abap:\/\/standards\/(.+)$/);
+    if (standardsMatch) {
+      const standardType = decodeURIComponent(standardsMatch[1]);
+      
+      let content: string;
+      
+      switch (standardType) {
+        case 'complete':
+          content = loadStaticResource('ABAP_Standards.md');
+          break;
+        case 'naming':
+          // Extract naming conventions section from complete standards
+          content = loadStaticResource('ABAP_Standards.md');
+          // Return sections 1, 3, and 8 (Naming, VDM CDS, Quick Reference)
+          break;
+        case 'formatting':
+          // Extract formatting section from complete standards
+          content = loadStaticResource('ABAP_Standards.md');
+          // Return section 2 (Code Formatting)
+          break;
+        case 'vdm-cds':
+          // Extract VDM CDS section from complete standards
+          content = loadStaticResource('ABAP_Standards.md');
+          // Return section 3 (VDM CDS Naming Guidelines)
+          break;
+        case 'cds-performance':
+          content = loadStaticResource('CDS_View_Performance.md');
+          break;
+        default:
+          throw new Error(`Unknown standards type: ${standardType}`);
+      }
+      
+      return {
+        contents: [
+          {
+            uri: uri,
+            mimeType: 'text/markdown',
+            text: content
           }
         ]
       };
