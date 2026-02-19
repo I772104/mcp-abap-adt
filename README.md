@@ -2,6 +2,7 @@
 > **🚨 INTERNAL EVALUATION PROJECT - NOT FOR PRODUCTION USE 🚨**
 > 
 > This project is an internal evaluation tool at SAP and is **NOT INTENDED TO BE PRODUCTIZED**. It is provided for SAP internal testing and evaluation purposes only. Do not use this in production environments or rely on it for critical business operations.
+> 
 > This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
 > The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
 >
@@ -17,301 +18,500 @@
 > [Enhancement proposals for the MCP server are collected here.](Enhancement%20Proposal.md)
 >
 > Found a bug or have a feature request? Please check our [GitHub Issues](https://github.tools.sap/D020426/mcp-abap-adt/issues) page to report issues or request new features.
+
 ---
 
 # mcp-abap-adt: Your Gateway to ABAP Development Tools (ADT)
-[![smithery badge](https://smithery.ai/badge/@mario-andreschak/mcp-abap-adt)](https://smithery.ai/server/@mario-andreschak/mcp-abap-adt)
 
-This project provides a server that allows you to interact with SAP ABAP systems using the Model Context Protocol (MCP).  Think of it as a bridge that lets tools like [Cline](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) (a VS Code extension) talk to your ABAP system and retrieve information like source code, table structures, and more.  It's like having a remote control for your ABAP development environment!
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-purple.svg)](https://modelcontextprotocol.io)
 
 <a href="https://glama.ai/mcp/servers/gwkh12xlu7">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/gwkh12xlu7/badge" alt="ABAP ADT MCP server" />
 </a>
 
-This guide is designed for beginners, so we'll walk through everything step-by-step.  We'll cover:
+A Model Context Protocol (MCP) server that provides AI coding assistants with direct access to SAP ABAP systems through ABAP Development Tools (ADT). Think of it as a bridge that lets tools like Cline, Claude Code CLI, and other MCP clients interact with your ABAP system to retrieve source code, analyze structures, run tests, and more.
 
-1.  **Prerequisites:** What you need before you start.
-2.  **Installation and Setup:**  Getting everything up and running.
-3.  **Running the Server:**  Starting the server in different modes.
-4.  **Integrating with Cline:** Connecting this server to the Cline VS Code extension.
-5.  **Troubleshooting:**  Common problems and solutions.
-6.  **Available Tools:**  A list of the commands you can use.
+## 📑 Table of Contents
 
-## 1. Prerequisites
+1. [Key Features](#key-features)
+2. [Quick Start](#quick-start)
+3. [Prerequisites](#prerequisites)
+4. [Installation and Setup](#installation-and-setup)
+5. [AI Agent Integration](#ai-agent-integration)
+6. [Available Tools & Resources](#available-tools--resources)
+7. [Running the Server Manually](#running-the-server-manually)
+8. [Docker Deployment](#docker-deployment)
+9. [Troubleshooting](#troubleshooting)
+10. [Contributing & Support](#contributing--support)
 
-Before you begin, you'll need a few things:
+## Key Features
 
-*   **An SAP ABAP System:**  This server connects to an existing ABAP system.  You'll need:
-    *   The system's URL (e.g., `https://my-sap-system.com:8000`)
-    *   A valid username and password for that system.
-    *   The SAP client number (e.g., `100`).
-    *   Ensure that your SAP system allows connections via ADT (ABAP Development Tools). This usually involves making sure the necessary services are activated in transaction `SICF`.  Your basis administrator can help with this. Specifically, you will need the following services to be active:
-        * `/sap/bc/adt`
-    *   For the `GetTableContents` Tool, you will need the implementation of a custom service `/z_mcp_abap_adt/z_tablecontent`. You can follow this guide [here](https://community.sap.com/t5/application-development-blog-posts/how-to-use-rfc-read-table-from-javascript-via-webservice/ba-p/13172358)
+- 🔍 **Comprehensive ABAP Object Access**: Retrieve programs, classes, interfaces, functions, tables, structures, and more
+- 🚀 **RAP Development Support**: Full support for CDS views, behavior definitions, service bindings, metadata extensions, and access control
+- 📦 **Batch Query Operations**: Query multiple tables or CDS views in a single call with advanced filtering and pagination
+- 🧪 **Testing & Quality Assurance**: Execute unit tests, analyze coverage, validate syntax, and find object usages
+- 🏗️ **Class Management**: Create, modify, activate, and delete ABAP classes directly from your AI assistant
+- 📊 **RAP BO Analysis**: Comprehensive analysis of RAP Business Objects via cacheable MCP resources
+- 🤖 **AI Agent Ready**: Optimized for Cline, Claude Code CLI, Cursor, OpenCode, and other MCP-compatible clients
+- ☁️ **ABAP Cloud Compliant**: Built-in guidance for ABAP Cloud (Tier 1) development standards
 
-*   **Git (or GitHub Desktop):**  We'll use Git to download the project code.  You have two options:
-    *   **Git:**  The command-line tool.  [Download Git](https://git-scm.com/downloads).  Choose the version for your operating system (Windows, macOS, Linux). Follow the installation instructions.
-    *   **GitHub Desktop:**  A graphical user interface for Git.  Easier for beginners!  [Download GitHub Desktop](https://desktop.github.com/).  Follow the installation instructions.
+## Quick Start
 
-*   **Node.js and npm:** Node.js is a JavaScript runtime that lets you run JavaScript code outside of a web browser.  npm (Node Package Manager) is included with Node.js and is used to install packages (libraries of code).
-    *   [Download Node.js](https://nodejs.org/en/download/).  **Choose the LTS (Long Term Support) version.**  This is the most stable version. Follow the installation instructions for your operating system.  Make sure to include npm in the installation (it's usually included by default).
-    *   **Verify Installation:** After installing Node.js, open a new terminal (command prompt on Windows, Terminal on macOS/Linux) and type:
-        ```bash
-        node -v
-        npm -v
-        ```
-        You should see version numbers for both Node.js and npm.  If you see an error, Node.js might not be installed correctly, or it might not be in your system's PATH.  (See Troubleshooting below).
-
-## 2. Installation and Setup
-
-Now, let's get the project code and set it up:
-
-### Installing via Smithery
-
-To install MCP ABAP Development Tools Server for Cline automatically via [Smithery](https://smithery.ai/server/@mario-andreschak/mcp-abap-adt):
+**For experienced developers** - get up and running in 5 minutes:
 
 ```bash
-npx -y @smithery/cli install @mario-andreschak/mcp-abap-adt --client cline
+# 1. Clone the repository
+git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+cd mcp-abap-adt
+
+# 2. Install dependencies and build
+npm install && npm run build
+
+# 3. Configure SAP credentials
+cat > .env << EOF
+SAP_URL=https://your-sap-system.com:8000
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password
+SAP_CLIENT=100
+EOF
+
+# 4. Add to your MCP client configuration (see AI Agent Integration section)
+
+# 5. Start coding with AI assistance!
 ```
 
-### Manual Installation
-1.  **Clone the Repository:**
-    *   **Using Git (command line):**
-        1.  Open a terminal (command prompt or Terminal).
-        2.  Navigate to the directory where you want to store the project.  For example, to put it on your Desktop:
-            ```bash
-            cd Desktop
-            ```
-        3.  Clone the repository:
-            ```bash
-            git clone https://github.com/mario-andreschak/mcp-abap-adt
-            ```
-        4.  Change into the project directory:
-            ```bash
-            cd mcp-abap-adt  # Or whatever the folder name is
-            ```
-    *   **Using GitHub Desktop:**
-        1.  Open GitHub Desktop.
-        2.  Click "File" -> "Clone Repository...".
-        3.  In the "URL" tab, paste the repository URL.
-        4.  Choose a local path (where you want to save the project on your computer).
-        5.  Click "Clone".
+📚 **First time with MCP servers?** Continue reading for detailed step-by-step instructions.
 
-2.  **Install Dependencies:**  This downloads all the necessary libraries the project needs.  In the terminal, inside the root directory, run:
-    ```bash
-    npm install
-    ```
-    This might take a few minutes.
+## Prerequisites
 
-3.  **Build the Project:** This compiles the code into an executable format.
-    ```bash
-    npm run build
-    ```
+Before you begin, ensure you have:
 
-4.  **Create a `.env` file:** This file stores sensitive information like your SAP credentials.  It's *very* important to keep this file secure.
-    1.  In the root directory, create a new file named `.env` (no extension).
-    2.  Open the `.env` file in a text editor (like Notepad, VS Code, etc.).
-    3.  Add the following lines, replacing the placeholders with your actual SAP system information:
-        Important: If your password contains a "#" character, make sure to enclose your password in quotes!
-        ```
-        SAP_URL=https://your-sap-system.com:8000  # Your SAP system URL
-        SAP_USERNAME=your_username              # Your SAP username
-        SAP_PASSWORD=your_password              # Your SAP password
-        SAP_CLIENT=100                         # Your SAP client
-        ```
-        **Important:**  Never share your `.env` file with anyone, and never commit it to a Git repository!
+### SAP ABAP System Access
+- System URL (e.g., `https://my-sap-system.com:8000`)
+- Valid username and password
+- SAP client number (e.g., `100`)
+- ADT services activated in transaction `SICF` (specifically `/sap/bc/adt`)
+- For `GetTableContents`: Custom service `/z_mcp_abap_adt/z_tablecontent` ([setup guide](https://community.sap.com/t5/application-development-blog-posts/how-to-use-rfc-read-table-from-javascript-via-webservice/ba-p/13172358))
 
-## 3. Running the Server
+### Development Tools
+- **Git**: [Download Git](https://git-scm.com/downloads) or [GitHub Desktop](https://desktop.github.com/)
+- **Node.js & npm**: [Download Node.js LTS](https://nodejs.org/en/download/) (includes npm)
 
-To be fair, you usually dont usually "run" this server on it's own. It is supposed to be integrated into an MCP Client like Cline or Claude Desktop. But you *can* manually run the server in two main ways:
+**Verify installation:**
+```bash
+node -v  # Should show version number
+npm -v   # Should show version number
+```
 
-*   **Standalone Mode:**  This runs the server directly, and it will output messages to the terminal. The server will start and wait for client connections, so potentially rendering it useless except to see if it starts.
-*   **Development/Debug Mode:** This runs the server with the MCP Inspector. You can open the URL that it outputs in your browser and start playing around.
+## Installation and Setup
 
-### 3.1 Standalone Mode
+### 1. Clone the Repository
 
-To run the server in standalone mode, use the following command in the terminal (from the root directory):
+**Using Git (command line):**
+```bash
+cd Desktop  # Or your preferred directory
+git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+cd mcp-abap-adt
+```
+
+**Using GitHub Desktop:**
+1. Open GitHub Desktop
+2. File → Clone Repository
+3. URL tab → Paste repository URL
+4. Choose local path → Clone
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+This downloads all required libraries (may take a few minutes).
+
+### 3. Build the Project
+
+```bash
+npm run build
+```
+
+This compiles TypeScript code into executable JavaScript.
+
+### 4. Configure SAP Credentials
+
+Create a `.env` file in the root directory:
+
+```bash
+SAP_URL=https://your-sap-system.com:8000
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password
+SAP_CLIENT=100
+```
+
+⚠️ **Important**: 
+- If your password contains `#`, enclose it in quotes: `SAP_PASSWORD="my#password"`
+- Never commit `.env` to version control
+- Keep this file secure
+
+## AI Agent Integration
+
+This MCP server integrates with various AI coding assistants. Choose your preferred tool:
+
+### Cline (VS Code Extension)
+
+Cline is a VS Code extension that uses MCP servers for AI-assisted development.
+
+**Setup:**
+
+1. **Install Cline** extension in VS Code
+
+2. **Open Cline Settings:**
+   - VS Code Settings (Ctrl+,)
+   - Search "Cline MCP Settings"
+   - Click "Edit in settings.json"
+
+3. **Add Server Configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "mcp-abap-adt": {
+         "command": "node",
+         "args": [
+           "C:/PATH_TO/mcp-abap-adt/dist/index.js"
+         ],
+         "disabled": false,
+         "autoApprove": []
+       }
+     }
+   }
+   ```
+
+4. **Test Connection:**
+   - Server appears in "MCP Servers" panel
+   - Ask Cline to retrieve ABAP source code
+   - Verify it uses the MCP server tools
+
+📚 **For detailed Cline integration**, see [docs/Cline_Integration_Guide.md](docs/Cline_Integration_Guide.md)
+
+### Claude Code CLI (SAP Internal)
+
+> **SAP Employees Only**: Claude Code CLI is officially approved for productive code development at SAP when used with the Hyperspace LLM Proxy.
+
+Claude Code CLI provides a command-line interface for AI-assisted coding.
+
+**Prerequisites:**
+- **hai CLI** must be installed and configured
+- See [official Claude Code CLI guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/) for complete setup
+
+**Quick Setup (3 Steps):**
+
+1. **Install Claude Code CLI:**
+   ```bash
+   # macOS / Linux / WSL
+   curl -fsSL https://claude.ai/install.sh | bash
+   ```
+   
+   ```powershell
+   # Windows (PowerShell)
+   irm https://claude.ai/install.ps1 | iex
+   ```
+
+2. **Configure with hai CLI:**
+   ```bash
+   hai configure claude-code
+   ```
+   This automatically creates all necessary configuration files.
+
+3. **Start Coding:**
+   ```bash
+   # Terminal 1: Start the proxy
+   hai proxy start
+   
+   # Terminal 2: Launch Claude Code
+   claude
+   ```
+
+**Important Notes:**
+- ✅ Production ready when used with Hyperspace LLM Proxy
+- ✅ Only use Anthropic models (Haiku, Sonnet, Opus)
+- ⚠️ Keep proxy running while using Claude Code CLI
+- ⚠️ Do not login - use proxy authentication configured in settings.json
+
+**Verify Setup:**
+```bash
+claude --print "What is 2+2?"
+```
+
+**Troubleshooting:**
+- **Setup fails**: Try [manual configuration](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
+- **API key issues**: Ensure hai proxy is running, copy API key from proxy terminal
+- **Connection issues**: Run `hai proxy status`
+
+📚 **Complete documentation**: [Hyperspace LLM Proxy Claude Code CLI Guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
+
+### Other AI Agents
+
+This server works with any MCP-compatible client:
+- **Cursor**: See [agents/.cursorrules](agents/.cursorrules)
+- **OpenCode**: See [agents/.opencoderules](agents/.opencoderules)
+- **Claude Desktop**: See [agents/CLAUDE.md](agents/CLAUDE.md)
+- **Universal Guide**: See [AGENTS.md](AGENTS.md)
+
+## Available Tools & Resources
+
+### MCP Resources
+
+Resources provide **cacheable, token-efficient** access to ABAP objects. Always prefer resources over tools when available.
+
+| Resource URI | Description | Token Usage | Documentation |
+|--------------|-------------|-------------|---------------|
+| `abap://packages/top-level/names` | Lightweight package names list | ~5K | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
+| `abap://packages/top-level` | Complete top-level packages | ~35K | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
+| `abap://package/{name}` | Detailed package information | ~2-5K | [PackageResource.md](docs/PackageResource.md) |
+| `rap-bo-analysis:///{bo_name}` | Complete RAP BO analysis | ~20-50K | [RAP_Analysis_Resource.md](docs/RAP_Analysis_Resource.md) |
+| `abap://class/{name}` | ABAP class source code | Varies | [Resources.md](docs/Resources.md) |
+| `abap://cds/{name}` | CDS view source and metadata | Varies | [Resources.md](docs/Resources.md) |
+| `abap://table/{name}` | Database table structure | Varies | [Resources.md](docs/Resources.md) |
+| `cds-view-data:///{name}?params` | CDS view data with filtering | Varies | [Resources.md](docs/Resources.md) |
+| `agent-guide://auto` | Auto-detect agent-specific guide | ~15K | [AGENTS.md](AGENTS.md) |
+
+📚 **Complete resource documentation**: [docs/Resources.md](docs/Resources.md)
+
+### Core ABAP Object Retrieval
+
+Retrieve source code and definitions from your ABAP system.
+
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `GetProgram` | Retrieve ABAP program source code | [GetProgram.md](docs/GetProgram.md) |
+| `GetClass` | Retrieve ABAP class definition and implementation | [GetClass.md](docs/GetClass.md) |
+| `GetInterface` | Retrieve ABAP interface source code | [GetInterface.md](docs/GetInterface.md) |
+| `GetInclude` | Retrieve ABAP include program source | [GetInclude.md](docs/GetInclude.md) |
+| `GetFunction` | Retrieve function module source code | [GetFunction.md](docs/GetFunction.md) |
+| `GetFunctionGroup` | Retrieve entire function group source | [GetFunctionGroup.md](docs/GetFunctionGroup.md) |
+| `GetTable` | Retrieve database table structure and metadata | [GetTable.md](docs/GetTable.md) |
+| `GetStructure` | Retrieve DDIC structure definitions | [GetStructure.md](docs/GetStructure.md) |
+| `GetTypeInfo` | Retrieve ABAP type information | - |
+| `GetPackage` | Retrieve package details and contained objects | [GetPackage.md](docs/GetPackage.md) |
+| `GetPackageContents` | List objects within a package | [GetPackageContents.md](docs/GetPackageContents.md) |
+| `GetTransaction` | Retrieve transaction code details | [GetTransaction.md](docs/GetTransaction.md) |
+| `SearchObject` | Search for ABAP objects using wildcards (e.g., `Z*`) | [SearchObject.md](docs/SearchObject.md) |
+
+### Data Query & Analysis
+
+Query table and CDS view data with advanced filtering and batch operations.
+
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `GetTableContents` | Query table data with filtering, pagination, and batch support | [GetTableContents.md](docs/GetTableContents.md) |
+| `GetCDSViewContents` | Query CDS view data with parameters and filtering | [GetCDSViewContents.md](docs/GetCDSViewContents.md) |
+
+**Key Features:**
+- Advanced WHERE conditions (equality operator)
+- Column selection and ordering
+- Pagination with offset
+- Batch queries (multiple tables/views in one call)
+- Column metadata inclusion
+
+### RAP Development Tools
+
+Full support for RESTful ABAP Programming (RAP) development.
+
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `GetCDSView` | Retrieve CDS view source code and annotations | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetBehaviorDefinition` | Retrieve RAP behavior definition source | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetServiceDefinition` | Retrieve RAP service definition source | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetServiceBinding` | Retrieve RAP service binding details | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetMetadataExtension` | Retrieve metadata extension (UI annotations) | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetAccessControl` | Retrieve access control (DCL) definition | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetBehaviorForRapBo` | Retrieve interface behavior for RAP Business Objects | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `SearchRapBo` | Search RAP Business Objects by description | [RAP_Tools.md](docs/RAP_Tools.md) |
+
+📚 **Complete RAP tools documentation**: [docs/RAP_Tools.md](docs/RAP_Tools.md)
+
+### Class Management Tools
+
+Create, modify, and manage ABAP classes directly.
+
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `CreateClass` | Create new ABAP class in local package ($TMP) | [CreateClass.md](docs/CreateClass.md) |
+| `CreateClassTests` | Create or replace test classes within existing class | [CreateClassTests.md](docs/CreateClassTests.md) |
+| `ActivateClasses` | Activate one or multiple ABAP classes | [ActivateClasses.md](docs/ActivateClasses.md) |
+| `CheckSyntax` | Validate ABAP source code syntax | [CheckSyntax.md](docs/CheckSyntax.md) |
+| `DeleteLocalClass` | Delete local ABAP class (Z/Y classes only) | [DeleteLocalClass.md](docs/DeleteLocalClass.md) |
+
+**Typical Workflow:**
+1. `CheckSyntax` - Validate class source code
+2. `CreateClass` - Create the class (auto_activate: false)
+3. `CheckSyntax` - Validate test source code
+4. `CreateClassTests` - Add unit tests
+5. `RunClassTests` - Execute tests
+6. `ActivateClasses` - Activate after tests pass
+
+📚 **Auto-activation guide**: [docs/AutoActivation.md](docs/AutoActivation.md)
+
+### Testing & Quality Assurance
+
+Execute tests, analyze coverage, and find dependencies.
+
+| Tool | Description | Documentation |
+|------|-------------|---------------|
+| `GetClassTests` | Retrieve local test classes from a class | [GetClassTests.md](docs/GetClassTests.md) |
+| `RunClassTests` | Execute unit tests and retrieve results | [RunClassTests.md](docs/RunClassTests.md) |
+| `RunPackageTests` | Execute tests for all objects in a package | [RunPackageTests.md](docs/RunPackageTests.md) |
+| `GetClassCoverage` | Run tests and retrieve code coverage metrics | [GetClassCoverage.md](docs/GetClassCoverage.md) |
+| `GetObjectUsages` | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md) |
+| `GetClassUsages` | Find where ABAP classes are used (convenience wrapper) | [GetClassUsages.md](docs/GetClassUsages.md) |
+
+**Coverage Targets:**
+- RAP Behavior Implementation: 80% minimum, 90% target
+- Business Logic Classes: 70% minimum, 85% target
+- Utility/Helper Classes: 60% minimum, 75% target
+
+## Running the Server Manually
+
+Typically, you don't run this server standalone - it's integrated into MCP clients. However, you can run it manually for testing:
+
+### Standalone Mode
 
 ```bash
 npm run start
 ```
 
-You should see messages in the terminal indicating that the server is running.  It will listen for connections from MCP clients.  The server will keep running until you stop it (usually with Ctrl+C).
+Server starts and waits for MCP client connections.
 
-### 3.2 Development/Debug Mode (with Inspector)
+### Development/Debug Mode (with Inspector)
 
-This mode is useful for debugging.
-
-1.  **Start the server in debug mode:**
-    ```bash
-    npm run dev
-    ```
-    This will start the server and output a message like:  `🔍 MCP Inspector is up and running at http://localhost:5173 🚀`.
-    This is the URL you'll use to open the MCP inspector in your Browser.
-
-## 4. Integrating with Cline
-
-Cline is a VS Code extension that uses MCP servers to provide language support. Here's how to connect this ABAP server to Cline:
-
-1.  **Install Cline:** If you haven't already, install the "Cline" extension in VS Code.
-
-2.  **Open Cline Settings:**
-    *   Open the VS Code settings (File -> Preferences -> Settings, or Ctrl+,).
-    *   Search for "Cline MCP Settings".
-    *   Click "Edit in settings.json". This will open the `cline_mcp_settings.json` file.  The full path is usually something like: `C:\Users\username\AppData\Roaming\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json` (replace `username` with your Windows username).
-
-3.  **Add the Server Configuration:**  You'll need to add an entry to the `servers` array in the `cline_mcp_settings.json` file.  Here's an example:
-
-    ```json
-    {
-      "mcpServers": 
-        {
-          "mcp-abap-adt": {
-            "command": "node",
-            "args": [
-              "C:/PATH_TO/mcp-abap-adt/dist/index.js"
-            ],
-            "disabled": true,
-            "autoApprove": []
-          }
-        // ... other server configurations ...
-        }
-    }
-    ```
-
-4.  **Test the Connection:**
-    *   Cline should automatically connect to the server.  You will see the Server appear in the "MCP Servers" Panel (in the Cline extension, you'll find different buttons on the top.)
-    *   Ask Cline to get the Sourcecode of a program and it should mention the MCP Server and should try to use the corresponding tools
-
-## 5. Troubleshooting
-
-*   **`node -v` or `npm -v` gives an error:**
-    *   Make sure Node.js is installed correctly.  Try reinstalling it.
-    *   Ensure that the Node.js installation directory is in your system's PATH environment variable.  On Windows, you can edit environment variables through the System Properties (search for "environment variables" in the Start Menu).
-*   **`npm install` fails:**
-    *   Make sure you have an internet connection.
-    *   Try deleting the `node_modules` folder and running `npm install` again.
-    *   If you're behind a proxy, you might need to configure npm to use the proxy.  Search online for "npm proxy settings".
-*   **Cline doesn't connect to the server:**
-    *   Double-check the settings in `cline_mcp_settings.json`.  It *must* be the correct, absolute path to the `root-server` directory, and use double backslashes on Windows.
-    *   Make sure the server is running (use `npm run start` to check).
-    *   Restart VS Code.
-    *   Alternatively: 
-    *   Navigate to the root folder of mcp-abap-adt in your Explorer, Shift+Right-Click and select "Open Powershell here". (Or open a Powershell and navigate to the folder using `cd C:/PATH_TO/mcp-abap-adt/`
-    *   Run "npm install"
-    *   Run "npm run build"
-    *   Run "npx @modelcontextprotocol/inspector node dist/index.js"
-    *   Open your browser at the URL it outputs. Click "connect" on the left side.
-    *   Click "Tools" on the top, then click "List Tools"
-    *   Click GetProgram and enter "SAPMV45A" or any other Report name as Program Name on the right
-    *   Test and see what the output is
-*   **SAP connection errors:**
-    *   Verify your SAP credentials in the `.env` file.
-    *   Ensure that the SAP system is running and accessible from your network.
-    *   Make sure that your SAP user has the necessary authorizations to access the ADT services.
-    *   Check that the required ADT services are activated in transaction `SICF`.
-    *   If you're using self-signed certificates or there is an issue with your SAP systems http config, make sure to set TLS_REJECT_UNAUTHORIZED as described above!
-
-## 6. AI Agent Integration
-
-### Quick Start for AI Agents
-
-This server provides **universal support for AI coding assistants** through the Model Context Protocol (MCP).
-
-**📚 Read the [AGENTS.md](AGENTS.md) guide** for:
-- Complete resource and tool catalog
-- Token-efficient workflows
-- Agent-specific optimizations (Cline, Claude Desktop, Cursor, OpenCode)
-- Best practices and patterns
-
-### Agent-Specific Guides (MCP Resources)
-
-Access optimized guides directly through MCP resources:
-
-```
-# Auto-detect your agent type
-access_mcp_resource: uri=agent-guide://auto
-
-# Or get specific guide
-access_mcp_resource: uri=agent-guide://cline
-access_mcp_resource: uri=agent-guide://claude
-access_mcp_resource: uri=agent-guide://cursor
-access_mcp_resource: uri=agent-guide://opencode
+```bash
+npm run dev
 ```
 
-### Key Features for AI Agents
+Opens MCP Inspector at `http://localhost:5173` for interactive testing.
 
-- **🌟 Resources First**: Cacheable, token-efficient access to ABAP objects
-- **📦 Package Discovery**: Lightweight package navigation (~5K tokens)
-- **🔍 RAP BO Analysis**: Complete business object structure in one call
-- **✅ Mandatory Workflows**: Structured class creation with testing
-- **☁️ Cloud Compliance**: ABAP Cloud (Tier 1) guidance built-in
+**Using the Inspector:**
+1. Open the URL in your browser
+2. Click "Connect" on the left
+3. Click "Tools" → "List Tools"
+4. Select a tool (e.g., GetProgram)
+5. Enter parameters and test
 
-## 7. Available Tools
+## Docker Deployment
 
-This server provides the following tools, which can be used through any MCP-compatible client:
+Deploy the MCP server using Docker for containerized environments.
 
-### Core ABAP Object Retrieval
-These tools allow you to retrieve source code and definitions from your ABAP system:
-- **GetProgram**: Retrieve complete ABAP program source code
-- **GetClass**: Get ABAP class definitions and implementations  
-- **GetInterface**: Access ABAP interface source code
-- **GetInclude**: Retrieve ABAP include program source
-- **GetFunction**: Get function module source code (requires function group)
-- **GetFunctionGroup**: Retrieve entire function group source
+### Build and Run
 
-### Data Structure Analysis  
-Tools for analyzing ABAP data structures and table contents:
-- **GetTable**: Retrieve ABAP table structure and metadata
-- **GetTableContents**: Extract actual data from ABAP tables (configurable row limit)
-- **GetStructure**: Get DDIC structure definitions
-- **GetTypeInfo**: Retrieve ABAP type information and metadata
+```bash
+# Build the image
+docker build -t mcp-abap-adt .
 
-### Development Support
-Tools to help with ABAP development workflows:
-- **SearchObject**: Quick search across ABAP objects using wildcards (e.g., "Z*" for custom objects)
-- **GetPackage**: Retrieve package details and contained objects
-- **GetTransaction**: Get transaction code details and associated programs
-- **CheckSyntax**: Validate ABAP code syntax
+# Run with environment variables
+docker run -d \
+  -e SAP_URL=https://your-sap-system.com:8000 \
+  -e SAP_USERNAME=your_username \
+  -e SAP_PASSWORD=your_password \
+  -e SAP_CLIENT=100 \
+  -p 5173:5173 \
+  mcp-abap-adt
+```
 
-### Testing & Quality Assurance
-Advanced tools for unit testing and code quality analysis:
-- **GetClassTests**: Retrieve unit test classes for ABAP classes
-- **RunClassTests**: Execute unit tests and get results
-- **GetClassCoverage**: Run tests and retrieve code coverage metrics
-- **GetClassUsages**: Find where ABAP classes are used across the system
+### Using Docker Compose
 
-### Complete Tool Reference
+Create `docker-compose.yml`:
 
-| Tool Name           | Description                                       | Input Parameters                                                   | Example Usage (in Cline)                                   |
-| ------------------- | ------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `GetProgram`        | Retrieve ABAP program source code.                | `program_name` (string): Name of the ABAP program.                 | `@tool GetProgram program_name=ZMY_PROGRAM`                |
-| `GetClass`          | Retrieve ABAP class source code.                  | `class_name` (string): Name of the ABAP class.                     | `@tool GetClass class_name=ZCL_MY_CLASS`                   |
-| `GetFunctionGroup`  | Retrieve ABAP Function Group source code.         | `function_group` (string): Name of the function group              | `@tool GetFunctionGroup function_group=ZMY_FUNCTION_GROUP` |
-| `GetFunction`       | Retrieve ABAP Function Module source code.        | `function_name` (string), `function_group` (string)                | `@tool GetFunction function_name=ZMY_FUNCTION function_group=ZFG`|
-| `GetStructure`      | Retrieve ABAP Structure.                          | `structure_name` (string): Name of the DDIC Structure.             | `@tool GetStructure structure_name=ZMY_STRUCT`             |
-| `GetTable`          | Retrieve ABAP table structure.                    | `table_name` (string): Name of the ABAP DB table.                  | `@tool GetTable table_name=ZMY_TABLE`                      |
-| `GetTableContents`  | Retrieve contents of an ABAP table.               | `table_name` (string), `max_rows` (number, optional, default 100)  | `@tool GetTableContents table_name=ZMY_TABLE max_rows=50`  |
-| `GetPackage`        | Retrieve ABAP package details.                    | `package_name` (string): Name of the ABAP package.                 | `@tool GetPackage package_name=ZMY_PACKAGE`                |
-| `GetTypeInfo`       | Retrieve ABAP type information.                   | `type_name` (string): Name of the ABAP type.                       | `@tool GetTypeInfo type_name=ZMY_TYPE`                     |
-| `GetInclude`        | Retrieve ABAP include source code                 | `include_name` (string): name of the ABAP include`                 | `@tool GetInclude include_name=ZMY_INCLUDE`                |
-| `SearchObject`      | Search for ABAP objects using quick search.       | `query` (string), `maxResults` (number, optional, default 100)     | `@tool SearchObject query=ZMY* maxResults=20`              |
-| `GetInterface`      | Retrieve ABAP interface source code.              | `interface_name` (string): Name of the ABAP interface.             | `@tool GetInterface interface_name=ZIF_MY_INTERFACE`       |
-| `GetTransaction`    | Retrieve ABAP transaction details.                | `transaction_name` (string): Name of the ABAP transaction.         | `@tool GetTransaction transaction_name=ZMY_TRANSACTION`    |
-| `GetClassTests`     | Retrieve local test classes from a class.         | `class_name` (string): Name of the ABAP class.                     | `@tool GetClassTests class_name=ZCL_MY_CLASS`              |
-| `RunClassTests`     | Run unit tests for a class and retrieve results.  | `class_name` (string): Name of the ABAP class.                     | `@tool RunClassTests class_name=ZCL_MY_CLASS`              |
-| `GetClassCoverage`  | Run unit tests and retrieve test coverage results.| `class_name` (string): Name of the ABAP class.                     | `@tool GetClassCoverage class_name=ZCL_MY_CLASS`           |
-| `GetClassUsages`    | Retrieve usages for an ABAP class.                | `class_name` (string): Name of the ABAP class.                     | `@tool GetClassUsages class_name=ZCL_MY_CLASS`             |
-| `CheckSyntax`       | Check ABAP code syntax validation.                | Various parameters for syntax checking                             | `@tool CheckSyntax` (see CheckSyntax.md for details)       |
+```yaml
+version: '3.8'
+services:
+  mcp-abap-adt:
+    build: .
+    environment:
+      - SAP_URL=https://your-sap-system.com:8000
+      - SAP_USERNAME=your_username
+      - SAP_PASSWORD=your_password
+      - SAP_CLIENT=100
+    ports:
+      - "5173:5173"
+```
 
-### RAP (RESTful ABAP Programming) Tools
+Run with:
+```bash
+docker-compose up -d
+```
 
-| Tool Name                | Description                                        | Input Parameters                                                   | Example Usage (in Cline)                                   |
-| ------------------------ | -------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `GetCDSView`            | Retrieve CDS view source code and metadata.        | `view_name` (string), `include_annotations` (boolean, optional)    | `@tool GetCDSView view_name=I_SalesOrder`                  |
-| `GetBehaviorDefinition` | Retrieve RAP behavior definition and metadata.     | `cds_view_name` (string): Name of the root CDS view entity         | `@tool GetBehaviorDefinition cds_view_name=R_SalesOrderTP` |
-| `GetServiceDefinition`  | Retrieve RAP service definition and metadata.      | `service_name` (string): Name of the service definition            | `@tool GetServiceDefinition service_name=ZUI_SALESORDER_O4`|
-| `GetServiceBinding`     | Retrieve RAP service binding details.              | `binding_name` (string): Name of the service binding               | `@tool GetServiceBinding binding_name=ZUI_SALESORDER_O4_02`|
-| `GetCDSViewDependencies`| Analyze CDS view dependencies and associations.    | `view_name` (string): Name of the CDS view to analyze              | `@tool GetCDSViewDependencies view_name=C_SalesOrderTP`    |
-| `GetMetadataExtension`  | Retrieve metadata extension (UI annotations).      | `extension_name` (string): Name of the metadata extension          | `@tool GetMetadataExtension extension_name=C_SalesOrderTP` |
-| `GetAccessControl`      | Retrieve access control (DCL) definition.          | `dcl_name` (string): Name of the access control definition         | `@tool GetAccessControl dcl_name=R_SalesOrderTP`           |
+📚 **Advanced configuration**: See [Dockerfile](Dockerfile)
+
+## Troubleshooting
+
+### Common Issues
+
+**Node.js/npm not found:**
+- Verify installation: `node -v` and `npm -v`
+- Ensure Node.js is in your system PATH
+- Reinstall Node.js if needed
+
+**npm install fails:**
+- Check internet connection
+- Delete `node_modules` folder and retry
+- Configure proxy if behind corporate firewall: [npm proxy settings](https://docs.npmjs.com/cli/v7/using-npm/config#proxy)
+
+**MCP client doesn't connect:**
+- Verify correct absolute path in client configuration
+- Ensure server is built: `npm run build`
+- Restart your MCP client (VS Code, etc.)
+- Check server logs for errors
+
+**SAP connection errors:**
+- Verify credentials in `.env` file
+- Ensure SAP system is accessible from your network
+- Check user authorizations for ADT services
+- Verify ADT services are active in transaction `SICF`
+- For self-signed certificates, set `NODE_TLS_REJECT_UNAUTHORIZED=0` (development only!)
+
+**Tool-specific issues:**
+- Check tool documentation in `docs/` folder
+- Verify object names and parameters
+- Review error messages for specific guidance
+
+### Getting Help
+
+- 📖 **Documentation**: Check `docs/` folder for detailed guides
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.tools.sap/D020426/mcp-abap-adt/issues)
+- 💡 **Feature Requests**: [Enhancement Proposals](Enhancement%20Proposal.md)
+- 📝 **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+## Contributing & Support
+
+### For SAP Internal Users
+
+This is an internal evaluation project. Contributions and feedback are welcome:
+
+1. **Report Issues**: Use [GitHub Issues](https://github.tools.sap/D020426/mcp-abap-adt/issues)
+2. **Suggest Features**: Add to [Enhancement Proposals](Enhancement%20Proposal.md)
+3. **Share Feedback**: Help us improve the server for SAP development use cases
+
+### Documentation
+
+- **AI Agent Guide**: [AGENTS.md](AGENTS.md) - Comprehensive guide for AI coding assistants
+- **Agent-Specific Guides**: `agents/` folder - Optimized guides for specific AI agents
+- **Tool Documentation**: `docs/` folder - Detailed documentation for each tool
+- **Example Project**: [Example_AGENTS.md](Example_AGENTS.md) - Sample AGENTS.md for ABAP projects
+
+### Standards & Best Practices
+
+- **ABAP Standards**: [docs/ABAP_Standards.md](docs/ABAP_Standards.md)
+- **CDS Performance**: [docs/CDS_View_Performance.md](docs/CDS_View_Performance.md)
+- **RAP Development**: [docs/RAP_Tools.md](docs/RAP_Tools.md)
+
+### Version Information
+
+- **Current Version**: 1.1.0
+- **License**: MIT
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+
+*This MCP server bridges the gap between AI coding assistants and SAP ABAP systems, enabling intelligent, context-aware development workflows.*

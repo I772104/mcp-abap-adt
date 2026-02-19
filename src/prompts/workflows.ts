@@ -135,10 +135,10 @@ function getCreateClassWorkflow(args: Record<string, string>): string {
 
 ## Task: Create class ${className}
 **Description**: ${description}
-**Estimated Time**: 3-5 minutes
-**Workflow Type**: Standard (safe, thorough, recommended for beginners)
+**Estimated Time**: 2-3 minutes
+**Workflow Type**: Standard (safe, thorough, recommended for all users)
 
-💡 **Tip**: For experienced users, consider using \`quick-class-workflow\` (40% faster)
+💡 **Tip**: For batch operations, consider using \`quick-class-workflow\` (saves 1 step)
 
 ## Prerequisites: Review ABAP Standards
 
@@ -161,7 +161,7 @@ Resource: abap://standards/formatting  # Code formatting rules
 
 ## Mandatory Steps (ALWAYS follow this exact sequence)
 
-### Step 1/7: Validate Class Source Code ⏱️ ~15 seconds
+### Step 1/6: Validate Class Source Code ⏱️ ~15 seconds
 \`\`\`
 Tool: CheckSyntax
 Purpose: Validate class source code BEFORE creation
@@ -170,7 +170,7 @@ Action: Check the class definition and implementation for syntax errors
 
 **Critical**: Do NOT proceed to Step 2 if syntax errors are found. Fix them first.
 
-### Step 2: Create the Class
+### Step 2/6: Create the Class ⏱️ ~10 seconds
 \`\`\`
 Tool: CreateClass
 Parameters:
@@ -181,9 +181,9 @@ Parameters:
   - description: "${description}"
 \`\`\`
 
-**Important**: Use auto_activate: false during development.
+**Important**: Use auto_activate: false to allow test addition before activation.
 
-### Step 3: Validate Existing Class
+### Step 3/6: Validate Existing Class ⏱️ ~5 seconds
 \`\`\`
 Tool: CheckSyntax
 Parameters:
@@ -195,7 +195,7 @@ Purpose: Validate the created class exists and is syntactically correct
 **Optimization**: Uses object_name instead of re-providing source code
 **Critical**: Ensures class was created successfully before adding tests
 
-### Step 4: Validate Test Source Code
+### Step 4/6: Validate Test Source Code ⏱️ ~15 seconds
 \`\`\`
 Tool: CheckSyntax
 Parameters:
@@ -205,7 +205,7 @@ Purpose: Validate test code syntax before creation
 
 **Critical**: Do NOT proceed to Step 5 if syntax errors are found. Fix them first.
 
-### Step 5: Create Unit Tests
+### Step 5/6: Create Unit Tests with Auto-Activation ⏱️ ~15 seconds
 \`\`\`
 Tool: CreateClassTests
 Parameters:
@@ -220,40 +220,62 @@ Parameters:
 - Test negative scenarios (error cases)
 - Test edge cases
 
-### Step 6: Run Unit Tests
+**Important**: Setting auto_activate: true will activate BOTH the test class AND the parent class.
+This eliminates the need for a separate activation step.
+
+### Step 6/6: Run Unit Tests ⏱️ ~20 seconds
 \`\`\`
 Tool: RunClassTests
 Parameters:
   - class_name: "${className}"
 \`\`\`
 
-**Critical**: ALL tests must pass before proceeding to Step 7.
+**Critical**: ALL tests must pass. If any test fails:
+1. Analyze the failure message
+2. Fix the issue in class or test code
+3. Re-validate with CheckSyntax (Step 1 or 4)
+4. Update the class/tests (Step 2 or 5)
+5. Re-run tests
 
-### Step 7: Activate the Class
-\`\`\`
-Tool: ActivateClasses
-Parameters:
-  - class_name: "${className}"
-\`\`\`
-
-**Final Step**: Only activate after all tests pass successfully.
+**Note**: Class was already activated in Step 5, so tests run on the active version.
 
 ## Success Criteria
-- ✅ Class syntax is valid
-- ✅ Test syntax is valid
-- ✅ All unit tests pass
-- ✅ Class is activated successfully
+- ✅ Class syntax is valid (Step 1)
+- ✅ Class created successfully (Step 2)
+- ✅ Class validation passed (Step 3)
+- ✅ Test syntax is valid (Step 4)
+- ✅ Class and tests activated (Step 5)
+- ✅ All unit tests pass (Step 6)
 
 ## Common Mistakes to Avoid
 - ❌ Skipping CheckSyntax validation
-- ❌ Using auto_activate: true during development
-- ❌ Activating without running tests
+- ❌ Proceeding with syntax errors
 - ❌ Ignoring test failures
+- ❌ Forgetting to fix issues before re-running
+
+## Workflow Optimizations
+- ✅ Auto-activation in Step 5 eliminates separate activation step
+- ✅ Uses object_name in Step 3 to avoid re-sending source code
+- ✅ Validates syntax before any creation operations
+- ✅ Clear error handling guidance for test failures
+
+## Troubleshooting
+
+### If Step 5 activation fails:
+- Class was already activated in a previous run
+- This is not an error - proceed to Step 6
+- The CreateClassTests tool handles activation internally
+
+### If tests fail in Step 6:
+- Review test failure messages carefully
+- Common issues: incorrect test data, wrong expected values
+- Fix and restart from Step 4 (validate test code)
 
 ## Next Steps After Completion
-1. Verify class functionality
+1. Verify class functionality with sample usage
 2. Check test coverage with GetClassCoverage
 3. Document the class purpose and usage
+4. Consider adding more edge case tests if coverage < 90%
 `;
 }
 
@@ -268,10 +290,10 @@ function getQuickClassWorkflow(args: Record<string, string>): string {
 
 ## Task: Create class ${className}
 **Description**: ${description}
-**Estimated Time**: 2-3 minutes (40% faster than standard)
+**Estimated Time**: 1-2 minutes (50% faster than standard)
 **Workflow Type**: Optimized (for experienced users)
 
-⚡ **Optimization**: Batch validation upfront, then auto-activate during creation
+⚡ **Optimization**: Batch validation upfront, then auto-activate everything
 
 ## Prerequisites: Review ABAP Standards
 
@@ -292,14 +314,14 @@ Resource: abap://standards/complete
 
 ## Streamlined Steps
 
-### Step 1/4: Batch Syntax Validation ⏱️ ~15 seconds
+### Step 1/4: Batch Syntax Validation (Parallel) ⏱️ ~15 seconds
 \`\`\`
-Tool: CheckSyntax (for class code)
-Tool: CheckSyntax (for test code)
-Purpose: Validate BOTH class and test code upfront
+Tool: CheckSyntax (for class code) - Call 1
+Tool: CheckSyntax (for test code) - Call 2
+Purpose: Validate BOTH class and test code upfront in parallel
 \`\`\`
 
-**Optimization**: Validate everything before creating anything
+**Optimization**: Run both syntax checks in parallel using a single message with multiple tool calls
 **Critical**: Both must pass before proceeding
 
 **Best Practice**: Prepare both class and test code before starting
@@ -318,16 +340,18 @@ Parameters:
 **Optimization**: Auto-activate since syntax already validated
 **Safe**: We know code is valid from Step 1
 
-### Step 3/4: Create Unit Tests ⏱️ ~10 seconds
+### Step 3/4: Create and Activate Unit Tests ⏱️ ~15 seconds
 \`\`\`
 Tool: CreateClassTests
 Parameters:
   - parent_class_name: "${className}"
   - test_source_code: <validated test code>
-  - auto_activate: false
+  - auto_activate: true
 \`\`\`
 
-**Note**: No need to validate again - already done in Step 1
+**Optimization**: Auto-activate tests immediately - no need for separate activation
+**Note**: Test syntax already validated in Step 1
+**Important**: This activates both the test class AND re-activates the parent class if needed
 
 ### Step 4/4: Run Tests ⏱️ ~20 seconds
 \`\`\`
@@ -336,61 +360,89 @@ Parameters:
   - class_name: "${className}"
 \`\`\`
 
-**Result**: Tests run on already-activated class
-**Safe**: Class activated in Step 2, tests validated in Step 1
+**Result**: Tests run on fully-activated class
+**Critical**: ALL tests must pass (100% success rate)
+
+**If tests fail**:
+1. Analyze failure messages
+2. Fix issues in class or test code
+3. Re-validate with Step 1
+4. Re-run from Step 2
 
 ## Success Criteria
-- ✅ Both class and test syntax validated upfront
-- ✅ All unit tests pass
-- ✅ Class activated automatically
+- ✅ Both class and test syntax validated upfront (Step 1)
+- ✅ Class created and activated (Step 2)
+- ✅ Tests created and activated (Step 3)
+- ✅ All unit tests pass 100% (Step 4)
 
 ## Time Comparison
 
-| Workflow | Steps | Time | API Calls |
-|----------|-------|------|-----------|
-| Standard | 7 steps | 3-5 min | 7 calls |
-| Quick | 4 steps | 2-3 min | 4 calls |
-| **Savings** | **-43%** | **-40%** | **-43%** |
+| Workflow | Steps | Time | API Calls | Activations |
+|----------|-------|------|-----------|-------------|
+| Standard | 6 steps | 2-3 min | 6 calls | 1 (auto) |
+| Quick | 4 steps | 1-2 min | 4 calls | 2 (auto) |
+| **Savings** | **-33%** | **-50%** | **-33%** | Auto |
 
 ## When to Use Quick Workflow
 
 ✅ **Use Quick Workflow When**:
 - You're experienced with ABAP development
-- You have both class and test code ready
-- You want faster iteration cycles
+- You have both class and test code ready upfront
+- You want fastest iteration cycles
 - You trust your validation process
+- You prefer batch operations
 
 ❌ **Use Standard Workflow When**:
 - You're new to ABAP or the MCP server
-- You want step-by-step guidance
+- You want to write class first, then tests separately
 - You need to debug issues between steps
-- You prefer explicit control over activation
+- You prefer more granular control
+- You're learning the workflow
+
+## Key Differences from Standard Workflow
+
+| Aspect | Standard | Quick |
+|--------|----------|-------|
+| Validation | Sequential | Parallel (both at once) |
+| Class activation | Step 5 (with tests) | Step 2 (immediately) |
+| Test activation | Step 5 (auto) | Step 3 (auto) |
+| Verification | Validates created class | Trusts Step 1 validation |
+| Best for | Learning, debugging | Speed, efficiency |
 
 ## Safety Features
 
 Even with optimizations, safety is maintained:
 - ✅ Syntax validation is still mandatory
-- ✅ Tests must pass before activation
+- ✅ Parallel validation catches errors early
 - ✅ Auto-activation only happens on success
-- ✅ Errors are caught and reported
+- ✅ Tests must pass 100% to complete workflow
+- ✅ Errors are caught and reported clearly
 
 ## Troubleshooting
 
-**If auto-activation fails**:
-1. Review test results in the response
-2. Fix any failing tests
-3. Re-run from Step 1 (batch validation)
-4. Or switch to standard workflow for debugging
+**If Step 1 syntax validation fails**:
+1. Fix syntax errors in the failing code (class or test)
+2. Re-run Step 1 for both files
+3. Proceed only when BOTH pass
 
-**If syntax validation fails**:
-1. Fix syntax errors in class or test code
-2. Re-run Step 1 (batch validation)
-3. Proceed only when both pass
+**If Step 2 or 3 activation fails**:
+1. Check for existing class conflicts
+2. Verify syntax is still valid
+3. Review activation warnings/errors
+4. Re-run from Step 1 if major changes needed
+
+**If Step 4 tests fail**:
+1. Analyze specific test failure messages
+2. Fix the issue in class logic or test expectations
+3. Re-validate syntax (Step 1)
+4. Re-create class/tests (Steps 2-3)
+5. Re-run tests (Step 4)
 
 ## Next Steps After Completion
-1. Verify class functionality
+1. Verify class functionality with sample usage
 2. Check test coverage with GetClassCoverage (optional)
-3. Consider refactoring if coverage is low
+3. Document the class if coverage >80%
+4. Consider refactoring if coverage <70%
 `;
 }
 
