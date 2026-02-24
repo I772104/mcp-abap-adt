@@ -149,10 +149,33 @@ SAP_PASSWORD=your_password
 SAP_CLIENT=100
 ```
 
-⚠️ **Important**: 
+⚠️ **Important**:
 - If your password contains `#`, enclose it in quotes: `SAP_PASSWORD="my#password"`
 - Never commit `.env` to version control
 - Keep this file secure
+
+## LLM Access Setup (SAP Internal)
+
+> **SAP Employees**: Before configuring MCP tools in your development environment, you must set up the Hyperspace AI Proxy to access LLM capabilities.
+
+Most AI coding assistants (Cline, Claude Code CLI, Cursor, etc.) require LLM access to function. At SAP, this is provided through the Hyperspace AI Proxy.
+
+### Setting Up Hyperspace AI Proxy
+
+**Complete setup guide**: [Hyperspace AI Proxy Documentation](https://pages.github.tools.sap/hAIperspace/hai-docs/)
+
+**Quick Overview:**
+1. **Install the hai CLI** - Command-line tool for managing LLM proxy
+2. **Configure your AI coding assistant** - Connect your tool (Cline, Claude Code, Cursor, etc.) to the proxy
+3. **Start the proxy** - Run the proxy service before using AI tools
+
+**Tool-Specific Guides:**
+- **Claude Code CLI**: [Configure Claude Code with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
+- **Cline**: [Configure Cline with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/cline/)
+- **Cursor**: [Configure Cursor with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/cursor/)
+- **Other Tools**: Check the [Hyperspace documentation](https://pages.github.tools.sap/hAIperspace/hai-docs/) for additional integrations
+
+⚠️ **Complete this setup first** before proceeding to configure the MCP server in your AI tool. Without LLM access, your AI coding assistant won't function.
 
 ## AI Agent Integration
 
