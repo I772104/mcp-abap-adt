@@ -1,18 +1,19 @@
 > [!CAUTION]
 > **🚨 INTERNAL EVALUATION PROJECT - NOT FOR PRODUCTION USE 🚨**
-> 
+>
 > This project is an internal evaluation tool at SAP and is **NOT INTENDED TO BE PRODUCTIZED**. It is provided for SAP internal testing and evaluation purposes only. Do not use this in production environments or rely on it for critical business operations.
-> 
+>
 > This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
 > The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
 >
 > **For AI Agents**: See [AGENTS.md](AGENTS.md) for comprehensive guidance on using this MCP server with AI coding assistants. Agent-specific quick reference files in the `agents/` folder:
+>
 > - **Cline**: [agents/.clinerules](agents/.clinerules)
 > - **Claude Desktop**: [agents/CLAUDE.md](agents/CLAUDE.md)
 > - **Cursor**: [agents/.cursorrules](agents/.cursorrules)
 > - **OpenCode**: [agents/.opencoderules](agents/.opencoderules)
 > - **All Others**: Use [AGENTS.md](AGENTS.md) directly
-> 
+>
 > Find an [Example AGENTS.md file](Example_AGENTS.md) for ABAP projects. Place it as AGENTS.md in the root folder of an ABAP project. See [agents.md](https://agents.md/) for reference.
 >
 > [Enhancement proposals for the MCP server are collected here.](Enhancement%20Proposal.md)
@@ -89,6 +90,7 @@ EOF
 Before you begin, ensure you have:
 
 ### SAP ABAP System Access
+
 - System URL (e.g., `https://my-sap-system.com:8000`)
 - Valid username and password
 - SAP client number (e.g., `100`)
@@ -96,10 +98,12 @@ Before you begin, ensure you have:
 - For `GetTableContents`: Custom service `/z_mcp_abap_adt/z_tablecontent` ([setup guide](https://community.sap.com/t5/application-development-blog-posts/how-to-use-rfc-read-table-from-javascript-via-webservice/ba-p/13172358))
 
 ### Development Tools
+
 - **Git**: [Download Git](https://git-scm.com/downloads) or [GitHub Desktop](https://desktop.github.com/)
 - **Node.js & npm**: [Download Node.js LTS](https://nodejs.org/en/download/) (includes npm)
 
 **Verify installation:**
+
 ```bash
 node -v  # Should show version number
 npm -v   # Should show version number
@@ -110,6 +114,7 @@ npm -v   # Should show version number
 ### 1. Clone the Repository
 
 **Using Git (command line):**
+
 ```bash
 cd Desktop  # Or your preferred directory
 git clone https://github.tools.sap/D020426/mcp-abap-adt.git
@@ -117,6 +122,7 @@ cd mcp-abap-adt
 ```
 
 **Using GitHub Desktop:**
+
 1. Open GitHub Desktop
 2. File → Clone Repository
 3. URL tab → Paste repository URL
@@ -150,6 +156,7 @@ SAP_CLIENT=100
 ```
 
 ⚠️ **Important**:
+
 - If your password contains `#`, enclose it in quotes: `SAP_PASSWORD="my#password"`
 - Never commit `.env` to version control
 - Keep this file secure
@@ -165,11 +172,13 @@ Most AI coding assistants (Cline, Claude Code CLI, Cursor, etc.) require LLM acc
 **Complete setup guide**: [Hyperspace AI Proxy Documentation](https://pages.github.tools.sap/hAIperspace/hai-docs/)
 
 **Quick Overview:**
+
 1. **Install the hai CLI** - Command-line tool for managing LLM proxy
 2. **Configure your AI coding assistant** - Connect your tool (Cline, Claude Code, Cursor, etc.) to the proxy
 3. **Start the proxy** - Run the proxy service before using AI tools
 
 **Tool-Specific Guides:**
+
 - **Claude Code CLI**: [Configure Claude Code with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
 - **Cline**: [Configure Cline with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/cline/)
 - **Cursor**: [Configure Cursor with hai](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/cursor/)
@@ -195,14 +204,13 @@ Cline is a VS Code extension that uses MCP servers for AI-assisted development.
    - Click "Edit in settings.json"
 
 3. **Add Server Configuration:**
+
    ```json
    {
      "mcpServers": {
        "mcp-abap-adt": {
          "command": "node",
-         "args": [
-           "C:/PATH_TO/mcp-abap-adt/dist/index.js"
-         ],
+         "args": ["C:/PATH_TO/mcp-abap-adt/dist/index.js"],
          "disabled": false,
          "autoApprove": []
        }
@@ -224,6 +232,7 @@ Cline is a VS Code extension that uses MCP servers for AI-assisted development.
 Claude Code CLI provides a command-line interface for AI-assisted coding.
 
 **Prerequisites:**
+
 - Claude Code CLI must be installed
 - **hai CLI** must be installed and configured
 - See [official Claude Code CLI guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/) for complete LLM proxy setup
@@ -231,21 +240,17 @@ Claude Code CLI provides a command-line interface for AI-assisted coding.
 **Setup:**
 
 1. **Open Claude Code Settings:**
-   ```bash
-   # Open settings.json in your default editor
-   claude config edit
-   ```
+   Open file `.claude.json` in your user home folder in your default editor (note: it might be hidden, make sure to view hidden files)
 
 2. **Add MCP Server Configuration:**
-   Add to the `mcpServers` section:
+   Add to the `mcpServers` section (or add the whole section to the root of the json):
+
    ```json
    {
      "mcpServers": {
        "mcp-abap-adt": {
          "command": "node",
-         "args": [
-           "C:/PATH_TO/mcp-abap-adt/dist/index.js"
-         ],
+         "args": ["C:/PATH_TO/mcp-abap-adt/dist/index.js"],
          "disabled": false
        }
      }
@@ -255,6 +260,7 @@ Claude Code CLI provides a command-line interface for AI-assisted coding.
    Replace `C:/PATH_TO/` with the actual path to your cloned repository.
 
 3. **Start Coding:**
+
    ```bash
    # Terminal 1: Start the proxy (if not already running)
    hai proxy start
@@ -269,6 +275,7 @@ Claude Code CLI provides a command-line interface for AI-assisted coding.
    - Verify it uses the MCP server tools
 
 **Important Notes:**
+
 - ✅ Production ready when used with Hyperspace LLM Proxy
 - ✅ Only use Anthropic models (Haiku, Sonnet, Opus)
 - ⚠️ Keep hai proxy running while using Claude Code CLI
@@ -276,6 +283,7 @@ Claude Code CLI provides a command-line interface for AI-assisted coding.
 - ⚠️ Do not login - use proxy authentication configured in settings.json
 
 **Troubleshooting:**
+
 - **MCP server not loading**: Check path in settings.json, ensure `npm run build` was executed
 - **hai proxy issues**: Run `hai proxy status`, restart with `hai proxy start`
 - **Configuration issues**: See [manual configuration guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
@@ -285,6 +293,7 @@ Claude Code CLI provides a command-line interface for AI-assisted coding.
 ### Other AI Agents
 
 This server works with any MCP-compatible client:
+
 - **Cursor**: See [agents/.cursorrules](agents/.cursorrules)
 - **OpenCode**: See [agents/.opencoderules](agents/.opencoderules)
 - **Claude Desktop**: See [agents/CLAUDE.md](agents/CLAUDE.md)
@@ -296,17 +305,17 @@ This server works with any MCP-compatible client:
 
 Resources provide **cacheable, token-efficient** access to ABAP objects. Always prefer resources over tools when available.
 
-| Resource URI | Description | Token Usage | Documentation |
-|--------------|-------------|-------------|---------------|
-| `abap://packages/top-level/names` | Lightweight package names list | ~5K | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
-| `abap://packages/top-level` | Complete top-level packages | ~35K | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
-| `abap://package/{name}` | Detailed package information | ~2-5K | [PackageResource.md](docs/PackageResource.md) |
-| `rap-bo-analysis:///{bo_name}` | Complete RAP BO analysis | ~20-50K | [RAP_Analysis_Resource.md](docs/RAP_Analysis_Resource.md) |
-| `abap://class/{name}` | ABAP class source code | Varies | [Resources.md](docs/Resources.md) |
-| `abap://cds/{name}` | CDS view source and metadata | Varies | [Resources.md](docs/Resources.md) |
-| `abap://table/{name}` | Database table structure | Varies | [Resources.md](docs/Resources.md) |
-| `cds-view-data:///{name}?params` | CDS view data with filtering | Varies | [Resources.md](docs/Resources.md) |
-| `agent-guide://auto` | Auto-detect agent-specific guide | ~15K | [AGENTS.md](AGENTS.md) |
+| Resource URI                      | Description                      | Token Usage | Documentation                                                   |
+| --------------------------------- | -------------------------------- | ----------- | --------------------------------------------------------------- |
+| `abap://packages/top-level/names` | Lightweight package names list   | ~5K         | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
+| `abap://packages/top-level`       | Complete top-level packages      | ~35K        | [TopLevelPackagesResource.md](docs/TopLevelPackagesResource.md) |
+| `abap://package/{name}`           | Detailed package information     | ~2-5K       | [PackageResource.md](docs/PackageResource.md)                   |
+| `rap-bo-analysis:///{bo_name}`    | Complete RAP BO analysis         | ~20-50K     | [RAP_Analysis_Resource.md](docs/RAP_Analysis_Resource.md)       |
+| `abap://class/{name}`             | ABAP class source code           | Varies      | [Resources.md](docs/Resources.md)                               |
+| `abap://cds/{name}`               | CDS view source and metadata     | Varies      | [Resources.md](docs/Resources.md)                               |
+| `abap://table/{name}`             | Database table structure         | Varies      | [Resources.md](docs/Resources.md)                               |
+| `cds-view-data:///{name}?params`  | CDS view data with filtering     | Varies      | [Resources.md](docs/Resources.md)                               |
+| `agent-guide://auto`              | Auto-detect agent-specific guide | ~15K        | [AGENTS.md](AGENTS.md)                                          |
 
 📚 **Complete resource documentation**: [docs/Resources.md](docs/Resources.md)
 
@@ -314,32 +323,33 @@ Resources provide **cacheable, token-efficient** access to ABAP objects. Always 
 
 Retrieve source code and definitions from your ABAP system.
 
-| Tool | Description | Documentation |
-|------|-------------|---------------|
-| `GetProgram` | Retrieve ABAP program source code | [GetProgram.md](docs/GetProgram.md) |
-| `GetClass` | Retrieve ABAP class definition and implementation | [GetClass.md](docs/GetClass.md) |
-| `GetInterface` | Retrieve ABAP interface source code | [GetInterface.md](docs/GetInterface.md) |
-| `GetInclude` | Retrieve ABAP include program source | [GetInclude.md](docs/GetInclude.md) |
-| `GetFunction` | Retrieve function module source code | [GetFunction.md](docs/GetFunction.md) |
-| `GetFunctionGroup` | Retrieve entire function group source | [GetFunctionGroup.md](docs/GetFunctionGroup.md) |
-| `GetTable` | Retrieve database table structure and metadata | [GetTable.md](docs/GetTable.md) |
-| `GetStructure` | Retrieve DDIC structure definitions | [GetStructure.md](docs/GetStructure.md) |
-| `GetTypeInfo` | Retrieve ABAP type information | - |
-| `GetPackage` | Retrieve package details and contained objects | [GetPackage.md](docs/GetPackage.md) |
-| `GetPackageContents` | List objects within a package | [GetPackageContents.md](docs/GetPackageContents.md) |
-| `GetTransaction` | Retrieve transaction code details | [GetTransaction.md](docs/GetTransaction.md) |
-| `SearchObject` | Search for ABAP objects using wildcards (e.g., `Z*`) | [SearchObject.md](docs/SearchObject.md) |
+| Tool                 | Description                                          | Documentation                                       |
+| -------------------- | ---------------------------------------------------- | --------------------------------------------------- |
+| `GetProgram`         | Retrieve ABAP program source code                    | [GetProgram.md](docs/GetProgram.md)                 |
+| `GetClass`           | Retrieve ABAP class definition and implementation    | [GetClass.md](docs/GetClass.md)                     |
+| `GetInterface`       | Retrieve ABAP interface source code                  | [GetInterface.md](docs/GetInterface.md)             |
+| `GetInclude`         | Retrieve ABAP include program source                 | [GetInclude.md](docs/GetInclude.md)                 |
+| `GetFunction`        | Retrieve function module source code                 | [GetFunction.md](docs/GetFunction.md)               |
+| `GetFunctionGroup`   | Retrieve entire function group source                | [GetFunctionGroup.md](docs/GetFunctionGroup.md)     |
+| `GetTable`           | Retrieve database table structure and metadata       | [GetTable.md](docs/GetTable.md)                     |
+| `GetStructure`       | Retrieve DDIC structure definitions                  | [GetStructure.md](docs/GetStructure.md)             |
+| `GetTypeInfo`        | Retrieve ABAP type information                       | -                                                   |
+| `GetPackage`         | Retrieve package details and contained objects       | [GetPackage.md](docs/GetPackage.md)                 |
+| `GetPackageContents` | List objects within a package                        | [GetPackageContents.md](docs/GetPackageContents.md) |
+| `GetTransaction`     | Retrieve transaction code details                    | [GetTransaction.md](docs/GetTransaction.md)         |
+| `SearchObject`       | Search for ABAP objects using wildcards (e.g., `Z*`) | [SearchObject.md](docs/SearchObject.md)             |
 
 ### Data Query & Analysis
 
 Query table and CDS view data with advanced filtering and batch operations.
 
-| Tool | Description | Documentation |
-|------|-------------|---------------|
-| `GetTableContents` | Query table data with filtering, pagination, and batch support | [GetTableContents.md](docs/GetTableContents.md) |
-| `GetCDSViewContents` | Query CDS view data with parameters and filtering | [GetCDSViewContents.md](docs/GetCDSViewContents.md) |
+| Tool                 | Description                                                    | Documentation                                       |
+| -------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
+| `GetTableContents`   | Query table data with filtering, pagination, and batch support | [GetTableContents.md](docs/GetTableContents.md)     |
+| `GetCDSViewContents` | Query CDS view data with parameters and filtering              | [GetCDSViewContents.md](docs/GetCDSViewContents.md) |
 
 **Key Features:**
+
 - Advanced WHERE conditions (equality operator)
 - Column selection and ordering
 - Pagination with offset
@@ -350,16 +360,16 @@ Query table and CDS view data with advanced filtering and batch operations.
 
 Full support for RESTful ABAP Programming (RAP) development.
 
-| Tool | Description | Documentation |
-|------|-------------|---------------|
-| `GetCDSView` | Retrieve CDS view source code and annotations | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetBehaviorDefinition` | Retrieve RAP behavior definition source | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetServiceDefinition` | Retrieve RAP service definition source | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetServiceBinding` | Retrieve RAP service binding details | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetMetadataExtension` | Retrieve metadata extension (UI annotations) | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetAccessControl` | Retrieve access control (DCL) definition | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `GetBehaviorForRapBo` | Retrieve interface behavior for RAP Business Objects | [RAP_Tools.md](docs/RAP_Tools.md) |
-| `SearchRapBo` | Search RAP Business Objects by description | [RAP_Tools.md](docs/RAP_Tools.md) |
+| Tool                    | Description                                          | Documentation                     |
+| ----------------------- | ---------------------------------------------------- | --------------------------------- |
+| `GetCDSView`            | Retrieve CDS view source code and annotations        | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetBehaviorDefinition` | Retrieve RAP behavior definition source              | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetServiceDefinition`  | Retrieve RAP service definition source               | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetServiceBinding`     | Retrieve RAP service binding details                 | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetMetadataExtension`  | Retrieve metadata extension (UI annotations)         | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetAccessControl`      | Retrieve access control (DCL) definition             | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `GetBehaviorForRapBo`   | Retrieve interface behavior for RAP Business Objects | [RAP_Tools.md](docs/RAP_Tools.md) |
+| `SearchRapBo`           | Search RAP Business Objects by description           | [RAP_Tools.md](docs/RAP_Tools.md) |
 
 📚 **Complete RAP tools documentation**: [docs/RAP_Tools.md](docs/RAP_Tools.md)
 
@@ -367,15 +377,16 @@ Full support for RESTful ABAP Programming (RAP) development.
 
 Create, modify, and manage ABAP classes directly.
 
-| Tool | Description | Documentation |
-|------|-------------|---------------|
-| `CreateClass` | Create new ABAP class in local package ($TMP) | [CreateClass.md](docs/CreateClass.md) |
+| Tool               | Description                                          | Documentation                                   |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------- |
+| `CreateClass`      | Create new ABAP class in local package ($TMP)        | [CreateClass.md](docs/CreateClass.md)           |
 | `CreateClassTests` | Create or replace test classes within existing class | [CreateClassTests.md](docs/CreateClassTests.md) |
-| `ActivateClasses` | Activate one or multiple ABAP classes | [ActivateClasses.md](docs/ActivateClasses.md) |
-| `CheckSyntax` | Validate ABAP source code syntax | [CheckSyntax.md](docs/CheckSyntax.md) |
-| `DeleteLocalClass` | Delete local ABAP class (Z/Y classes only) | [DeleteLocalClass.md](docs/DeleteLocalClass.md) |
+| `ActivateClasses`  | Activate one or multiple ABAP classes                | [ActivateClasses.md](docs/ActivateClasses.md)   |
+| `CheckSyntax`      | Validate ABAP source code syntax                     | [CheckSyntax.md](docs/CheckSyntax.md)           |
+| `DeleteLocalClass` | Delete local ABAP class (Z/Y classes only)           | [DeleteLocalClass.md](docs/DeleteLocalClass.md) |
 
 **Typical Workflow:**
+
 1. `CheckSyntax` - Validate class source code
 2. `CreateClass` - Create the class (auto_activate: false)
 3. `CheckSyntax` - Validate test source code
@@ -389,16 +400,17 @@ Create, modify, and manage ABAP classes directly.
 
 Execute tests, analyze coverage, and find dependencies.
 
-| Tool | Description | Documentation |
-|------|-------------|---------------|
-| `GetClassTests` | Retrieve local test classes from a class | [GetClassTests.md](docs/GetClassTests.md) |
-| `RunClassTests` | Execute unit tests and retrieve results | [RunClassTests.md](docs/RunClassTests.md) |
-| `RunPackageTests` | Execute tests for all objects in a package | [RunPackageTests.md](docs/RunPackageTests.md) |
-| `GetClassCoverage` | Run tests and retrieve code coverage metrics | [GetClassCoverage.md](docs/GetClassCoverage.md) |
-| `GetObjectUsages` | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md) |
-| `GetClassUsages` | Find where ABAP classes are used (convenience wrapper) | [GetClassUsages.md](docs/GetClassUsages.md) |
+| Tool               | Description                                                       | Documentation                                   |
+| ------------------ | ----------------------------------------------------------------- | ----------------------------------------------- |
+| `GetClassTests`    | Retrieve local test classes from a class                          | [GetClassTests.md](docs/GetClassTests.md)       |
+| `RunClassTests`    | Execute unit tests and retrieve results                           | [RunClassTests.md](docs/RunClassTests.md)       |
+| `RunPackageTests`  | Execute tests for all objects in a package                        | [RunPackageTests.md](docs/RunPackageTests.md)   |
+| `GetClassCoverage` | Run tests and retrieve code coverage metrics                      | [GetClassCoverage.md](docs/GetClassCoverage.md) |
+| `GetObjectUsages`  | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md)   |
+| `GetClassUsages`   | Find where ABAP classes are used (convenience wrapper)            | [GetClassUsages.md](docs/GetClassUsages.md)     |
 
 **Coverage Targets:**
+
 - RAP Behavior Implementation: 80% minimum, 90% target
 - Business Logic Classes: 70% minimum, 85% target
 - Utility/Helper Classes: 60% minimum, 75% target
@@ -424,6 +436,7 @@ npm run dev
 Opens MCP Inspector at `http://localhost:5173` for interactive testing.
 
 **Using the Inspector:**
+
 1. Open the URL in your browser
 2. Click "Connect" on the left
 3. Click "Tools" → "List Tools"
@@ -455,7 +468,7 @@ docker run -d \
 Create `docker-compose.yml`:
 
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   mcp-abap-adt:
     build: .
@@ -469,6 +482,7 @@ services:
 ```
 
 Run with:
+
 ```bash
 docker-compose up -d
 ```
@@ -480,22 +494,26 @@ docker-compose up -d
 ### Common Issues
 
 **Node.js/npm not found:**
+
 - Verify installation: `node -v` and `npm -v`
 - Ensure Node.js is in your system PATH
 - Reinstall Node.js if needed
 
 **npm install fails:**
+
 - Check internet connection
 - Delete `node_modules` folder and retry
 - Configure proxy if behind corporate firewall: [npm proxy settings](https://docs.npmjs.com/cli/v7/using-npm/config#proxy)
 
 **MCP client doesn't connect:**
+
 - Verify correct absolute path in client configuration
 - Ensure server is built: `npm run build`
 - Restart your MCP client (VS Code, etc.)
 - Check server logs for errors
 
 **SAP connection errors:**
+
 - Verify credentials in `.env` file
 - Ensure SAP system is accessible from your network
 - Check user authorizations for ADT services
@@ -503,6 +521,7 @@ docker-compose up -d
 - For self-signed certificates, set `NODE_TLS_REJECT_UNAUTHORIZED=0` (development only!)
 
 **Tool-specific issues:**
+
 - Check tool documentation in `docs/` folder
 - Verify object names and parameters
 - Review error messages for specific guidance
@@ -545,5 +564,4 @@ This is an internal evaluation project. Contributions and feedback are welcome:
 
 ---
 
-
-*This MCP server bridges the gap between AI coding assistants and SAP ABAP systems, enabling intelligent, context-aware development workflows.*
+_This MCP server bridges the gap between AI coding assistants and SAP ABAP systems, enabling intelligent, context-aware development workflows._
