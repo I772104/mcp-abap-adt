@@ -117,7 +117,7 @@ async function parseTableContentsResponse(
 
     const result: any = {
         table: tableData['dataPreview:name'],
-        total_rows: parseInt(tableData['dataPreview:totalRows']) || 0,
+        total_rows: rows.length,
         execution_time: tableData['dataPreview:queryExecutionTime'] || '0'
     };
 

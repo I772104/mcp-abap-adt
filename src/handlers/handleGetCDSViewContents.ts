@@ -138,7 +138,7 @@ async function parseViewContentsResponse(
     const result: any = {
         view_name: tableData['dataPreview:cdsEntityName'] || tableData['dataPreview:name'],
         cds_type: tableData.$?.['dataPreview:cdsTypeKind'] || 'UNKNOWN',
-        total_rows: parseInt(tableData['dataPreview:totalRows']) || 0,
+        total_rows: rows.length,
         execution_time: tableData['dataPreview:queryExecutionTime'] || '0'
     };
 
