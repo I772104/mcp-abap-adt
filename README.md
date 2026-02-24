@@ -224,52 +224,61 @@ Cline is a VS Code extension that uses MCP servers for AI-assisted development.
 Claude Code CLI provides a command-line interface for AI-assisted coding.
 
 **Prerequisites:**
+- Claude Code CLI must be installed
 - **hai CLI** must be installed and configured
-- See [official Claude Code CLI guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/) for complete setup
+- See [official Claude Code CLI guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/) for complete LLM proxy setup
 
-**Quick Setup (3 Steps):**
+**Setup:**
 
-1. **Install Claude Code CLI:**
+1. **Open Claude Code Settings:**
    ```bash
-   # macOS / Linux / WSL
-   curl -fsSL https://claude.ai/install.sh | bash
-   ```
-   
-   ```powershell
-   # Windows (PowerShell)
-   irm https://claude.ai/install.ps1 | iex
+   # Open settings.json in your default editor
+   claude config edit
    ```
 
-2. **Configure with hai CLI:**
-   ```bash
-   hai configure claude-code
+2. **Add MCP Server Configuration:**
+   Add to the `mcpServers` section:
+   ```json
+   {
+     "mcpServers": {
+       "mcp-abap-adt": {
+         "command": "node",
+         "args": [
+           "C:/PATH_TO/mcp-abap-adt/dist/index.js"
+         ],
+         "disabled": false
+       }
+     }
+   }
    ```
-   This automatically creates all necessary configuration files.
+
+   Replace `C:/PATH_TO/` with the actual path to your cloned repository.
 
 3. **Start Coding:**
    ```bash
-   # Terminal 1: Start the proxy
+   # Terminal 1: Start the proxy (if not already running)
    hai proxy start
-   
+
    # Terminal 2: Launch Claude Code
    claude
    ```
 
+4. **Test Connection:**
+   - Server loads automatically when Claude Code starts
+   - Ask Claude to retrieve ABAP source code
+   - Verify it uses the MCP server tools
+
 **Important Notes:**
 - ✅ Production ready when used with Hyperspace LLM Proxy
 - ✅ Only use Anthropic models (Haiku, Sonnet, Opus)
-- ⚠️ Keep proxy running while using Claude Code CLI
+- ⚠️ Keep hai proxy running while using Claude Code CLI
+- ⚠️ Use absolute paths in MCP configuration
 - ⚠️ Do not login - use proxy authentication configured in settings.json
 
-**Verify Setup:**
-```bash
-claude --print "What is 2+2?"
-```
-
 **Troubleshooting:**
-- **Setup fails**: Try [manual configuration](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
-- **API key issues**: Ensure hai proxy is running, copy API key from proxy terminal
-- **Connection issues**: Run `hai proxy status`
+- **MCP server not loading**: Check path in settings.json, ensure `npm run build` was executed
+- **hai proxy issues**: Run `hai proxy status`, restart with `hai proxy start`
+- **Configuration issues**: See [manual configuration guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
 
 📚 **Complete documentation**: [Hyperspace LLM Proxy Claude Code CLI Guide](https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/)
 
