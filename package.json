@@ -16,15 +16,19 @@
     "mcp",
     "model-context-protocol"
   ],
-  "author": "orchestraight.co",
-  "description": "ABAP ADT (ABAP Development Tools) MCP Server for interacting with SAP systems",
+  "author": "SAP SE (forked from orchestraight.co)",
+  "description": "ABAP ADT (ABAP Development Tools) MCP Server - Evaluation platform for AI-assisted ABAP development and MCP capability exploration",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mario-andreschak/mcp-abap-adt.git"
+    "url": "git+https://github.tools.sap/D020426/mcp-abap-adt.git"
+  },
+  "homepage": "https://github.tools.sap/D020426/mcp-abap-adt#readme",
+  "bugs": {
+    "url": "https://github.tools.sap/D020426/mcp-abap-adt/issues"
   },
   "devDependencies": {
     "@types/diff": "^7.0.2",

@@ -1,10 +1,18 @@
-> [!CAUTION]
-> **🚨 INTERNAL EVALUATION PROJECT - NOT FOR PRODUCTION USE 🚨**
+> [!NOTE]
+> **🧪 EVALUATION & LEARNING PROJECT - SAP INTERNAL**
 >
-> This project is an internal evaluation tool at SAP and is **NOT INTENDED TO BE PRODUCTIZED**. It is provided for SAP internal testing and evaluation purposes only. Do not use this in production environments or rely on it for critical business operations.
+> This project serves dual purposes at SAP:
+> 1. **Evaluation Platform**: Test how Model Context Protocol (MCP) can support AI-assisted ABAP development
+> 2. **Practical Tool**: Enable SAP colleagues to use standard AI coding assistants (Claude Code CLI, Cline, Cursor, etc.) for ABAP development tasks
 >
-> This project is a clone of [https://github.com/mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt) to evaluate possible further capabilities of the server supporting SAP internal development use cases.
-> The implementation might be straight forward and pragmatic and is not intended to follow standards nor specific quality requirements!
+> **Project Status:**
+> - ✅ Actively maintained and feature-complete for evaluation purposes
+> - ✅ Open to contributions from SAP internal teams
+> - ✅ Suitable for development and testing environments
+> - ⚠️ Implementation is pragmatic and focused on capability exploration
+> - ⚠️ Not intended for production business-critical operations
+>
+> **Origin**: Originally forked from [mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt), now evolved with additional capabilities for SAP internal development scenarios.
 >
 > **For AI Agents**: See [AGENTS.md](AGENTS.md) for comprehensive guidance on using this MCP server with AI coding assistants. Agent-specific quick reference files in the `agents/` folder:
 >
@@ -36,16 +44,32 @@ A Model Context Protocol (MCP) server that provides AI coding assistants with di
 
 ## 📑 Table of Contents
 
-1. [Key Features](#key-features)
-2. [Quick Start](#quick-start)
-3. [Prerequisites](#prerequisites)
-4. [Installation and Setup](#installation-and-setup)
-5. [AI Agent Integration](#ai-agent-integration)
-6. [Available Tools & Resources](#available-tools--resources)
-7. [Running the Server Manually](#running-the-server-manually)
-8. [Docker Deployment](#docker-deployment)
-9. [Troubleshooting](#troubleshooting)
-10. [Contributing & Support](#contributing--support)
+1. [Project Philosophy](#project-philosophy)
+2. [Key Features](#key-features)
+3. [Quick Start](#quick-start)
+4. [Prerequisites](#prerequisites)
+5. [Installation and Setup](#installation-and-setup)
+6. [AI Agent Integration](#ai-agent-integration)
+7. [Available Tools & Resources](#available-tools--resources)
+8. [Running the Server Manually](#running-the-server-manually)
+9. [Docker Deployment](#docker-deployment)
+10. [Troubleshooting](#troubleshooting)
+11. [Contributing & Support](#contributing--support)
+
+## Project Philosophy
+
+This server balances three objectives:
+
+1. **Exploration First**: Test what's possible with MCP in ABAP development contexts
+2. **Practical Value**: Provide immediate utility for AI-assisted ABAP development
+3. **Learning Platform**: Serve as a reference for building domain-specific MCP servers
+
+Implementation philosophy:
+- **Pragmatic over perfect**: Features may be straightforward rather than architected for scale
+- **Capability focused**: Prioritize exploring what AI assistants need over production hardening
+- **Community driven**: Feedback and contributions shape the server's evolution
+
+This approach allows rapid iteration on MCP capabilities while delivering real value to developers.
 
 ## Key Features
 
@@ -66,6 +90,7 @@ A Model Context Protocol (MCP) server that provides AI coding assistants with di
 ```bash
 # 1. Clone the repository
 git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+# For external contributors: git clone https://github.com/mario-andreschak/mcp-abap-adt.git
 cd mcp-abap-adt
 
 # 2. Install dependencies and build
@@ -598,13 +623,25 @@ docker-compose up -d
 
 ## Contributing & Support
 
-### For SAP Internal Users
+### Contributing
 
-This is an internal evaluation project. Contributions and feedback are welcome:
+We welcome contributions from SAP internal teams and external developers:
 
+**For SAP Internal Contributors:**
 1. **Report Issues**: Use [GitHub Issues](https://github.tools.sap/D020426/mcp-abap-adt/issues)
 2. **Suggest Features**: Add to [Enhancement Proposals](Enhancement%20Proposal.md)
-3. **Share Feedback**: Help us improve the server for SAP development use cases
+3. **Submit Code**: See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines (coming soon)
+4. **Share Feedback**: Help us improve MCP capabilities for ABAP development
+
+**For External Contributors:**
+- This fork focuses on SAP-internal evaluation scenarios
+- For the upstream project, see [mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt)
+- Feature contributions welcome that enhance MCP evaluation capabilities
+
+**Project Goals:**
+- Explore how MCP can improve AI-assisted ABAP development
+- Serve as a reference implementation for MCP server development
+- Enable practical use of AI coding assistants for ABAP tasks
 
 ### Documentation
 
