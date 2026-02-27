@@ -7,7 +7,15 @@
     "build": "tsc -p tsconfig.json",
     "start": "node ./dist/index.js",
     "dev": "npx @modelcontextprotocol/inspector node ./dist/index.js",
-    "updated": "npm i && npm run build"
+    "updated": "npm i && npm run build",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck",
+    "fix": "npm run format && npm run lint:fix",
+    "validate": "npm run check && npm run build && npm run test"
   },
   "keywords": [
     "abap",
@@ -35,7 +43,13 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.10",
     "@types/xml2js": "^0.4.14",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
     "jest": "^29.7.0",
+    "prettier": "^3.8.1",
     "ts-jest": "^29.2.5",
     "typescript": "^5.7.3"
   },
