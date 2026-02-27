@@ -220,9 +220,14 @@ export async function makeAdtRequest(url: string, method: string, timeout: numbe
     }
 
     try {
+        // DEBUG: Log the URL being requested
+        console.error(`[DEBUG] Requesting URL: ${method} ${url}`);
         const response = await createAxiosInstance()(requestConfig);
         return response;
     } catch (error) {
+        // DEBUG: Log the error details
+        console.error(`[DEBUG] Request failed: ${method} ${url}`, error instanceof AxiosError ? { status: error.response?.status, statusText: error.response?.statusText } : error);
+
         // If we get a 403 with "CSRF token validation failed", try to fetch a new token and retry
         if (error instanceof AxiosError && error.response?.status === 403 &&
             error.response.data?.includes('CSRF')) {

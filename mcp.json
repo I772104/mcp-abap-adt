@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "mcp-abap-adt": {
+      "command": "node",
+      "args": [
+        "C:/Users/D047719/Documents/GitHub/tilo-mcp-abap-adt/dist/index.js"
+      ],
+      "disabled": false,
+      "alwaysAllow": [
+        "GetProgram",
+        "GetClass",
+        "GetInterface",
+        "GetInclude",
+        "GetFunction",
+        "GetFunctionGroup",
+        "GetTable",
+        "GetStructure",
+        "GetClassTests",
+        "GetClassUsages",
+        "SearchObject"
+      ]
+    }
+  }
+}

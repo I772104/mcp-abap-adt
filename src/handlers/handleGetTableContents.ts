@@ -136,13 +136,34 @@ async function parseTableContentsResponse(
  */
 function validateColumns(requestedColumns: string[], availableColumns: ColumnMetadata[]): void {
     const availableColumnNames = new Set(availableColumns.map(c => c.name));
-    
+
     for (const col of requestedColumns) {
         if (!availableColumnNames.has(col)) {
             const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
-                ErrorCode.InvalidParams, 
+                ErrorCode.InvalidParams,
                 `Invalid column name: ${col}\n\nAvailable columns:\n  - ${columnList}`
+            );
+        }
+    }
+}
+
+/**
+ * Validate ORDER BY column names (strips DESC/ASC suffixes before validation)
+ */
+function validateOrderByColumns(orderByColumns: string[], availableColumns: ColumnMetadata[]): void {
+    const availableColumnNames = new Set(availableColumns.map(c => c.name));
+
+    for (const orderCol of orderByColumns) {
+        // Extract column name from "COLUMN DESC" or "COLUMN ASC" or just "COLUMN"
+        const parts = orderCol.trim().split(/\s+/);
+        const colName = parts[0];
+
+        if (!availableColumnNames.has(colName)) {
+            const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `Invalid column name in ORDER BY: ${colName}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
     }
@@ -230,7 +251,14 @@ function buildSelectStatement(
 
     // Add ORDER BY clause if provided
     if (orderBy && orderBy.length > 0) {
-        const orderCols = orderBy.map(col => `${tableName}~${col}`).join(', ');
+        const orderCols = orderBy.map(col => {
+            // Support DESC suffix: "COLUMN DESC" or "COLUMN ASC" or just "COLUMN"
+            const parts = col.trim().split(/\s+/);
+            const colName = parts[0];
+            const direction = parts[1]?.toUpperCase() === 'DESC' ? ' DESC' :
+                            parts[1]?.toUpperCase() === 'ASC' ? ' ASC' : '';
+            return `${tableName}~${colName}${direction}`;
+        }).join(', ');
         sql += ` ORDER BY ${orderCols}`;
     }
 
@@ -298,7 +326,7 @@ async function executeSingleQuery(
 
     // Step 4: Validate ORDER BY columns
     if (query.order_by && query.order_by.length > 0) {
-        validateColumns(query.order_by, availableColumns);
+        validateOrderByColumns(query.order_by, availableColumns);
     }
 
     // Step 5: Build safe SELECT statement

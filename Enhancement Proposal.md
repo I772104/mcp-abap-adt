@@ -12,7 +12,7 @@
 - ✅ `GetCDSViewContents` - Query CDS view data with filtering and parameters
 - `CreateCDSView` - Create new CDS view
 - `UpdateCDSView` - Modify existing CDS view
-- ✅ `GetCDSViewDependencies` - Analyze CDS view dependencies (removed, may be re-added)
+- ✅ `GetCDSViewDependencies` - Analyze CDS view dependencies (deprecated, may be re-added)
 
 ### Behavior Definitions
 - ✅ `GetBehaviorDefinition` - Retrieve RAP behavior definition
@@ -40,10 +40,10 @@
 
 ## ABAP Cloud Compliance
 
-- `GetAPIReleaseState` - Check if API is released for ABAP Cloud
+- ✅ `GetAPIReleaseState` - Check if API is released for ABAP Cloud
 - `CheckCloudReadiness` - Validate object for ABAP Cloud compliance
 - `GetSimplificationItems` - Get S/4HANA simplification items for object
-- `RunATCCheck` - Execute ATC checks with specific variant
+- ✅ `RunATCCheck` - Execute ATC checks with specific variant
 - `GetATCFindings` - Retrieve ATC findings for object
 - `GetATCExemptions` - Get ATC exemptions for object
 
@@ -52,8 +52,7 @@
 ## Code Analysis & Understanding
 
 ### Where-Used & Dependencies
-- ✅ `GetObjectUsages` - Enhanced where-used for all object types (classes, interfaces, programs, etc.)
-- ✅ `GetClassUsages` - Convenience wrapper for class where-used
+- ✅ `GetObjectUsages` - Where-used for all object types (classes, interfaces, programs, etc.)
 - `GetCallHierarchy` - Analyze caller/callee relationships
 - `GetCrossReferences` - Get all references (tables, classes, FMs, etc.)
 - `GetDataFlow` - Analyze data flow for variables
@@ -146,19 +145,23 @@
 ## Integration & Interfaces
 
 - `GetODataService` - Analyze OData service details
+- ✅ `GetFunctionModule` - Get function module source
 - `GetFunctionModuleDetails` - Get FM parameters and exceptions (enhanced)
 - `GetBusinessEvents` - Get business event definitions
 - `GetEnterpriseEvents` - Get enterprise event subscriptions
 
 ---
 
-## Transport Management
+## Transport & Version Control
 
-- `GetTransportRequest` - Get transport request details
+- ✅ `ListUserTransports` - List all transports for user (modifiable and released) via E070 table
+- ✅ `GetTransportRequest` - Get transport details with task/request hierarchy
+- ✅ `GetVersionHistory` - Retrieve version history (supports CLAS, PROG, INCL, FUGR, INTF, DDLS, BDEF, DCLS)
+- ✅ `GetTransportVersions` - Analyze transport and find relevant versions
+- ✅ `CompareObjectVersions` - Compare versions with unified/side-by-side/summary diffs
 - `CreateTransportRequest` - Create new transport request
 - `AddToTransport` - Add object to transport
 - `ReleaseTransport` - Release transport request
-- `GetTransportHistory` - Get transport history for object
 
 ---
 
@@ -196,19 +199,19 @@
 ## Implementation Priority
 
 ### Phase 1 (High Priority)
-1. RAP CRUD operations (Create/Update CDS, BDEF, Services)
-2. ABAP Cloud compliance checks
-3. Enhanced code analysis tools
+1. ABAP Cloud compliance checks (`GetAPIReleaseState`, `RunATCCheck`, `GetATCFindings`)
+2. Performance analysis (`GetSQLExplainPlan`, `AnalyzeCDSPerformance`)
+3. Full-text code search (`SearchByText`)
 
 ### Phase 2 (Medium Priority)
-1. Performance analysis tools
-2. Advanced testing capabilities
-3. Transport management
+1. RAP CRUD operations (Create/Update CDS, BDEF, Services)
+2. Code quality metrics (`GetCodeMetrics`, `GetCodeComplexity`)
+3. Enhanced testing (`GetPackageCoverage`, `GetMethodCoverage`)
 
 ### Phase 3 (Low Priority)
-1. Legacy UI analysis
-2. Advanced debugging
-3. Security auditing
+1. Error analysis (`GetRuntimeErrors`, `GetApplicationLogs`)
+2. Legacy UI analysis
+3. Advanced debugging (limited by API)
 
 ---
 
@@ -222,5 +225,5 @@
 
 ---
 
-*Last Updated: 2026-02-19*  
-*Version: 2.0 (Simplified)*
+*Last Updated: 2026-02-26*
+*Version: 2.1*

@@ -51,6 +51,11 @@ import { handleGetAccessControl } from './handlers/handleGetAccessControl';
 import { handleGetBehaviorForRapBo } from './handlers/handleGetBehaviorForRapBo';
 import { handleSearchRapBo } from './handlers/handleSearchRapBo';
 import { handleRapBoAnalysisResource, listRapBoAnalysisResources } from './handlers/handleRapBoAnalysisResource';
+import { handleListUserTransports } from './handlers/handleListUserTransports';
+import { handleGetTransportRequest } from './handlers/handleGetTransportRequest';
+import { handleGetVersionHistory } from './handlers/handleGetVersionHistory';
+import { handleGetTransportVersions } from './handlers/handleGetTransportVersions';
+import { handleCompareObjectVersions } from './handlers/handleCompareObjectVersions';
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
@@ -953,6 +958,148 @@ export class mcp_abap_adt_server {
               },
               required: ['search_term']
             }
+          },
+          {
+            name: 'ListUserTransports',
+            description: `⚠️ IMPORTANT: Always use from_date parameter to ensure recent transports are visible!
+
+List ALL transport requests for a user by querying CTS database tables (E070/E07T) directly.
+
+✅ WORKS FOR BOTH MODIFIABLE AND RELEASED TRANSPORTS
+
+This tool:
+- Queries CTS database tables (E070, E07T) directly
+- Shows ALL transports: Modifiable (D), Released (R), and others
+- Returns results in DESCENDING order (newest first)
+- Provides transport type, status, date, target system, and description
+- **Auto-defaults to previous year** if no from_date specified (prevents missing recent data)
+
+⚠️ CRITICAL LIMITATION:
+- Can only fetch 500 rows per query (ADT API limit)
+- If result count equals limit, MORE RECENT TRANSPORTS MAY BE HIDDEN
+- **SOLUTION: Always provide from_date parameter** (e.g., "20260101" for 2026 onwards)
+- Tool will warn you if limit is reached
+
+Common status values:
+- D: Modifiable (in development)
+- R: Released
+- L: Modifiable + Protected
+- O: Released + ready for import
+
+Use this tool to find a developer's transports, both in-progress and released.`,
+            inputSchema: {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'string',
+                  description: 'Username (required)'
+                },
+                status: {
+                  type: 'string',
+                  description: 'Optional: Filter by status (D=Modifiable, R=Released, L=Modifiable+Protected, O=Released+Import)'
+                },
+                max_results: {
+                  type: 'number',
+                  description: 'Optional: Maximum number of results to return (default: 50, max possible from API: 500)'
+                },
+                from_date: {
+                  type: 'string',
+                  description: '⚠️ HIGHLY RECOMMENDED: Minimum date filter in YYYYMMDD format. Defaults to last year if not provided. Always use this to ensure recent transports are visible! Example: "20260101" for 2026 onwards.'
+                }
+              },
+              required: ['user']
+            }
+          },
+          {
+            name: 'GetTransportRequest',
+            description: 'Retrieve detailed transport information showing task/request hierarchy and object list. IMPORTANT: Use this FIRST when analyzing a specific transport to understand if it is a task (child) or request (parent), as version history may record changes under the parent request. Returns formatted output with hierarchy, objects, and guidance for next steps.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                transport_number: {
+                  type: 'string',
+                  description: 'The transport request number (e.g., ER1K8AKL0L)'
+                }
+              },
+              required: ['transport_number']
+            }
+          },
+          {
+            name: 'GetVersionHistory',
+            description: 'Retrieve version history for an ABAP object across transports. Returns formatted table with version IDs, dates, authors, and transport numbers. IMPORTANT: Transport numbers shown may be either tasks or parent requests - use GetTransportRequest to understand the hierarchy. Version "00000" = CURRENT/ACTIVE for all object types (may have earlier timestamp than transported versions but contains current code). See footer notes for complete guidance on transport hierarchy and version numbering.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                object_type: {
+                  type: 'string',
+                  description: 'Object type: CLAS (class), PROG (program), INCL (include), FUGR (function group), INTF (interface), DDLS (CDS view), BDEF (behavior definition), DCLS (access control)'
+                },
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object'
+                }
+              },
+              required: ['object_type', 'object_name']
+            }
+          },
+          {
+            name: 'GetTransportVersions',
+            description: 'Helper tool that combines transport analysis and version history in one command. Given a transport number and object, automatically handles task/parent request hierarchy, finds the relevant version(s), and suggests comparison steps. This is the recommended starting point for analyzing what changed in a specific transport.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                transport_number: {
+                  type: 'string',
+                  description: 'Transport number (can be either a task or parent request, e.g., ER1K8AK0XI)'
+                },
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object (e.g., CL_MAN_CHANGELOG)'
+                },
+                object_type: {
+                  type: 'string',
+                  description: 'Object type: CLAS (class), PROG (program), INCL (include), FUGR (function group), INTF (interface), DDLS (CDS view), BDEF (behavior definition), DCLS (access control)'
+                }
+              },
+              required: ['transport_number', 'object_name', 'object_type']
+            }
+          },
+          {
+            name: 'CompareObjectVersions',
+            description: 'Compare two versions of an ABAP object and return a formatted diff. Supports multiple output formats: unified (like git diff), side-by-side, or summary. Use with GetVersionHistory or GetTransportVersions to identify version IDs, then compare them to see exactly what changed.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                object_type: {
+                  type: 'string',
+                  description: 'Object type: CLAS (class), PROG (program), INCL (include), FUGR (function group), INTF (interface), DDLS (CDS view), BDEF (behavior definition), DCLS (access control)'
+                },
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object (e.g., CL_MAN_CHANGELOG)'
+                },
+                version_old: {
+                  type: 'string',
+                  description: 'Older version identifier in timestamp/version format (e.g., 20260201144253/00006) from GetVersionHistory'
+                },
+                version_new: {
+                  type: 'string',
+                  description: 'Newer version identifier in timestamp/version format (e.g., 20260201144253/00000) from GetVersionHistory'
+                },
+                context_lines: {
+                  type: 'number',
+                  description: 'Number of context lines to show around changes in unified format (default: 3)',
+                  default: 3
+                },
+                format: {
+                  type: 'string',
+                  enum: ['unified', 'side-by-side', 'summary'],
+                  description: 'Output format: unified (like git diff, default), side-by-side (comparison view), or summary (statistics only)',
+                  default: 'unified'
+                }
+              },
+              required: ['object_type', 'object_name', 'version_old', 'version_new']
+            }
           }
         ]
       };
@@ -1029,6 +1176,16 @@ export class mcp_abap_adt_server {
           return await handleGetBehaviorForRapBo(request.params.arguments);
         case 'SearchRapBo':
           return await handleSearchRapBo(request.params.arguments);
+        case 'ListUserTransports':
+          return await handleListUserTransports(request.params.arguments);
+        case 'GetTransportRequest':
+          return await handleGetTransportRequest(request.params.arguments);
+        case 'GetVersionHistory':
+          return await handleGetVersionHistory(request.params.arguments);
+        case 'GetTransportVersions':
+          return await handleGetTransportVersions(request.params.arguments);
+        case 'CompareObjectVersions':
+          return await handleCompareObjectVersions(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,

@@ -51,6 +51,7 @@ A Model Context Protocol (MCP) server that provides AI coding assistants with di
 
 - 🔍 **Comprehensive ABAP Object Access**: Retrieve programs, classes, interfaces, functions, tables, structures, and more
 - 🚀 **RAP Development Support**: Full support for CDS views, behavior definitions, service bindings, metadata extensions, and access control
+- 🚚 **Transport & Version Control**: List transport requests, view version history, and compare object versions across transports
 - 📦 **Batch Query Operations**: Query multiple tables or CDS views in a single call with advanced filtering and pagination
 - 🧪 **Testing & Quality Assurance**: Execute unit tests, analyze coverage, validate syntax, and find object usages
 - 🏗️ **Class Management**: Create, modify, activate, and delete ABAP classes directly from your AI assistant
@@ -356,6 +357,56 @@ Query table and CDS view data with advanced filtering and batch operations.
 - Batch queries (multiple tables/views in one call)
 - Column metadata inclusion
 
+### Transport & Version Control
+
+Manage transport requests and track version history across your ABAP landscape. **NEW**: Improved tools with automatic task/request hierarchy handling, formatted output, and **direct version comparison**.
+
+| Tool                        | Description                                                      | Documentation                                                 |
+| --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| `GetTransportVersions` ⭐   | **Quick analysis**: Combines transport + version analysis in one command | [GetTransportVersions.md](docs/GetTransportVersions.md) |
+| `CompareObjectVersions` ⭐  | **Compare versions**: Shows exactly what changed between two versions (unified diff, side-by-side, or summary) | [CompareObjectVersions.md](docs/CompareObjectVersions.md) |
+| `ListUserTransports`        | List ALL transport requests for a user (modifiable + released) with optional date filtering | [ListUserTransports.md](docs/ListUserTransports.md)           |
+| `GetTransportRequest`       | Show transport hierarchy, objects, and next steps (formatted output) | [GetTransportRequest.md](docs/GetTransportRequest.md)    |
+| `GetVersionHistory`         | View version history with transport hierarchy guidance          | [GetVersionHistory.md](docs/GetVersionHistory.md)             |
+
+**Key Capabilities:**
+
+- **Direct version comparison** - see exact changes with unified diff, side-by-side, or summary formats
+- **Automatic task/parent request hierarchy detection** - no manual investigation needed
+- **Intelligent version filtering** - automatically skips test transports and untransported versions
+- **Formatted, human-readable output** - clear hierarchy visualization with guided next steps
+- **Complete workflow documentation** - see [TRANSPORT_WORKFLOWS.md](docs/TRANSPORT_WORKFLOWS.md)
+- **Date-filtered transport listing** - efficiently find recent transports with `from_date` parameter (avoids token waste)
+- Filter transport requests by user, status, and target system
+- View detailed transport contents including all objects, tasks, and locks
+- View complete version history including dates, authors, and transport numbers
+- Support for classes, programs, function groups, interfaces, CDS views, and more
+
+**Typical Workflows:**
+
+*Quick Analysis (Recommended):*
+1. `GetTransportVersions` - One command to analyze what changed in a transport
+   - Automatically handles task → parent request hierarchy
+   - Finds the relevant version and suggests comparison
+2. `CompareObjectVersions` - See exactly what changed (one command instead of manual diff)
+   - Choose format: unified (git diff), side-by-side, or summary
+
+*Step-by-Step Analysis:*
+1. `GetTransportRequest` - Understand transport hierarchy and see all objects
+2. `GetVersionHistory` - View version history (look for parent request if analyzing a task)
+3. `CompareObjectVersions` - Compare versions directly to see exact changes
+
+*Finding Changes by User:*
+1. `ListUserTransports` - Find ALL transports for a specific user (add `from_date` parameter for recent transports)
+2. `GetTransportVersions` - Analyze each transport quickly
+3. `CompareObjectVersions` - Review changes in detail
+
+📚 **Complete Workflow Guide**: See [docs/TRANSPORT_WORKFLOWS.md](docs/TRANSPORT_WORKFLOWS.md) for:
+- SAP transport hierarchy explanation (Request → Task → Objects)
+- 4 step-by-step workflows with examples
+- Common pitfalls and how to avoid them
+- Version numbering patterns for different object types
+
 ### RAP Development Tools
 
 Full support for RESTful ABAP Programming (RAP) development.
@@ -398,22 +449,34 @@ Create, modify, and manage ABAP classes directly.
 
 ### Testing & Quality Assurance
 
-Execute tests, analyze coverage, and find dependencies.
+Execute tests, analyze coverage, validate quality, and ensure ABAP Cloud compliance.
 
-| Tool               | Description                                                       | Documentation                                   |
-| ------------------ | ----------------------------------------------------------------- | ----------------------------------------------- |
-| `GetClassTests`    | Retrieve local test classes from a class                          | [GetClassTests.md](docs/GetClassTests.md)       |
-| `RunClassTests`    | Execute unit tests and retrieve results                           | [RunClassTests.md](docs/RunClassTests.md)       |
-| `RunPackageTests`  | Execute tests for all objects in a package                        | [RunPackageTests.md](docs/RunPackageTests.md)   |
-| `GetClassCoverage` | Run tests and retrieve code coverage metrics                      | [GetClassCoverage.md](docs/GetClassCoverage.md) |
-| `GetObjectUsages`  | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md)   |
-| `GetClassUsages`   | Find where ABAP classes are used (convenience wrapper)            | [GetClassUsages.md](docs/GetClassUsages.md)     |
+| Tool                  | Description                                                       | Documentation                                       |
+| --------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
+| `GetClassTests`       | Retrieve local test classes from a class                          | [GetClassTests.md](docs/GetClassTests.md)           |
+| `RunClassTests`       | Execute unit tests and retrieve results                           | [RunClassTests.md](docs/RunClassTests.md)           |
+| `RunPackageTests`     | Execute tests for all objects in a package                        | [RunPackageTests.md](docs/RunPackageTests.md)       |
+| `GetClassCoverage`    | Run tests and retrieve code coverage metrics                      | [GetClassCoverage.md](docs/GetClassCoverage.md)     |
+| `GetObjectUsages`     | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md)       |
+| `GetClassUsages`      | Find where ABAP classes are used (convenience wrapper)            | [GetClassUsages.md](docs/GetClassUsages.md)         |
+| `GetAPIReleaseState`  | Check if APIs are released for ABAP Cloud (Tier 1)                | [GetAPIReleaseState.md](docs/GetAPIReleaseState.md) |
+| `RunATCCheck`         | Execute ATC quality checks programmatically                       | [RunATCCheck.md](docs/RunATCCheck.md)               |
 
 **Coverage Targets:**
 
 - RAP Behavior Implementation: 80% minimum, 90% target
 - Business Logic Classes: 70% minimum, 85% target
 - Utility/Helper Classes: 60% minimum, 75% target
+
+**Quality Pipeline:**
+
+```
+CheckSyntax → GetAPIReleaseState → RunATCCheck → RunClassTests
+     ↓              ↓                   ↓              ↓
+  Syntax OK    APIs Released      Quality OK      Tests Pass
+                                                       ↓
+                                              Approved for Transport
+```
 
 ## Running the Server Manually
 
