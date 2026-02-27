@@ -484,24 +484,12 @@ Execute tests, analyze coverage, validate quality, and ensure ABAP Cloud complia
 | `GetClassCoverage`    | Run tests and retrieve code coverage metrics                      | [GetClassCoverage.md](docs/GetClassCoverage.md)     |
 | `GetObjectUsages`     | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md)       |
 | `GetClassUsages`      | Find where ABAP classes are used (convenience wrapper)            | [GetClassUsages.md](docs/GetClassUsages.md)         |
-| `GetAPIReleaseState`  | Check if APIs are released for ABAP Cloud (Tier 1)                | [GetAPIReleaseState.md](docs/GetAPIReleaseState.md) |
-| `RunATCCheck`         | Execute ATC quality checks programmatically                       | [RunATCCheck.md](docs/RunATCCheck.md)               |
 
 **Coverage Targets:**
 
 - RAP Behavior Implementation: 80% minimum, 90% target
 - Business Logic Classes: 70% minimum, 85% target
 - Utility/Helper Classes: 60% minimum, 75% target
-
-**Quality Pipeline:**
-
-```
-CheckSyntax → GetAPIReleaseState → RunATCCheck → RunClassTests
-     ↓              ↓                   ↓              ↓
-  Syntax OK    APIs Released      Quality OK      Tests Pass
-                                                       ↓
-                                              Approved for Transport
-```
 
 ## Running the Server Manually
 

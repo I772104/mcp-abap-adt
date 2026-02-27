@@ -40,10 +40,10 @@
 
 ## ABAP Cloud Compliance
 
-- ✅ `GetAPIReleaseState` - Check if API is released for ABAP Cloud
+- `GetAPIReleaseState` - Check if API is released for ABAP Cloud
 - `CheckCloudReadiness` - Validate object for ABAP Cloud compliance
 - `GetSimplificationItems` - Get S/4HANA simplification items for object
-- ✅ `RunATCCheck` - Execute ATC checks with specific variant
+- `RunATCCheck` - Execute ATC checks with specific variant
 - `GetATCFindings` - Retrieve ATC findings for object
 - `GetATCExemptions` - Get ATC exemptions for object
 
