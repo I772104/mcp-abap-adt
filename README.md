@@ -484,6 +484,7 @@ Execute tests, analyze coverage, validate quality, and ensure ABAP Cloud complia
 | `GetClassCoverage`    | Run tests and retrieve code coverage metrics                      | [GetClassCoverage.md](docs/GetClassCoverage.md)     |
 | `GetObjectUsages`     | Find where-used list for ABAP objects (classes, interfaces, etc.) | [GetObjectUsages.md](docs/GetObjectUsages.md)       |
 | `GetClassUsages`      | Find where ABAP classes are used (convenience wrapper)            | [GetClassUsages.md](docs/GetClassUsages.md)         |
+| `GetATCResults` ⚠️    | Retrieve existing ATC results (WIP - not yet functional)          | [GetATCResults.md](docs/GetATCResults.md)           |
 
 **Coverage Targets:**
 

@@ -32,6 +32,7 @@ import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
 import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleRunPackageTests } from './handlers/handleRunPackageTests';
+import { handleGetATCResults } from './handlers/handleGetATCResults';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
 import { handleSearchObject } from './handlers/handleSearchObject';
 import { handleGetClassUsages } from './handlers/handleGetClassUsages';
@@ -547,6 +548,29 @@ export class mcp_abap_adt_server {
                 }
               },
               required: ['class_name']
+            }
+          },
+          {
+            name: 'GetATCResults',
+            description: 'Retrieve existing ABAP Test Cockpit results from last central run for an object',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                object_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP object (e.g., class name, CDS view name)'
+                },
+                object_type: {
+                  type: 'string',
+                  description: 'Type of object: CLAS (class), INTF (interface), PROG (program), FUGR (function group), DDLS (CDS view), BDEF (behavior definition), DCLS (access control)'
+                },
+                include_exempted: {
+                  type: 'boolean',
+                  description: 'Optional: Include exempted findings in results (default: false)',
+                  default: false
+                }
+              },
+              required: ['object_name', 'object_type']
             }
           },
           {
@@ -1144,6 +1168,8 @@ Use this tool to find a developer's transports, both in-progress and released.`,
           return await handleRunPackageTests(request.params.arguments);
         case 'GetClassCoverage':
           return await handleGetClassCoverage(request.params.arguments);
+        case 'GetATCResults':
+          return await handleGetATCResults(request.params.arguments as any);
         case 'GetObjectUsages':
           return await handleGetObjectUsages(request.params.arguments);
         case 'GetClassUsages':

@@ -43,8 +43,7 @@
 - `GetAPIReleaseState` - Check if API is released for ABAP Cloud
 - `CheckCloudReadiness` - Validate object for ABAP Cloud compliance
 - `GetSimplificationItems` - Get S/4HANA simplification items for object
-- `RunATCCheck` - Execute ATC checks with specific variant
-- `GetATCFindings` - Retrieve ATC findings for object
+- ⚠️ `GetATCResults` - Retrieve existing ATC results from last central run (WIP - not yet functional)
 - `GetATCExemptions` - Get ATC exemptions for object
 
 ---
@@ -199,7 +198,7 @@
 ## Implementation Priority
 
 ### Phase 1 (High Priority)
-1. ABAP Cloud compliance checks (`GetAPIReleaseState`, `RunATCCheck`, `GetATCFindings`)
+1. ABAP Cloud compliance checks (⚠️ `GetATCResults` WIP/not functional, `GetAPIReleaseState` in research)
 2. Performance analysis (`GetSQLExplainPlan`, `AnalyzeCDSPerformance`)
 3. Full-text code search (`SearchByText`)
 
