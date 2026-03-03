@@ -1,158 +1,166 @@
-# Claude Desktop Guide for MCP ABAP ADT Server
+# Claude Code Guide for MCP ABAP ADT Server
 
-> **📚 UNIVERSAL GUIDE**: All universal guidance is in [AGENTS.md](AGENTS.md)
-> 
-> This file contains **only Claude Desktop-specific quick references**. For complete documentation:
-> - **Universal patterns**: See [AGENTS.md](AGENTS.md)
-> - **Detailed workflows**: Invoke MCP workflow prompts
-> - **Agent-specific optimizations**: Access `agent-guide://claude` resource
+> **📚 This is a lightweight quick reference. Complete documentation in [AGENTS.md](../AGENTS.md)**
 
 ---
 
-## Quick Access
+## Quick Start
 
-### Get Claude-Specific Guide
+### 1. Get Complete Guide
 ```
-access_mcp_resource:
-  server_name: mcp-abap-adt-1
-  uri: agent-guide://claude
+Read: ../AGENTS.md
+→ Authentication setup, workflows, resources, best practices
 ```
 
-### Get Universal Guide
-See [AGENTS.md](AGENTS.md) in repository root for:
-- Complete resource and tool catalog
-- Token-efficient workflow patterns
-- Best practices for ABAP Cloud development
-- RAP Business Object guidelines
-- Common mistakes to avoid
+### 2. Access Dynamic Claude-Specific Guide
+```
+access_mcp_resource: uri=agent-guide://claude
+→ Auto-generated, cacheable, Claude-optimized guidance
+```
 
 ---
 
-## Claude Desktop-Specific Features
+## Authentication (First Time)
+
+**SSO Setup**:
+1. Read `.env` to get `SAP_URL` and `SAP_CLIENT`
+2. Authenticate to shared location:
+   ```
+   Tool: sap_authenticate
+   entry_url: {SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}
+   store_path: C:\Users\{username}\.sap\cookies
+   ```
+3. Update `.env`: `AUTH_COOKIE_DIR=C:\Users\{username}\.sap\cookies`
+4. Restart MCP server
+
+**When Cookies Expire**:
+- CSRF 403 error → Re-authenticate to shared location
+- Check status: `sap_get_cookie_info`
+- Restart server after re-authentication
+
+---
+
+## Core Workflows
+
+Read detailed workflows when needed:
+
+- **[docs/workflows/ClassDevelopment.md](../docs/workflows/ClassDevelopment.md)** - Create/test/activate classes
+- **[docs/workflows/PackageDiscovery.md](../docs/workflows/PackageDiscovery.md)** - Find packages efficiently
+- **[docs/workflows/RAPAnalysis.md](../docs/workflows/RAPAnalysis.md)** - Analyze RAP Business Objects
+- **[docs/workflows/DataQuerying.md](../docs/workflows/DataQuerying.md)** - Query tables and CDS views
+
+---
+
+## Claude-Specific Strengths
 
 ### Large Context Window
-Claude can handle large codebases effectively:
 - Load multiple resources at once
 - Analyze complete RAP BO structures
 - Process comprehensive documentation
 
-### Complex Structure Understanding
-Claude excels at understanding complex RAP structures:
-- Use rap-bo-analysis:/// resources
+### Complex Understanding
+- Excel at RAP architecture analysis
+- Use `rap-bo-analysis:///` resources
 - Request detailed explanations
-- Analyze multi-layer architectures
 
-### Comprehensive Test Generation
-Claude is strong at generating test suites:
-- Request full test coverage
+### Test Generation
+- Generate comprehensive test suites
 - Include positive and negative scenarios
-- Generate test doubles for dependencies
+- Create test doubles for dependencies
 
 ---
 
-## Workflow Prompts (Use These!)
+## Essential Patterns
 
-Instead of manually following workflows, **invoke MCP prompts** for step-by-step guidance:
-
-### Available Prompts
-1. **create-class-workflow** - Create and test ABAP classes
-2. **package-discovery-workflow** - Token-efficient package navigation
-3. **rap-bo-analysis-workflow** - Analyze RAP Business Objects
-4. **refactor-class-workflow** - Safe class refactoring
-5. **table-analysis-workflow** - Analyze database tables
-
-### How to Invoke
+### Always Prefer Resources
 ```
-User: "Create a calculator class"
-→ Invoke prompt: create-class-workflow
-→ Arguments: {class_name: "ZCL_CALCULATOR", description: "Calculator class"}
-→ Follow the step-by-step guidance provided
+✅ access_mcp_resource: uri=abap://class/{name}
+❌ use_mcp_tool: GetClass
 ```
 
----
-
-## Essential Resources (PREFER OVER TOOLS!)
-
-### Package Discovery (Token-Efficient)
+### Class Development Sequence
 ```
-# Lightest: Names only (~5K tokens)
-abap://packages/top-level/names
-
-# Filtered: Specific packages (~500 tokens)
-abap://packages/top-level?prefix=FIN&fields=name,description
-
-# Detailed: Single package (~2K tokens)
-abap://package/FINANCIAL_BASIS
+1. CheckSyntax (class)
+2. CreateClass (auto_activate: false)
+3. CheckSyntax (tests)
+4. CreateClassTests
+5. RunClassTests
+6. ActivateClasses
 ```
 
-### RAP Business Object Analysis
+### Use Workflow Prompts
 ```
-# Complete BO structure in one call
-rap-bo-analysis:///I_SalesOrder
-
-# Claude can handle comprehensive analysis
-rap-bo-analysis:///I_SalesOrder?depth=comprehensive
-```
-
-### ABAP Objects
-```
-# CDS View
-abap://cds/I_SalesOrder
-
-# Class
-abap://class/CL_ABAP_TYPEDESCR
-
-# Table
-abap://table/MARA
+invoke_prompt: create-class-workflow
+invoke_prompt: rap-bo-analysis-workflow
+invoke_prompt: package-discovery-workflow
 ```
 
 ---
 
-## Critical Rules (NEVER Skip!)
+## Critical Rules
 
-1. **CheckSyntax First** - Always validate before CreateClass or CreateClassTests
-2. **Test Before Activation** - Never use `auto_activate: true` during development
-3. **Use Resources** - Prefer resources over tools (cacheable, token-efficient)
-4. **Follow Workflows** - Use MCP prompts for guided workflows
-5. **Comprehensive Testing** - Generate complete test suites
+1. **CheckSyntax First** - Before creating any object
+2. **Test Before Activation** - Never skip RunClassTests
+3. **Use Resources** - Cacheable, efficient
+4. **Follow Workflows** - Use MCP prompts for guidance
+5. **ABAP Cloud Only** - Released APIs and RAP patterns
 
 ---
 
 ## Quick Reference
 
-### Most Common Workflow
+### Package Discovery
 ```
-User asks to create a class:
-→ Invoke prompt: create-class-workflow
-→ Request comprehensive test coverage
-→ Generate test doubles if needed
+access_mcp_resource: uri=abap://packages/top-level/names
 ```
 
-### Most Common Analysis
+### RAP BO Analysis
 ```
-User asks to analyze a RAP BO:
-→ Invoke prompt: rap-bo-analysis-workflow
-→ Use comprehensive depth
-→ Request detailed explanations
+access_mcp_resource: uri=rap-bo-analysis:///{bo_name}
 ```
 
-### Most Common Pattern Explanation
+### Query Data
 ```
-User asks to explain ABAP pattern:
-→ Load relevant resources
-→ Provide detailed explanation
-→ Include best practices and examples
+# Table
+use_mcp_tool: GetTableContents with table_name, columns, where_conditions
+
+# CDS View (cacheable)
+access_mcp_resource: uri=cds-view-data:///{view}?columns=col1,col2&max_rows=10
+```
+
+### Create Class
+```
+invoke_prompt: create-class-workflow
+arguments: {class_name: "ZCL_MY_CLASS", description: "..."}
 ```
 
 ---
 
-## Documentation Links
+## Documentation Structure
 
-- **Universal Guide**: [AGENTS.md](AGENTS.md) - Complete documentation
-- **Resources Guide**: [docs/Resources.md](docs/Resources.md) - Resource catalog
-- **RAP Tools**: [docs/RAP_Tools.md](docs/RAP_Tools.md) - RAP-specific tools
-- **Example Workflows**: [Example_AGENTS.md](Example_AGENTS.md) - ABAP project examples
+```
+AGENTS.md (root)
+├── Quick Start & Authentication
+├── Documentation Structure (routes to detailed docs)
+├── Essential Principles
+└── Common Operations
+
+docs/workflows/
+├── ClassDevelopment.md      Detailed class creation workflow
+├── PackageDiscovery.md      Package navigation patterns
+├── RAPAnalysis.md           RAP BO analysis methods
+└── DataQuerying.md          Table/CDS querying
+
+docs/
+├── Resources.md             Complete resource catalog
+├── RAP_Tools.md             RAP development tools
+├── ABAP_Standards.md        Naming and conventions
+└── CDS_View_Performance.md  Performance guidelines
+
+agents/
+└── CLAUDE.md (this file)    Claude-specific quick reference
+```
 
 ---
 
-*For complete universal guidance, workflows, and best practices, always refer to [AGENTS.md](AGENTS.md)*
+**For complete documentation, workflows, and best practices → Read [../AGENTS.md](../AGENTS.md)**

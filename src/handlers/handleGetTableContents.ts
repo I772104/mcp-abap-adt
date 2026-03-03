@@ -360,6 +360,11 @@ async function executeSingleQuery(
         formattedResult.rows = formattedResult.rows.slice(offset);
     }
 
+    // Step 8.5: Limit to maxRows
+    if (formattedResult.rows) {
+        formattedResult.rows = formattedResult.rows.slice(0, maxRows);
+    }
+
     // Step 9: Add pagination info
     const rowsReturned = formattedResult.rows?.length || 0;
     formattedResult.pagination = {

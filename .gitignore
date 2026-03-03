@@ -11,6 +11,13 @@ package-lock.json
 .env.local
 .env.*.local
 
+# Authentication cookies and temporary files
+tmp/
+*.backup
+
+# MCP configuration (local only)
+.mcp.json
+
 # Logs
 logs
 *.log

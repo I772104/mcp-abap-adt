@@ -79,23 +79,29 @@ export interface SapConfig {
 
 /**
  * Retrieves SAP configuration from environment variables.
+ * Username and password are optional - SSO cookies can be used as fallback.
  *
  * @returns {SapConfig} The SAP configuration object.
- * @throws {Error} If any required environment variable is missing.
+ * @throws {Error} If required environment variables (URL, client) are missing.
  */
 export function getConfig(): SapConfig {
   const url = process.env.SAP_URL;
-  const username = process.env.SAP_USERNAME;
-  const password = process.env.SAP_PASSWORD;
+  const username = process.env.SAP_USERNAME || '';
+  const password = process.env.SAP_PASSWORD || '';
   const client = process.env.SAP_CLIENT;
 
-  // Check if all required environment variables are set
-  if (!url || !username || !password || !client) {
+  // Only URL and client are strictly required
+  // Username/password are optional (SSO cookies can be used instead)
+  if (!url || !client) {
     throw new Error(`Missing required environment variables. Required variables:
 - SAP_URL
+- SAP_CLIENT
+
+Optional (for Basic Authentication):
 - SAP_USERNAME
 - SAP_PASSWORD
-- SAP_CLIENT`);
+
+Note: If credentials are not provided, SSO cookies will be used (via sap_authenticate tool).`);
   }
 
   return { url, username, password, client };

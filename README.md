@@ -44,17 +44,19 @@ A Model Context Protocol (MCP) server that provides AI coding assistants with di
 
 ## 📑 Table of Contents
 
-1. [Project Philosophy](#project-philosophy)
-2. [Key Features](#key-features)
-3. [Quick Start](#quick-start)
-4. [Prerequisites](#prerequisites)
-5. [Installation and Setup](#installation-and-setup)
-6. [AI Agent Integration](#ai-agent-integration)
-7. [Available Tools & Resources](#available-tools--resources)
-8. [Running the Server Manually](#running-the-server-manually)
-9. [Docker Deployment](#docker-deployment)
-10. [Troubleshooting](#troubleshooting)
-11. [Contributing & Support](#contributing--support)
+
+1. [Key Features](#key-features)
+2. [Quick Start](#quick-start)
+3. [Prerequisites](#prerequisites)
+4. [Installation and Setup](#installation-and-setup)
+5. [Authentication Guide](#authentication-guide)
+6. [LLM Access Setup (SAP Internal)](#llm-access-setup-sap-internal)
+7. [AI Agent Integration](#ai-agent-integration)
+8. [Available Tools & Resources](#available-tools--resources)
+9. [Running the Server Manually](#running-the-server-manually)
+10. [Docker Deployment](#docker-deployment)
+11. [Troubleshooting](#troubleshooting)
+12. [Contributing & Support](#contributing--support)
 
 ## Project Philosophy
 
@@ -70,6 +72,7 @@ Implementation philosophy:
 - **Community driven**: Feedback and contributions shape the server's evolution
 
 This approach allows rapid iteration on MCP capabilities while delivering real value to developers.
+
 
 ## Key Features
 
@@ -96,17 +99,22 @@ cd mcp-abap-adt
 # 2. Install dependencies and build
 npm install && npm run build
 
-# 3. Configure SAP credentials
+# 3. Configure SAP connection
 cat > .env << EOF
 SAP_URL=https://your-sap-system.com:8000
-SAP_USERNAME=your_username
-SAP_PASSWORD=your_password
 SAP_CLIENT=100
 EOF
 
-# 4. Add to your MCP client configuration (see AI Agent Integration section)
+# 4. Authenticate with SAP
+#    See docs/Authentication.md for detailed guide
+#
+# Quick options:
+# - SSO (Recommended): Use sap_authenticate tool
+# - Basic Auth: Add SAP_USERNAME/SAP_PASSWORD to .env
 
-# 5. Start coding with AI assistance!
+# 5. Add to your MCP client configuration (see AI Agent Integration section)
+
+# 6. Start coding with AI assistance!
 ```
 
 📚 **First time with MCP servers?** Continue reading for detailed step-by-step instructions.
@@ -170,22 +178,77 @@ npm run build
 
 This compiles TypeScript code into executable JavaScript.
 
-### 4. Configure SAP Credentials
+### 4. Configure SAP Connection
 
 Create a `.env` file in the root directory:
 
 ```bash
 SAP_URL=https://your-sap-system.com:8000
-SAP_USERNAME=your_username
-SAP_PASSWORD=your_password
 SAP_CLIENT=100
 ```
 
-⚠️ **Important**:
+⚠️ **Important**: Never commit `.env` to version control - keep this file secure!
 
-- If your password contains `#`, enclose it in quotes: `SAP_PASSWORD="my#password"`
-- Never commit `.env` to version control
-- Keep this file secure
+### 5. Authenticate with SAP System
+
+The server supports two authentication methods that are automatically selected based on your configuration.
+
+📚 **Complete authentication guide**: [docs/Authentication.md](docs/Authentication.md)
+
+#### Quick Setup Options
+
+**Option 1 - SSO Authentication (Recommended for Production)**:
+
+Best for corporate SAP systems with SSO. Requires the `sap-auth-mcp` MCP server.
+
+1. Install and configure `sap-auth-mcp` server (see [Authentication Guide](docs/Authentication.md#sso-authentication-recommended))
+2. Use your MCP client to call `sap_authenticate` tool:
+   - `entry_url`: `{SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}`
+   - `store_path`: `tmp`
+3. Cookies are saved to `tmp/sap_cookies.json` and used automatically
+
+**Option 2 - Basic Authentication (Recommended for Dev/Test)**:
+
+Simple setup using username and password. Add to your `.env` file:
+
+```bash
+SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=100
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password
+```
+
+#### How Authentication Works
+
+The server automatically detects and uses the best authentication method:
+
+1. **If credentials exist** (`SAP_USERNAME` and `SAP_PASSWORD` in `.env`) → Uses Basic Auth
+2. **If SSO cookies exist** (`tmp/sap_cookies.json`) → Uses SSO
+3. **If neither exists** → Shows clear error with setup instructions
+
+You'll see which method is active in the console logs:
+```
+[Auth] Using SSO Authentication (cookies from tmp/sap_cookies.json)
+```
+or
+```
+[Auth] Using Basic Authentication (credentials)
+```
+
+## Authentication Guide
+
+For complete authentication setup, troubleshooting, and best practices, see the comprehensive guide:
+
+📚 **[Authentication Guide](docs/Authentication.md)**
+
+The guide covers:
+- Detailed SSO setup with sap-auth-mcp server
+- Basic authentication configuration
+- Cookie file locations and formats
+- Re-authentication procedures
+- Security best practices
+- Troubleshooting authentication issues
+- CSRF token handling
 
 ## LLM Access Setup (SAP Internal)
 

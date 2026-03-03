@@ -3,6 +3,8 @@ import axios, { AxiosError, AxiosInstance } from 'axios';
 import { Agent } from 'https';
 import { AxiosResponse } from 'axios';
 import { getConfig, SapConfig } from '../index'; // getConfig needs to be exported from index.ts
+import { AuthProvider, createAuthProvider, CookieAuthProvider } from '../infrastructure/auth';
+import * as path from 'path';
 
 export { McpError, ErrorCode, AxiosResponse };
 
@@ -17,8 +19,13 @@ export function return_response(response: AxiosResponse) {
 }
 export function return_error(error: any) {
     let errorMessage = 'Unknown error occurred';
-    
+    let statusCode: number | undefined;
+    let responseData: string = '';
+
     if (error instanceof AxiosError) {
+        statusCode = error.response?.status;
+        responseData = String(error.response?.data || '');
+
         // Handle Axios-specific errors with detailed information
         if (error.response) {
             // Server responded with error status
@@ -46,7 +53,63 @@ export function return_error(error: any) {
             errorMessage = `Unknown error type: ${typeof error}`;
         }
     }
-    
+
+    // Enhanced error messages for common authentication issues
+    if (statusCode === 401) {
+        // Get auth provider info if available
+        let authMethod = 'Unknown';
+        try {
+            const provider = getAuthProviderInstance();
+            authMethod = provider.getName();
+        } catch {
+            // Provider not initialized yet
+        }
+
+        errorMessage =
+            '🔒 Authentication Failed (401)\n\n' +
+            `Current authentication method: ${authMethod}\n` +
+            'Credentials are invalid or expired.\n\n' +
+            'Troubleshooting steps:\n' +
+            '1. If using Basic Auth:\n' +
+            '   - Check SAP_USERNAME and SAP_PASSWORD in .env file\n' +
+            '   - Verify credentials are correct for the SAP system\n' +
+            '   - Check if your password has expired\n' +
+            '2. If using SSO:\n' +
+            '   - Re-authenticate using sap_authenticate MCP tool\n' +
+            '   - Restart MCP server: /mcp\n' +
+            '3. Restart MCP server after any changes: /mcp';
+    } else if (statusCode === 403 && (responseData.includes('CSRF') || responseData.includes('token validation failed'))) {
+        // Get auth provider info if available
+        let authMethod = 'Unknown';
+        let systemUrl = '';
+        let client = '';
+        try {
+            const provider = getAuthProviderInstance();
+            authMethod = provider.getName();
+            systemUrl = provider.getSystemUrl();
+            client = provider.getClient();
+        } catch {
+            // Provider not initialized yet
+        }
+
+        errorMessage =
+            '🔒 CSRF Token Validation Failed (403)\n\n' +
+            `Current authentication method: ${authMethod}\n` +
+            'CSRF token fetch or validation failed.\n\n' +
+            'Troubleshooting steps:\n' +
+            '1. If using Basic Auth:\n' +
+            '   - Check if credentials are still valid\n' +
+            '   - Verify SAP_USERNAME and SAP_PASSWORD in .env file\n' +
+            '   - Restart MCP server: /mcp\n' +
+            '2. If using SSO:\n' +
+            '   - Re-authenticate using sap_authenticate MCP tool with:\n' +
+            `     entry_url: ${systemUrl}/sap/bc/adt?sap-client=${client}\n` +
+            '     store_path: tmp\n' +
+            '   - Restart MCP server: /mcp\n' +
+            '3. Check SAP system connectivity and permissions\n\n' +
+            `Original error: ${responseData}`;
+    }
+
     return {
         isError: true,
         content: [{
@@ -79,13 +142,31 @@ export function cleanup() {
     }
     axiosInstance = null;
     config = undefined;
+    authProvider = null;
     csrfToken = null;
     cookies = null;
 }
 
 let config: SapConfig | undefined;
+let authProvider: AuthProvider | null = null;
 let csrfToken: string | null = null;
-let cookies: string | null = null; // Variable to store cookies
+let cookies: string | null = null; // Variable to store cookies from SAP responses
+
+export function getAuthProviderInstance(): AuthProvider {
+    if (!authProvider) {
+        if (!config) {
+            config = getConfig();
+        }
+        const baseUrl = new URL(config.url).origin;
+        authProvider = createAuthProvider(
+            baseUrl,
+            config.client,
+            config.username,
+            config.password
+        );
+    }
+    return authProvider;
+}
 
 export async function getBaseUrl() {
     if (!config) {
@@ -102,25 +183,39 @@ export async function getBaseUrl() {
 }
 
 export async function getAuthHeaders() {
-    if (!config) {
-        config = getConfig();
+    try {
+        const provider = getAuthProviderInstance();
+        return await provider.getAuthHeaders();
+    } catch (error) {
+        if (error instanceof Error && error.message === 'SSO_COOKIE_NOT_FOUND') {
+            throw new Error(
+                '🔒 Authentication Required\n\n' +
+                'No authentication method available. Please authenticate using SSO:\n\n' +
+                'SSO Authentication (Recommended):\n' +
+                '  1. Use sap-auth-mcp-main MCP server\n' +
+                '  2. Call sap_authenticate tool with your SAP system URL\n' +
+                '  3. Restart MCP server: /mcp\n\n' +
+                'Alternative - Basic Authentication (for dev/test):\n' +
+                '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
+                '  Then restart MCP server: /mcp'
+            );
+        }
+        throw error;
     }
-    const { username, password, client } = config;
-    const auth = Buffer.from(`${username}:${password}`).toString('base64'); // Create Basic Auth string
-    return {
-        'Authorization': `Basic ${auth}`, // Basic Authentication header
-        'X-SAP-Client': client            // SAP client header
-    };
 }
 
 async function fetchCsrfToken(url: string): Promise<string> {
     const baseUrl = await getBaseUrl();
-    
+
     // Get SAP client for URL parameter
     if (!config) {
         config = getConfig();
     }
-    
+
+    // Log authentication method being used
+    const provider = getAuthProviderInstance();
+    console.error(`[CSRF] Fetching token using ${provider.getName()}`);
+
     // Try multiple endpoints to fetch CSRF token
     const csrfEndpoints = [
         `${baseUrl}/sap/bc/adt/core/discovery`,  // ADT discovery endpoint (most reliable)
