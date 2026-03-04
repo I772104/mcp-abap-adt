@@ -562,12 +562,16 @@ export class mcp_abap_adt_server {
                 },
                 object_type: {
                   type: 'string',
-                  description: 'Type of object: CLAS (class), INTF (interface), PROG (program), FUGR (function group), DDLS (CDS view), BDEF (behavior definition), DCLS (access control)'
+                  description: 'Type of object: CLAS (class), INTF (interface), PROG (program), FUGR (function group), DDLS (CDS view), BDEF (behavior definition), DCLS (access control), PACKAGE (package - for checking entire package backlog)'
                 },
                 include_exempted: {
                   type: 'boolean',
                   description: 'Optional: Include exempted findings in results (default: false)',
                   default: false
+                },
+                priority_filter: {
+                  type: 'string',
+                  description: 'Optional: Filter by priority levels (e.g., "1" for errors only, "2" for warnings only, "1,2" for errors and warnings). Helps reduce result size for large central runs.'
                 }
               },
               required: ['object_name', 'object_type']

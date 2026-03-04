@@ -1,17 +1,17 @@
 /**
  * Handler for GetATCResults MCP Tool
  * Retrieves existing ABAP Test Cockpit results from last central run
- * Uses HATEOAS-based discovery to find the correct endpoints
+ * Uses direct ADT API endpoints (not HATEOAS discovery)
  */
 
 import { parseStringPromise } from 'xml2js';
 import { makeAdtRequest, getBaseUrl } from '../lib/utils';
-import { findWorkspace, findCollection, findRelation } from '../utils/adtDiscovery';
 
 interface ATCResultsParams {
   object_name: string;
   object_type: string;
   include_exempted?: boolean;
+  priority_filter?: string; // e.g., "1" for errors only, "1,2" for errors+warnings
 }
 
 interface ATCFinding {
@@ -39,6 +39,8 @@ function getObjectUri(objectType: string, objectName: string): string {
     DDLS: 'ddic/ddl/sources',
     BDEF: 'ddic/bdef/sources',
     DCLS: 'acm/dcl/sources',
+    PACKAGE: 'packages',  // NEW: Package support
+    DEVC: 'packages',     // Alternative name for package
   };
 
   const path = typeMap[objectType.toUpperCase()];
@@ -65,67 +67,118 @@ function getPriorityText(priority: string): string {
 }
 
 /**
- * Get ATC results for an object from the central/active results
+ * List available ATC results for an object
  */
-async function getAtcResults(
-  resultsUrl: string,
-  objectUri: string,
-  includeExempted: boolean = false
-): Promise<ATCFinding[]> {
+async function listAtcResults(objectUri: string): Promise<any[]> {
   const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}/sap/bc/adt/atc/results?createdBy=*&objectUri=${encodeURIComponent(objectUri)}`;
 
-  // Query central/active results for this specific object
-  const url = `${baseUrl}${resultsUrl}?objectUri=${encodeURIComponent(objectUri)}`;
+  console.log(`[ATC] Listing ATC results: ${url}`);
 
   const response = await makeAdtRequest(url, 'GET', 30000, undefined, {}, {
-    'Accept': 'application/vnd.sap.atc.results.v1+xml',
+    'Accept': 'application/xml',
   });
 
-  // Parse the results response
   const parsed = await parseStringPromise(response.data, {
     explicitArray: false,
-    mergeAttrs: true,
-    xmlns: true,
+    mergeAttrs: false,
+    xmlns: false,
+  });
+
+  const resultList = parsed['atcresult:resultList'] || parsed['resultList'];
+  if (!resultList) return [];
+
+  const results = resultList['atcresult:result'] || resultList['result'];
+  if (!results) return [];
+
+  const resultArray = Array.isArray(results) ? results : [results];
+
+  return resultArray.map((r: any) => {
+    const getId = (obj: any) => {
+      if (typeof obj === 'string') return obj;
+      if (obj && obj['_']) return obj['_'];
+      if (obj && typeof obj === 'object') return Object.values(obj)[0];
+      return String(obj);
+    };
+
+    return {
+      displayId: getId(r['atcresult:displayId'] || r['displayId']),
+      title: getId(r['atcresult:title'] || r['title']),
+      checkVariant: getId(r['atcresult:checkVariant'] || r['checkVariant']),
+      createdAt: getId(r['atcresult:createdAt'] || r['createdAt']),
+      aggregates: {
+        numPrio1: parseInt(getId(r['atcresult:aggregates']?.['atcresult:numPrio1'] || r['aggregates']?.['numPrio1'] || '0')),
+        numPrio2: parseInt(getId(r['atcresult:aggregates']?.['atcresult:numPrio2'] || r['aggregates']?.['numPrio2'] || '0')),
+        numPrio3: parseInt(getId(r['atcresult:aggregates']?.['atcresult:numPrio3'] || r['aggregates']?.['numPrio3'] || '0')),
+      }
+    };
+  });
+}
+
+/**
+ * Get detailed findings from a specific ATC result
+ */
+async function getAtcResultFindings(
+  displayId: string,
+  objectUri: string,
+  includeExempted: boolean = false,
+  priorityFilter?: string
+): Promise<ATCFinding[]> {
+  const baseUrl = await getBaseUrl();
+  let url = `${baseUrl}/sap/bc/adt/atc/results/${displayId}?objectUri=${encodeURIComponent(objectUri)}`;
+
+  // Add priority filter if specified
+  if (priorityFilter) {
+    const priorities = priorityFilter.split(',').map(p => p.trim());
+    priorities.forEach(p => {
+      url += `&priority=${p}`;
+    });
+  }
+
+  console.log(`[ATC] Fetching findings: ${url}`);
+
+  const response = await makeAdtRequest(url, 'GET', 90000, undefined, {}, {
+    'Accept': 'application/xml',
+  });
+
+  const parsed = await parseStringPromise(response.data, {
+    explicitArray: false,
+    mergeAttrs: false,
+    xmlns: false,
   });
 
   const findings: ATCFinding[] = [];
 
-  // Extract findings from the results
-  const results = parsed['atc:results'];
-  if (!results) return findings;
-
-  const result = results['atc:result'];
-  if (!result) return findings;
-
-  const objects = result['atc:objects']?.['atc:object'];
+  // Navigate the XML structure
+  const objects = parsed['atcobject:objectSet']?.['atcobject:object'];
   if (!objects) return findings;
 
   const objectArray = Array.isArray(objects) ? objects : [objects];
 
   for (const obj of objectArray) {
-    const findingsList = obj['atc:findings']?.['atc:finding'] || [];
+    const findingsList = obj['atcfinding:findings']?.['atcfinding:finding'] || [];
     const findingsArray = Array.isArray(findingsList) ? findingsList : [findingsList];
 
     for (const finding of findingsArray) {
       if (!finding) continue;
 
-      const exempted = finding['atc:exempted'] === 'true' || finding['atc:exempted'] === true;
+      const exempted = finding['atcfinding:exemptionApproval'] === 'APPROVED';
 
       // Skip exempted findings if not requested
       if (exempted && !includeExempted) continue;
 
-      const priority = finding['atc:priority'] || finding.priority || 'UNKNOWN';
+      const priority = finding['atcfinding:priority'] || '3';
 
       findings.push({
         priority,
         priorityText: getPriorityText(priority),
-        checkId: finding['atc:checkId'] || finding.checkId || '',
-        checkTitle: finding['atc:checkTitle'] || finding.checkTitle || '',
-        messageId: finding['atc:messageId'] || finding.messageId || '',
-        messageTitle: finding['atc:messageTitle'] || finding.messageTitle || '',
-        location: finding['atc:location'] || finding.location || undefined,
-        line: finding['atc:line'] || finding.line || undefined,
-        quickfixAvailable: finding['atc:quickfixInfo'] === 'true' || finding.quickfixInfo === 'true',
+        checkId: finding['atcfinding:checkId'] || '',
+        checkTitle: finding['atcfinding:checkTitle'] || '',
+        messageId: finding['atcfinding:messageId'] || '',
+        messageTitle: finding['atcfinding:messageTitle'] || '',
+        location: finding['atcfinding:location']?.['atcfinding:file'] || undefined,
+        line: finding['atcfinding:location']?.['atcfinding:line'] || undefined,
+        quickfixAvailable: finding['atcfinding:quickfixInfo']?.['atcfinding:quickfixAvailable'] === 'true',
         exempted,
       });
     }
@@ -139,66 +192,50 @@ async function getAtcResults(
  */
 export async function handleGetATCResults(params: ATCResultsParams) {
   try {
-    const { object_name, object_type, include_exempted = false } = params;
+    const { object_name, object_type, include_exempted = false, priority_filter } = params;
 
-    // Step 1: Discover ATC endpoints using HATEOAS
-    console.log('[ATC] Discovering ATC endpoints...');
-    const workspace = await findWorkspace('ABAP Test Cockpit');
-
-    if (!workspace) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `⚠️ ATC API Not Available
-
-**ABAP Test Cockpit workspace not found in discovery document.**
-
-This SAP system may not have ATC REST API enabled or configured.
-
-**To view ATC results:**
-1. Open Eclipse ABAP Development Tools (ADT)
-2. Navigate to ${object_name} (${object_type})
-3. View existing ATC results in the ATC Results view`,
-          },
-        ],
-      };
-    }
-
-    // Look for the "results" collection
-    const resultsCollection =
-      findCollection(workspace, 'results') ||
-      findCollection(workspace, 'active') ||
-      findCollection(workspace, 'central');
-
-    if (!resultsCollection) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `⚠️ ATC Results Endpoint Not Found
-
-Found ATC workspace but the results collection is not available.
-
-Available collections:
-${workspace.collections.map(c => `- ${c.title} (${c.href})`).join('\n')}
-
-Please use Eclipse ADT to view ATC results on this system.`,
-          },
-        ],
-      };
-    }
-
-    const resultsUrl = resultsCollection.href;
-    console.log(`[ATC] Discovered results endpoint: ${resultsUrl}`);
-
-    // Step 2: Get object URI
+    // Step 1: Get object URI
     const objectUri = getObjectUri(object_type, object_name);
     console.log(`[ATC] Object URI: ${objectUri}`);
 
-    // Step 3: Get ATC results
-    console.log('[ATC] Retrieving ATC results from last central run...');
-    const findings = await getAtcResults(resultsUrl, objectUri, include_exempted);
+    // Step 2: List available ATC results for this object
+    console.log('[ATC] Listing available ATC results...');
+    const results = await listAtcResults(objectUri);
+    console.log(`[ATC] Found ${results.length} ATC result(s)`);
+
+    if (results.length === 0) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `ℹ️  No ATC Results Found
+
+**Object:** ${object_name} (${object_type})
+
+No ATC results found for this object. This could mean:
+- The object has never been checked by central ATC
+- The object was created after the last central ATC run
+- The object passed all checks with no findings`,
+          },
+        ],
+      };
+    }
+
+    // Step 3: Get the most recent result
+    const mostRecent = results[0]; // Already sorted by date (most recent first)
+    console.log(`[ATC] Using most recent result: ${mostRecent.title} (${mostRecent.displayId})`);
+    if (priority_filter) {
+      console.log(`[ATC] Priority filter: ${priority_filter}`);
+    }
+
+    // Step 4: Get detailed findings
+    console.log('[ATC] Retrieving detailed findings...');
+    const findings = await getAtcResultFindings(
+      mostRecent.displayId,
+      objectUri,
+      include_exempted,
+      priority_filter
+    );
     console.log(`[ATC] Found ${findings.length} findings`);
 
     // Format results
