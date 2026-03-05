@@ -51,4 +51,6 @@ Thumbs.db
 *.bak
 
 # Claude Code session and settings
-.claude/
+.claude/*
+# But allow agents directory (custom agents are part of the project)
+!.claude/agents/

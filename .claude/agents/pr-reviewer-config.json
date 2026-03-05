@@ -1,0 +1,91 @@
+{
+  "name": "pr-reviewer",
+  "version": "1.0.0",
+  "description": "Automated PR review agent for mcp-abap-adt project",
+  "agent_file": "pr-reviewer.md",
+  "triggers": {
+    "manual": true,
+    "automatic": false,
+    "git_hooks": ["pre-push"]
+  },
+  "checks": {
+    "typescript_types": {
+      "enabled": true,
+      "severity": "critical",
+      "patterns": [
+        "\\bany\\b",
+        ":\\s*any\\s*[,;)]",
+        "Promise<any>"
+      ]
+    },
+    "commit_messages": {
+      "enabled": true,
+      "severity": "high",
+      "format": "^(feat|fix|docs|test|refactor|perf|chore|ci)(\\([a-z-]+\\))?:\\s.+",
+      "max_length": 72
+    },
+    "test_coverage": {
+      "enabled": true,
+      "severity": "critical",
+      "thresholds": {
+        "handlers": 70,
+        "utilities": 80,
+        "critical_paths": 90
+      }
+    },
+    "security": {
+      "enabled": true,
+      "severity": "critical",
+      "patterns": [
+        "password\\s*=",
+        "token\\s*=",
+        "secret\\s*=",
+        "SAP_PASSWORD",
+        "SAP_URL.*://.*:.*@",
+        "\\.env[^.]"
+      ]
+    },
+    "documentation": {
+      "enabled": true,
+      "severity": "high",
+      "require_docs_for": ["handlers", "resources", "lib"]
+    },
+    "handler_structure": {
+      "enabled": true,
+      "severity": "high",
+      "required_patterns": [
+        "try\\s*{",
+        "catch\\s*\\(",
+        "return\\s*{"
+      ]
+    }
+  },
+  "exclusions": {
+    "files": [
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "*.test.ts",
+      "*.spec.ts"
+    ],
+    "patterns": {
+      "typescript_types": {
+        "allow_any_in": [
+          "__tests__/**",
+          "*.test.ts"
+        ]
+      }
+    }
+  },
+  "output": {
+    "format": "markdown",
+    "include_line_numbers": true,
+    "include_suggestions": true,
+    "severity_emoji": {
+      "critical": "🚨",
+      "high": "⚠️",
+      "medium": "💡",
+      "low": "ℹ️"
+    }
+  }
+}
