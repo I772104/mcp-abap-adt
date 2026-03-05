@@ -86,6 +86,17 @@ This approach allows rapid iteration on MCP capabilities while delivering real v
 - 🤖 **AI Agent Ready**: Optimized for Cline, Claude Code CLI, Cursor, OpenCode, and other MCP-compatible clients
 - ☁️ **ABAP Cloud Compliant**: Built-in guidance for ABAP Cloud (Tier 1) development standards
 
+> [!IMPORTANT]
+> **ABAP Debugging Not Supported**
+>
+> This Node.js-based MCP server does **not** support ABAP debugging capabilities. ABAP debugging requires RFC (Remote Function Call) protocol, which is only available through SAP's native libraries (JCo for Java, NW RFC SDK for C/C++).
+>
+> **Need debugging?** Use the Java-based MCP server [ai-sap-abap-adt](https://github.wdf.sap.corp/sap-managed-tm-ewm/ai-sap-abap-adt) which includes SAP JCo and provides full debugging support including:
+> - Setting/managing breakpoints
+> - Step-by-step execution (step into, step over, step out)
+> - Variable inspection and modification
+> - Call stack analysis
+
 ## Quick Start
 
 **For experienced developers** - get up and running in 5 minutes:
