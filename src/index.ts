@@ -56,6 +56,9 @@ import { handleGetTransportRequest } from './handlers/handleGetTransportRequest'
 import { handleGetVersionHistory } from './handlers/handleGetVersionHistory';
 import { handleGetTransportVersions } from './handlers/handleGetTransportVersions';
 import { handleCompareObjectVersions } from './handlers/handleCompareObjectVersions';
+import { handleExportClassToFile } from './handlers/handleExportClassToFile';
+import { handleImportClassFromFile } from './handlers/handleImportClassFromFile';
+import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
@@ -200,6 +203,62 @@ export class mcp_abap_adt_server {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
         tools: [ // Define available tools
+          {
+            name: 'ExportClassToFile',
+            description: 'Export an ABAP class from the system directly to a file in the tmp folder. Automatically creates the tmp folder if it does not exist.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class to export'
+                }
+              },
+              required: ['class_name']
+            }
+          },
+          {
+            name: 'ImportClassFromFile',
+            description: 'Import an ABAP class from a file in the tmp folder and create it in the SAP system. Only supports local classes (Z/Y prefix) in local packages.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                class_name: {
+                  type: 'string',
+                  description: 'Name of the ABAP class to import (must start with Z or Y)'
+                },
+                description: {
+                  type: 'string',
+                  description: 'Optional description for the class (extracted from file if not provided)'
+                },
+                package: {
+                  type: 'string',
+                  description: 'Optional package name (defaults to $TMP)',
+                  default: '$TMP'
+                },
+                auto_activate: {
+                  type: 'boolean',
+                  description: 'Optional: Automatically activate the class after import (default: false)',
+                  default: false
+                },
+                preaudit_requested: {
+                  type: 'boolean',
+                  description: 'Optional: Request pre-audit during activation (default: true)',
+                  default: true
+                }
+              },
+              required: ['class_name']
+            }
+          },
+          {
+            name: 'GetSystemInfo',
+            description: 'Get current SAP system connection information including system URL, client, authentication method, and connection status',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+              required: []
+            }
+          },
           {
             name: 'GetProgram',
             description: 'Retrieve ABAP program source code',
@@ -636,17 +695,21 @@ export class mcp_abap_adt_server {
           },
           {
             name: 'CheckSyntax',
-            description: 'Check ABAP source code syntax and return detailed error information. Either provide source_code directly, or provide object_name to check an existing object.',
+            description: 'Check ABAP source code syntax and return detailed error information. Supports three input modes: file_path (from tmp folder), source_code (direct code), or object_name (existing object). Priority: file_path > source_code > object_name.',
             inputSchema: {
               type: 'object',
               properties: {
+                file_path: {
+                  type: 'string',
+                  description: 'Path to ABAP source file to check. Defaults to tmp folder for relative paths (e.g., "ZCL_MY_CLASS.abap"). Supports absolute paths. Auto-detects class name from filename.'
+                },
                 source_code: {
                   type: 'string',
-                  description: 'ABAP source code to check for syntax errors (provide this OR object_name)'
+                  description: 'ABAP source code to check for syntax errors (used if file_path not provided)'
                 },
                 object_name: {
                   type: 'string',
-                  description: 'Name of the ABAP object. If source_code is not provided, will attempt to fetch source from this existing class (provide this OR source_code)'
+                  description: 'Name of the ABAP object. If file_path and source_code not provided, will fetch source from this existing class. Also used for file_path when class name cannot be auto-detected.'
                 },
                 object_type: {
                   type: 'string',
@@ -1114,6 +1177,12 @@ Use this tool to find a developer's transports, both in-progress and released.`,
     // Handler for CallToolRequest
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       switch (request.params.name) {
+        case 'ExportClassToFile':
+          return await handleExportClassToFile(request.params.arguments as any);
+        case 'ImportClassFromFile':
+          return await handleImportClassFromFile(request.params.arguments as any);
+        case 'GetSystemInfo':
+          return await handleGetSystemInfo(request.params.arguments || {});
         case 'GetProgram':
           return await handleGetProgram(request.params.arguments);
         case 'GetClass':

@@ -1,5 +1,6 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
+import { ABAP_CLASS_NAME_MAX_LENGTH } from '../lib/fileUtils';
 
 /**
  * Interface for class activation parameters
@@ -56,8 +57,8 @@ function validateAndFormatClassNames(classNames: string[]): string[] {
         }
 
         // Check length limit (ABAP object names are typically max 30 characters)
-        if (upperClassName.length > 30) {
-            throw new McpError(ErrorCode.InvalidParams, `Class name '${upperClassName}' exceeds 30 character limit`);
+        if (upperClassName.length > ABAP_CLASS_NAME_MAX_LENGTH) {
+            throw new McpError(ErrorCode.InvalidParams, `Class name '${upperClassName}' exceeds ${ABAP_CLASS_NAME_MAX_LENGTH} character limit`);
         }
 
         return upperClassName;

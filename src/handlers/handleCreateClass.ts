@@ -1,5 +1,6 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
+import { validateLocalClassName, validateLocalPackage, ABAP_CLASS_NAME_MAX_LENGTH } from '../lib/fileUtils';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
 import { handleGetClass } from './handleGetClass';
 import { attemptClassActivation, createWorkflowResponse, WorkflowResult } from '../lib/activation-utils';
@@ -26,43 +27,6 @@ interface ClassBackup {
     original_content: string;
     package?: string;
     description?: string;
-}
-
-/**
- * Validates class name follows Z/Y naming convention and ABAP naming rules
- */
-function validateClassName(className: string): void {
-    if (!className) {
-        throw new McpError(ErrorCode.InvalidParams, 'Class name is required');
-    }
-    
-    const upperClassName = className.toUpperCase();
-    
-    // Check Z/Y prefix for customer namespace
-    if (!upperClassName.startsWith('Z') && !upperClassName.startsWith('Y')) {
-        throw new McpError(ErrorCode.InvalidParams, 'Class name must start with Z or Y for local development');
-    }
-    
-    // Check length limit
-    if (upperClassName.length > 30) {
-        throw new McpError(ErrorCode.InvalidParams, 'Class name must not exceed 30 characters');
-    }
-    
-    // Check valid ABAP naming pattern
-    const validPattern = /^[ZY][A-Z0-9_]*$/;
-    if (!validPattern.test(upperClassName)) {
-        throw new McpError(ErrorCode.InvalidParams, 'Class name contains invalid characters. Use only A-Z, 0-9, and underscore');
-    }
-}
-
-/**
- * Validates the package is local (no transport required)
- */
-function validateLocalPackage(packageName: string): void {
-    const isLocalPackage = packageName === '$TMP' || packageName === '$LOCAL' || packageName.startsWith('$');
-    if (!isLocalPackage) {
-        throw new McpError(ErrorCode.InvalidParams, 'Package must be local ($TMP, $LOCAL, or other $-prefixed packages)');
-    }
 }
 
 /**
@@ -278,7 +242,7 @@ export async function handleCreateClass(args: any): Promise<any> {
         };
 
         // Validate inputs
-        validateClassName(params.class_name);
+        params.class_name = validateLocalClassName(params.class_name);
         validateLocalPackage(params.package!);
 
         // Check if class already exists and handle accordingly

@@ -1,5 +1,6 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
+import { validateLocalClassName, isLocalPackage, ABAP_CLASS_NAME_MAX_LENGTH } from '../lib/fileUtils';
 
 /**
  * Interface for class deletion parameters
@@ -9,12 +10,6 @@ interface DeleteLocalClassParams {
 }
 
 /**
- * Validates class name follows Z/Y naming convention and ABAP naming rules
- */
-function validateClassName(className: string): void {
-    if (!className) {
-        throw new McpError(ErrorCode.InvalidParams, 'Class name is required');
-    }
     
     const upperClassName = className.toUpperCase();
     
@@ -69,7 +64,7 @@ function parseDeletionCheckResponse(xmlResponse: string, className: string): { i
         const isDeletable = deletableMatch ? deletableMatch[1] === 'true' : false;
         
         // Check if it's a local package
-        const isLocal = packageName === '$TMP' || packageName === '$LOCAL' || packageName.startsWith('$');
+        const isLocal = isLocalPackage(packageName);
         
         return { isDeletable, isLocal, packageName };
     } catch (error) {
@@ -111,7 +106,7 @@ export async function handleDeleteLocalClass(args: any): Promise<any> {
         };
 
         // Validate class name
-        validateClassName(params.class_name);
+        params.class_name = validateLocalClassName(params.class_name);
 
         const baseUrl = await getBaseUrl();
         const lowerClassName = params.class_name.toLowerCase();

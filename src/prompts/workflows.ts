@@ -96,6 +96,17 @@ export function listWorkflowPrompts(): Prompt[] {
         },
       ],
     },
+    {
+      name: "export-modify-import-workflow",
+      description: "Export a class, make modifications locally, and import back as a local class (99% token savings vs AI-generated code)",
+      arguments: [
+        {
+          name: "class_name",
+          description: "Name of the ABAP class to export and modify",
+          required: true,
+        },
+      ],
+    },
   ];
 }
 
@@ -119,6 +130,8 @@ export function getWorkflowPrompt(
       return getRefactorClassWorkflow(args);
     case "table-analysis-workflow":
       return getTableAnalysisWorkflow(args);
+    case "export-modify-import-workflow":
+      return getExportModifyImportWorkflow(args);
     default:
       throw new Error(`Unknown workflow prompt: ${promptName}`);
   }
@@ -140,17 +153,6 @@ function getCreateClassWorkflow(args: Record<string, string>): string {
 
 💡 **Tip**: For batch operations, consider using \`quick-class-workflow\` (saves 1 step)
 
-## Prerequisites: Review ABAP Standards
-
-**⭐ ALWAYS Access Standards Before Coding:**
-\`\`\`
-# Complete ABAP standards (recommended for first-time users)
-Resource: abap://standards/complete
-
-# Or specific sections for quick reference
-Resource: abap://standards/naming      # Class, method, parameter naming
-Resource: abap://standards/formatting  # Code formatting rules
-\`\`\`
 
 **Key Standards to Check:**
 - ✅ Class naming: CL_<module>_<name> (e.g., CL_FIN_CALCULATOR)
@@ -976,5 +978,135 @@ max_rows: 50
 3. Review data quality
 4. Plan data access strategy
 5. Consider CDS view creation
+`;
+}
+
+/**
+ * Export-Modify-Import Workflow (Lightweight)
+ */
+function getExportModifyImportWorkflow(args: Record<string, string>): string {
+  const className = args.class_name || "CL_EXAMPLE";
+
+  return `# Export-Modify-Import Class Workflow
+
+## Target: ${className}
+
+⚡ **99% token savings** - Source code stays in files, never in LLM context
+
+## Core Process
+
+### Step 1: Export ⏱️ ~5s
+\`\`\`
+Tool: ExportClassToFile
+Parameters: { class_name: "${className}" }
+\`\`\`
+→ Creates \`tmp/${className.toUpperCase()}.abap\`
+
+### Step 2: Analyze Code
+**Focus Areas:**
+- Naming: class/method/parameter names (Section 1)
+- Formatting: UPPERCASE keywords, indentation (Section 2)
+- ABAP Cloud: Released APIs, no direct DB access (Section 4)
+- Quality: Remove commented code, optimize patterns
+
+### Step 3: Modify Locally
+**Priority 1 - Standards Compliance:**
+- **Naming**: Apply prefixes (IV_/EV_/RV_/LV_/MV_)
+- **Formatting**: UPPERCASE keywords, consistent indentation
+- **ABAP Cloud**: Use CDS views, released APIs only
+
+**Priority 2 - Optimization:**
+- Refactor repetitive code
+- Add modern ABAP patterns (VALUE, COND)
+- Improve performance
+
+**Document:**
+- Standards sections applied (1.x, 2.x, 4.x)
+- Specific changes made
+- Breaking changes (if any)
+
+### Step 4: Validate Modified Code ⏱️ ~15s
+\`\`\`
+Tool: CheckSyntax
+Parameters: { 
+  file_path: "${className.toUpperCase()}.abap"
+}
+\`\`\`
+
+**Purpose**: Validate syntax before importing to SAP system
+**Benefit**: Catch errors locally, avoid failed imports
+**Auto-detection**: Class name extracted from filename
+
+**Critical**: Do NOT proceed to Step 5 if syntax errors are found. Fix them first in the local file.
+
+### Step 5: Import (INACTIVE) ⏱️ ~10s
+\`\`\`
+Tool: ImportClassFromFile
+Parameters: {
+  class_name: "${className}",
+  description: "Standards-compliant version",
+  auto_activate: false
+}
+\`\`\`
+
+**Auto-conversion**: CL_* → ZCL_*, IF_* → ZIF_*, etc.
+
+### Step 6: Manual Review & Activate
+1. Open in SE24/SE80
+2. Check syntax (F2)
+3. Test manually
+4. Activate (Ctrl+F3)
+
+## Key Standards
+
+### Naming (Section 1)
+- Classes: \`CL_<module>_<name>\`
+- Methods: \`SET_*/GET_*/IS_*/CHECK_*\`
+- Parameters: \`IV_*/EV_*/CV_*/RV_*\`
+- Variables: \`LV_*/MV_*/SV_*\`
+
+### Formatting (Section 2)
+- UPPERCASE keywords (DATA, METHOD, IF, LOOP)
+- Consistent indentation (2 or 4 spaces)
+- Aligned VALUE statements
+
+### ABAP Cloud (Section 4)
+- ✅ Released CDS views (I_*, C_*, R_*)
+- ✅ Released classes (CL_SYSTEM_UUID, etc.)
+- ❌ No SELECT * FROM tables
+- ❌ No unreleased FMs
+
+## Use Cases
+- **Optimize**: Reduce repetitive code
+- **Learn**: Study and enhance standard classes
+- **Customize**: Add company-specific logic
+- **Modernize**: Apply modern ABAP patterns
+
+## Best Practices
+- ✅ Priority 1: Standards compliance
+- ✅ Priority 2: Code optimization  
+- ✅ Preserve method signatures
+- ✅ Document all changes
+- ✅ Test before activating
+
+## Workflow Steps Summary
+1. **Export** → Class file in tmp/ folder
+2. **Analyze** → Review for standards compliance
+3. **Modify** → Apply improvements locally
+4. **Validate** → CheckSyntax with file_path (NEW!)
+5. **Import** → Create inactive Z class in system
+6. **Activate** → Manual review and activation in SE24
+
+## Troubleshooting
+- **Step 4 syntax errors**: Fix in local file, re-run CheckSyntax
+- **Step 5 import fails**: Ensure class name starts with Z/Y
+- **Step 6 activation fails**: Review in SE24, fix issues first
+
+## Benefits of File-Based CheckSyntax (Step 4)
+- ✅ Validates before import (prevents failed imports)
+- ✅ Token-efficient (source stays in file)
+- ✅ Auto-detects class name from filename
+- ✅ Shows file metadata (size, lines, modified)
+- ✅ Consistent with Export/Import pattern
 `;
 }

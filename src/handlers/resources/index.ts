@@ -21,7 +21,7 @@ import { join } from 'path';
  */
 function loadStaticResource(filename: string): string {
   try {
-    const filePath = join(__dirname, '..', '..', 'docs', filename);
+    const filePath = join(__dirname, '..', '..', '..', 'docs', filename);
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
     throw new Error(`Failed to load static resource ${filename}: ${error}`);

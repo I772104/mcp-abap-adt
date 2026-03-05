@@ -3,6 +3,14 @@ import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../li
 import { handleGetClass } from './handleGetClass';
 import { handleCreateClass } from './handleCreateClass';
 import { handleDeleteLocalClass } from './handleDeleteLocalClass';
+import {
+    resolveAbapFilePath,
+    readAbapSourceFile,
+    getFileMetadata,
+    extractClassNameFromFile,
+    ABAP_FILE_EXTENSION
+} from '../lib/fileUtils';
+import * as path from 'path';
 
 /**
  * Interface for syntax check result items
@@ -351,18 +359,47 @@ ENDCLASS.`;
  */
 export async function handleCheckSyntax(args: any) {
     try {
-        // Validate that at least source_code or object_name is provided
-        if (!args?.source_code && !args?.object_name) {
-            throw new McpError(ErrorCode.InvalidParams, 'Either source_code or object_name parameter is required');
+        // Validate that at least one source is provided
+        if (!args?.source_code && !args?.object_name && !args?.file_path) {
+            throw new McpError(ErrorCode.InvalidParams, 'Either source_code, object_name, or file_path parameter is required');
         }
 
         let sourceCode = args.source_code;
         let objectName = args.object_name;
         let sourceMethod = 'provided'; // Track how we got the source code
         let classExists = false;
+        let fileMetadata: any = null;
 
-        // If source_code is not provided, try to fetch it from existing class
-        if (!sourceCode && objectName) {
+        // Priority 1: Check if file_path is provided
+        if (args?.file_path) {
+            console.error(`Reading source code from file: ${args.file_path}`);
+
+            // Resolve file path (defaults to tmp folder for relative paths)
+            const filePath = resolveAbapFilePath(args.file_path);
+
+            // Read source code (throws if file not found or empty - no TOCTOU)
+            sourceCode = readAbapSourceFile(filePath);
+            sourceMethod = 'file';
+
+            // Get file metadata
+            fileMetadata = getFileMetadata(filePath, sourceCode);
+
+            // Auto-detect class name from filename if not provided
+            if (!objectName) {
+                objectName = extractClassNameFromFile(filePath);
+                console.error(`Auto-detected class name from filename: ${objectName}`);
+            }
+
+            // Warn if file doesn't have .abap extension
+            if (!filePath.toLowerCase().endsWith(ABAP_FILE_EXTENSION)) {
+                console.error(`Warning: File ${path.basename(filePath)} does not have ${ABAP_FILE_EXTENSION} extension`);
+            }
+
+            console.error(`Successfully read ${fileMetadata.lines} lines from file: ${filePath}`);
+        }
+
+        // Priority 2: If source_code is still not set, try to fetch from existing class
+        else if (!sourceCode && objectName) {
             console.error(`Attempting to fetch source code for class: ${objectName}`);
             try {
                 const classResult = await handleGetClass({ class_name: objectName });
@@ -471,6 +508,11 @@ export async function handleCheckSyntax(args: any) {
                 approach: approach
             }
         };
+
+        // Add file metadata if syntax check was from file
+        if (fileMetadata) {
+            enhancedResponse.fileInfo = fileMetadata;
+        }
 
         // Return the enhanced response with REAL ADT syntax errors
         const enhancedAxiosResponse = {
