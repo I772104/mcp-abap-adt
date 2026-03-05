@@ -190,8 +190,6 @@ export async function handleCreateClassTests(args: any): Promise<any> {
 
         // Handle auto-activation if requested
         if (params.auto_activate) {
-            console.log(`Auto-activation requested for parent class ${params.parent_class_name} after test creation`);
-            
             const activationResult = await attemptClassActivation(
                 params.parent_class_name,
                 params.preaudit_requested || true

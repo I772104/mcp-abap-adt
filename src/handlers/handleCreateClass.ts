@@ -34,17 +34,17 @@ interface ClassBackup {
  */
 function validateBasicSyntax(sourceCode: string): any[] | null {
     const errors: any[] = [];
-    
+
     // Check for missing periods in common statements
     const lines = sourceCode.split('\n');
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
+
         // Skip empty lines and comments
         if (!line || line.startsWith('*') || line.startsWith('"')) {
             continue;
         }
-        
+
         // Check for missing periods in METHODS declarations
         if (line.includes('METHODS:') && !line.endsWith('.') && !line.endsWith(',')) {
             errors.push({
@@ -54,7 +54,7 @@ function validateBasicSyntax(sourceCode: string): any[] | null {
                 severity: 'error'
             });
         }
-        
+
         // Check for missing RETURNING VALUE parameter name
         if (line.includes('RETURNING VALUE()')) {
             errors.push({
@@ -65,7 +65,7 @@ function validateBasicSyntax(sourceCode: string): any[] | null {
             });
         }
     }
-    
+
     return errors.length > 0 ? errors : null;
 }
 
@@ -273,7 +273,6 @@ export async function handleCreateClass(args: any): Promise<any> {
                 
                 if (isETagError) {
                     // ETag mismatch during replacement - likely syntax errors
-                    console.log(`ETag mismatch during class replacement for ${params.class_name}, likely syntax error`);
                     const errorResponse = createSyntaxErrorResponse(params, uploadError, true);
                     return return_response(errorResponse);
                 }
@@ -284,7 +283,14 @@ export async function handleCreateClass(args: any): Promise<any> {
             
         } catch (getError: any) {
             // Class doesn't exist, proceed with normal creation
-            if (getError.message?.includes('404') || getError.message?.includes('Not Found')) {
+            // Check for 404 error (class not found) - be flexible with error format
+            const is404Error = 
+                getError.message?.includes('404') || 
+                getError.message?.includes('Not Found') ||
+                getError.status === 404 ||
+                getError.response?.status === 404;
+            
+            if (is404Error) {
                 isReplacing = false;
                 
                 const createUrl = `${baseUrl}/sap/bc/adt/oo/classes`;
@@ -370,8 +376,6 @@ export async function handleCreateClass(args: any): Promise<any> {
 
         // Handle auto-activation if requested
         if (params.auto_activate) {
-            console.log(`Auto-activation requested for class ${params.class_name}`);
-            
             const activationResult = await attemptClassActivation(
                 params.class_name,
                 params.preaudit_requested || true

@@ -47,6 +47,10 @@ Thumbs.db
 # Optional eslint cache
 .eslintcache
 
+# Test coverage
+coverage/
+.nyc_output/
+
 # Backup files
 *.bak
 

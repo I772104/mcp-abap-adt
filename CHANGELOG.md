@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Priority: file_path > source_code > object_name
 
 ### Changed
+- **Test Execution:** `npm test` now runs only unit tests by default (no SAP credentials required)
+  - Use `npm run test:integration` for integration tests (requires `.env` credentials)
+  - Use `npm run test:all` to run all tests including integration tests
+  - Updated test scripts for better developer experience and CI/CD compatibility
 - **Export-Modify-Import Workflow**: Major safety and quality improvements
   - Changed `auto_activate` default from `true` to `false` for safer deployment
   - Added mandatory ABAP standards review (Phase 1) before modifications

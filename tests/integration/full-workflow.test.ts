@@ -1,28 +1,28 @@
 import { after } from 'node:test';
-import { mcp_abap_adt_server } from './index';
-import { handleGetProgram } from './handlers/handleGetProgram';
-import { handleGetClass } from './handlers/handleGetClass';
-import { handleGetFunctionGroup } from './handlers/handleGetFunctionGroup';
-import { handleGetFunction } from './handlers/handleGetFunction';
-import { handleGetTable } from './handlers/handleGetTable';
-import { handleGetStructure } from './handlers/handleGetStructure';
-import { handleGetTableContents } from './handlers/handleGetTableContents';
-import { handleGetPackage } from './handlers/handleGetPackage';
-import { handleGetInclude } from './handlers/handleGetInclude';
-import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
-import { handleGetInterface } from './handlers/handleGetInterface';
-import { handleGetTransaction } from './handlers/handleGetTransaction';
-import { handleGetClassTests } from './handlers/handleGetClassTests';
-import { handleRunClassTests } from './handlers/handleRunClassTests';
-import { handleSearchObject } from './handlers/handleSearchObject';
-import { handleGetClassUsages } from './handlers/handleGetClassUsages';
-import { handleCheckSyntax } from './handlers/handleCheckSyntax';
-import { handleCreateClass } from './handlers/handleCreateClass';
-import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
-import { handleCreateClassTests } from './handlers/handleCreateClassTests';
-import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
-import { handleActivateClasses } from './handlers/handleActivateClasses';
-import { cleanup } from './lib/utils';
+import { mcp_abap_adt_server } from '../../src/index';
+import { handleGetProgram } from '../../src/handlers/handleGetProgram';
+import { handleGetClass } from '../../src/handlers/handleGetClass';
+import { handleGetFunctionGroup } from '../../src/handlers/handleGetFunctionGroup';
+import { handleGetFunction } from '../../src/handlers/handleGetFunction';
+import { handleGetTable } from '../../src/handlers/handleGetTable';
+import { handleGetStructure } from '../../src/handlers/handleGetStructure';
+import { handleGetTableContents } from '../../src/handlers/handleGetTableContents';
+import { handleGetPackage } from '../../src/handlers/handleGetPackage';
+import { handleGetInclude } from '../../src/handlers/handleGetInclude';
+import { handleGetTypeInfo } from '../../src/handlers/handleGetTypeInfo';
+import { handleGetInterface } from '../../src/handlers/handleGetInterface';
+import { handleGetTransaction } from '../../src/handlers/handleGetTransaction';
+import { handleGetClassTests } from '../../src/handlers/handleGetClassTests';
+import { handleRunClassTests } from '../../src/handlers/handleRunClassTests';
+import { handleSearchObject } from '../../src/handlers/handleSearchObject';
+import { handleGetClassUsages } from '../../src/handlers/handleGetClassUsages';
+import { handleCheckSyntax } from '../../src/handlers/handleCheckSyntax';
+import { handleCreateClass } from '../../src/handlers/handleCreateClass';
+import { handleDeleteLocalClass } from '../../src/handlers/handleDeleteLocalClass';
+import { handleCreateClassTests } from '../../src/handlers/handleCreateClassTests';
+import { handleGetClassCoverage } from '../../src/handlers/handleGetClassCoverage';
+import { handleActivateClasses } from '../../src/handlers/handleActivateClasses';
+import { cleanup } from '../../src/lib/utils';
 
 describe('mcp_abap_adt_server - Integration Tests', () => {
   let server: mcp_abap_adt_server;
@@ -152,7 +152,6 @@ describe('mcp_abap_adt_server - Integration Tests', () => {
   describe('handleGetTransaction', () => {
     it('should successfully retrieve transaction details', async () => {
       const result = await handleGetTransaction({ transaction_name: 'SE93' });
-      console.log(result)
       expect(result.isError).toBe(false);
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
@@ -697,7 +696,6 @@ ENDCLASS.`;
 
     it('should complete full development workflow: create → activate → modify → activate → add tests → activate → run tests', async () => {
       // Step 1: Create initial class
-      console.log(`Step 1: Creating class ${workflowClassName}...`);
       const createResult = await handleCreateClass({
         class_name: workflowClassName,
         source_code: originalClassCode,
@@ -716,10 +714,8 @@ ENDCLASS.`;
         // Fallback for old format (if auto_activate was explicitly set to false)
         expect(createData.status).toBe('success');
       }
-      console.log(`✓ Class ${workflowClassName} created successfully`);
 
       // Step 2: Activate the newly created class
-      console.log(`Step 2: Activating class ${workflowClassName}...`);
       const activateResult1 = await handleActivateClasses({
         class_name: workflowClassName,
         preaudit_requested: true
@@ -729,10 +725,8 @@ ENDCLASS.`;
       const activateData1 = JSON.parse(activateResult1.content[0].text);
       expect(activateData1.activation.activatedClasses).toHaveLength(1);
       expect(activateData1.activation.activatedClasses[0].className).toBe(workflowClassName);
-      console.log(`✓ Class ${workflowClassName} activated successfully`);
 
       // Step 3: Modify the class (add multiply method)
-      console.log(`Step 3: Modifying class ${workflowClassName}...`);
       const modifyResult = await handleCreateClass({
         class_name: workflowClassName,
         source_code: modifiedClassCode,
@@ -752,10 +746,8 @@ ENDCLASS.`;
         expect(modifyData.status).toBe('success');
         expect(modifyData.details.action).toBe('replace');
       }
-      console.log(`✓ Class ${workflowClassName} modified successfully`);
 
       // Step 4: Activate the modified class (required before it can be used or tested)
-      console.log(`Step 4: Activating modified class ${workflowClassName}...`);
       const activateResult2 = await handleActivateClasses({
         class_name: workflowClassName,
         preaudit_requested: true
@@ -765,10 +757,8 @@ ENDCLASS.`;
       const activateData2 = JSON.parse(activateResult2.content[0].text);
       expect(activateData2.activation.activatedClasses).toHaveLength(1);
       expect(activateData2.activation.activatedClasses[0].className).toBe(workflowClassName);
-      console.log(`✓ Modified class ${workflowClassName} activated successfully`);
 
       // Step 5: Add test classes to the activated class
-      console.log(`Step 5: Adding test classes to ${workflowClassName}...`);
       const testResult = await handleCreateClassTests({
         parent_class_name: workflowClassName,
         test_source_code: testClassCode,
@@ -779,42 +769,32 @@ ENDCLASS.`;
       // but we should get a response structure
       expect(Array.isArray(testResult.content)).toBe(true);
       if (!testResult.isError) {
-        console.log(`✓ Test classes added to ${workflowClassName} successfully`);
-        
         // Step 6: Activate the class again (with test classes)
-        console.log(`Step 6: Activating class with tests ${workflowClassName}...`);
         const activateResult3 = await handleActivateClasses({
           class_name: workflowClassName,
           preaudit_requested: false // Skip preaudit for faster test execution
         });
         
         expect(activateResult3.isError).toBe(false);
-        console.log(`✓ Class with tests ${workflowClassName} activated successfully`);
 
         // Step 7: Run the tests (only if previous steps succeeded)
-        console.log(`Step 7: Running tests for ${workflowClassName}...`);
         const runTestResult = await handleRunClassTests({
           class_name: workflowClassName
         });
         
         expect(Array.isArray(runTestResult.content)).toBe(true);
         if (!runTestResult.isError) {
-          console.log(`✓ Tests completed for ${workflowClassName}`);
           const testDataText = runTestResult.content[0].text;
           expect(testDataText).toBeDefined();
           expect(testDataText.length).toBeGreaterThan(0);
         }
-      } else {
-        console.log(`⚠ Test class creation failed (possibly due to permissions), but workflow validation successful`);
       }
 
       // Verify final class state
-      console.log(`Step 8: Verifying final class state...`);
       const finalClassResult = await handleGetClass({ class_name: workflowClassName });
       expect(finalClassResult.isError).toBe(false);
       const finalClassCode = finalClassResult.content[0].text;
       expect(finalClassCode).toContain('multiply'); // Should contain the new method
-      console.log(`✓ Final class verification completed - class contains modifications`);
 
     }, 120000); // Extended timeout for the complete workflow
 
@@ -838,7 +818,6 @@ ENDCLASS.`;
 
       try {
         // Create the batch test class
-        console.log(`Creating batch test class ${batchClassName}...`);
         const createBatchResult = await handleCreateClass({
           class_name: batchClassName,
           source_code: batchClassCode,
@@ -848,7 +827,6 @@ ENDCLASS.`;
         expect(createBatchResult.isError).toBe(false);
 
         // Activate both classes in a single batch operation
-        console.log(`Batch activating classes ${workflowClassName} and ${batchClassName}...`);
         const batchActivateResult = await handleActivateClasses({
           class_names: [workflowClassName, batchClassName],
           preaudit_requested: true
@@ -862,7 +840,6 @@ ENDCLASS.`;
         const classNames = batchData.activation.activatedClasses.map((c: any) => c.className);
         expect(classNames).toContain(workflowClassName);
         expect(classNames).toContain(batchClassName);
-        console.log(`✓ Batch activation successful for ${classNames.join(', ')}`);
 
       } finally {
         // Clean up batch test class

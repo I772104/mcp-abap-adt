@@ -3,7 +3,12 @@
   "version": "1.1.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --selectProjects=unit",
+    "test:unit": "jest --selectProjects=unit",
+    "test:integration": "jest --selectProjects=integration",
+    "test:all": "jest",
+    "test:watch": "jest --selectProjects=unit --watch",
+    "test:coverage": "jest --selectProjects=unit --coverage",
     "build": "tsc -p tsconfig.json",
     "start": "node ./dist/index.js",
     "dev": "npx @modelcontextprotocol/inspector node ./dist/index.js",

@@ -1,5 +1,5 @@
 import { getConfig } from '../index';
-import { makeAdtRequest, return_error, return_response } from '../lib/utils';
+import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
 
 /**
  * Object type mapping from friendly names to ADT types
@@ -298,7 +298,7 @@ export async function handleGetObjectUsages(args: any) {
       }
     }
 
-    const baseUrl = await import('../lib/utils.js').then(m => m.getBaseUrl());
+    const baseUrl = await getBaseUrl();
     const objectUri = buildObjectUri(object_name, object_type);
     const adtType = OBJECT_TYPE_MAP[object_type.toLowerCase()] || object_type;
     
