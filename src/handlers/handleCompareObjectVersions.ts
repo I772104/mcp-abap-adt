@@ -230,7 +230,7 @@ function generateSideBySideDiff(
             } else if (part.removed) {
                 // Removed line - only in old version
                 const oldLine = `${lineNumOld.toString().padStart(4)}: ${line}`;
-                output += `- ${oldLine}`.padEnd(50) + ` |\n`;
+                output += `- ${oldLine}`.padEnd(50) + ' |\n';
                 lineNumOld++;
             } else {
                 // Unchanged line - in both versions
@@ -291,23 +291,23 @@ function generateDiffSummary(
     output += `New version: ${versionNew}\n`;
     output += `${'='.repeat(80)}\n\n`;
 
-    output += `Statistics:\n`;
+    output += 'Statistics:\n';
     output += `  Lines added:     ${linesAdded}\n`;
     output += `  Lines removed:   ${linesRemoved}\n`;
     output += `  Lines unchanged: ${linesUnchanged}\n`;
     output += `  Total sections:  ${changes.length}\n\n`;
 
     if (changedSections.length > 0) {
-        output += `Changed sections:\n`;
+        output += 'Changed sections:\n';
         output += changedSections.join('\n');
-        output += `\n`;
+        output += '\n';
     } else {
-        output += `No changes detected - versions are identical.\n`;
+        output += 'No changes detected - versions are identical.\n';
     }
 
     output += `\n${'='.repeat(80)}\n`;
-    output += `Use format='unified' to see detailed line-by-line changes.\n`;
-    output += `Use format='side-by-side' to see old and new versions side-by-side.\n`;
+    output += "Use format='unified' to see detailed line-by-line changes.\n";
+    output += "Use format='side-by-side' to see old and new versions side-by-side.\n";
 
     return output;
 }

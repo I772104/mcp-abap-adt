@@ -160,7 +160,7 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             if (uploadError.message?.includes('412') || uploadError.message?.includes('ETag')) {
                 throw new McpError(
                     ErrorCode.InvalidParams,
-                    `Concurrent modification detected. The test class may have been modified by another user. Please try again.`
+                    'Concurrent modification detected. The test class may have been modified by another user. Please try again.'
                 );
             }
             throw uploadError;

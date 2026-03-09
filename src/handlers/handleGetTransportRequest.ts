@@ -111,22 +111,22 @@ function formatTransportResponse(xml: string, transportNumber: string): string {
             output += `${(idx + 1).toString().padStart(4)}. ${objectName.padEnd(40)} ${objectInfo}\n`;
         });
 
-        output += `\n`;
+        output += '\n';
     } else {
-        output += `No objects found in this transport.\n\n`;
+        output += 'No objects found in this transport.\n\n';
     }
 
     output += `${'='.repeat(80)}\n`;
-    output += `\nNEXT STEPS:\n`;
-    output += `  - Use GetVersionHistory(<object_name>, <object_type>) to see versions\n`;
+    output += '\nNEXT STEPS:\n';
+    output += '  - Use GetVersionHistory(<object_name>, <object_type>) to see versions\n';
     if (taskMatch) {
         output += `  - When checking version history, look for transport: ${taskMatch[2]}\n`;
-        output += `    (versions may be recorded under parent request, not the task)\n`;
+        output += '    (versions may be recorded under parent request, not the task)\n';
     }
-    output += `  - Use CompareObjectVersions to compare version changes\n`;
+    output += '  - Use CompareObjectVersions to compare version changes\n';
 
     output += `\n${'='.repeat(80)}\n`;
-    output += `\nRAW XML RESPONSE (for detailed inspection):\n`;
+    output += '\nRAW XML RESPONSE (for detailed inspection):\n';
     output += `${'='.repeat(80)}\n`;
     output += xml;
 

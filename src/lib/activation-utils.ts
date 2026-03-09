@@ -243,7 +243,7 @@ export async function attemptBatchActivation(
     } catch (error: any) {
         return {
             status: 'error',
-            error_message: `Unexpected error during batch activation`,
+            error_message: 'Unexpected error during batch activation',
             details: {
                 error_code: 'BATCH_ACTIVATION_EXCEPTION',
                 raw_response: error?.message || 'Unknown error',

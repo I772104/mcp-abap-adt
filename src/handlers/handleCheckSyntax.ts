@@ -306,7 +306,7 @@ ENDCLASS.`;
         const createResult = await handleCreateClass({
             class_name: tempClassName,
             source_code: minimalSource,
-            description: `Temp class for syntax check`,
+            description: 'Temp class for syntax check',
             package: '$TMP',
         });
 
@@ -473,7 +473,7 @@ export async function handleCheckSyntax(args: any) {
 
         if (!classExists && responseContainsNotExist && !isTestClass) {
             // Use temporary class approach for non-existing classes (but NOT for test classes)
-            console.error(`Direct ADT approach failed because class doesn't exist. Using temporary class approach...`);
+            console.error("Direct ADT approach failed because class doesn't exist. Using temporary class approach...");
             const tempResults = await performTempClassSyntaxCheck(sourceCode, objectName);
 
             syntaxResults = {
@@ -509,7 +509,7 @@ export async function handleCheckSyntax(args: any) {
             // Use direct results - either class exists, or it's a test class, or direct ADT worked
             if (isTestClass && !classExists && responseContainsNotExist) {
                 console.error(
-                    `Skipping temporary class creation for test class code - using direct results even if class doesn't exist`
+                    "Skipping temporary class creation for test class code - using direct results even if class doesn't exist"
                 );
                 skippedTempCreation = true;
                 approach = 'direct_adt_api_test_class';

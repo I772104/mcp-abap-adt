@@ -38,7 +38,7 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
             conversionNotes.push(`🔄 Auto-converted: ${originalClassName} → ${zClassName}`);
         }
         if (wasTruncated) {
-            conversionNotes.push(`✂️ Truncated to 30 characters (ABAP limit)`);
+            conversionNotes.push('✂️ Truncated to 30 characters (ABAP limit)');
         }
 
         // Construct file path
@@ -97,7 +97,7 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
                     {
                         type: 'text',
                         text:
-                            `✅ Class imported successfully from file!\n\n` +
+                            '✅ Class imported successfully from file!\n\n' +
                             `📁 Source File: ${fileName}\n` +
                             `📊 File Size: ${metadata.size} bytes\n` +
                             `📝 Lines: ${metadata.lines}\n` +
@@ -115,7 +115,7 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
                     {
                         type: 'text',
                         text:
-                            `❌ Class import from file failed!\n\n` +
+                            '❌ Class import from file failed!\n\n' +
                             `📁 Source File: ${fileName}\n` +
                             `📊 File Size: ${metadata.size} bytes\n` +
                             `📝 Lines: ${metadata.lines}\n` +

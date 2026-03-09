@@ -29,7 +29,7 @@ export async function handleGetTransportVersions(args: any) {
 
         let output = '';
         output += `${'='.repeat(80)}\n`;
-        output += `TRANSPORT VERSION ANALYSIS\n`;
+        output += 'TRANSPORT VERSION ANALYSIS\n';
         output += `${'='.repeat(80)}\n\n`;
 
         // Step 1: Get transport details
@@ -58,16 +58,16 @@ export async function handleGetTransportVersions(args: any) {
             parentRequest = taskMatch[2];
             searchTransport = parentRequest;
 
-            output += `Transport Type: TASK\n`;
+            output += 'Transport Type: TASK\n';
             output += `Task Number: ${transportNumber}\n`;
             output += `Parent Request: ${parentRequest}\n`;
-            output += `\nNOTE: Versions are typically recorded under the parent request.\n`;
+            output += '\nNOTE: Versions are typically recorded under the parent request.\n';
             output += `      Searching for versions in: ${parentRequest}\n\n`;
         } else if (requestMatch) {
-            output += `Transport Type: REQUEST (parent transport)\n`;
+            output += 'Transport Type: REQUEST (parent transport)\n';
             output += `Request Number: ${transportNumber}\n\n`;
         } else {
-            output += `Transport Type: UNKNOWN (unable to determine hierarchy)\n`;
+            output += 'Transport Type: UNKNOWN (unable to determine hierarchy)\n';
             output += `Transport Number: ${transportNumber}\n\n`;
         }
 
@@ -77,7 +77,7 @@ export async function handleGetTransportVersions(args: any) {
             output += `✓ Object ${objectName} (${objectType}) is included in this transport\n\n`;
         } else {
             output += `✗ WARNING: Object ${objectName} (${objectType}) NOT found in this transport\n`;
-            output += `  The object may not be part of this transport or may use a different name.\n\n`;
+            output += '  The object may not be part of this transport or may use a different name.\n\n';
         }
 
         // Step 2: Get version history
@@ -115,7 +115,7 @@ export async function handleGetTransportVersions(args: any) {
                 output += `${line}\n`;
             });
 
-            output += `\n`;
+            output += '\n';
 
             // Find the version ID from the first matching line
             const firstMatch = versionLines[0];
@@ -156,24 +156,26 @@ export async function handleGetTransportVersions(args: any) {
                         output += `${previousLine}\n\n`;
 
                         output += `${'='.repeat(80)}\n`;
-                        output += `NEXT STEPS TO SEE CHANGES:\n`;
+                        output += 'NEXT STEPS TO SEE CHANGES:\n';
                         output += `${'='.repeat(80)}\n\n`;
-                        output += `Compare versions using CompareObjectVersions:\n`;
+                        output += 'Compare versions using CompareObjectVersions:\n';
                         output += `   CompareObjectVersions(object_type="${objectType}", object_name="${objectName}", version_old="${previousVersion}", version_new="${versionId}", format="unified")\n\n`;
                     }
                 } else if (currentIndex >= 0) {
-                    output += `\nNOTE: This appears to be the oldest version in history (no previous version available).\n\n`;
+                    output +=
+                        '\nNOTE: This appears to be the oldest version in history (no previous version available).\n\n';
                     output += `${'='.repeat(80)}\n`;
-                    output += `NEXT STEPS:\n`;
+                    output += 'NEXT STEPS:\n';
                     output += `${'='.repeat(80)}\n\n`;
-                    output += `View this version (no comparison available):\n`;
-                    output += `   This is the first version recorded in history.\n\n`;
+                    output += 'View this version (no comparison available):\n';
+                    output += '   This is the first version recorded in history.\n\n';
                 } else {
-                    output += `\nNOTE: This appears to be the first version or most recent version with no prior comparison available.\n\n`;
+                    output +=
+                        '\nNOTE: This appears to be the first version or most recent version with no prior comparison available.\n\n';
                     output += `${'='.repeat(80)}\n`;
-                    output += `NEXT STEPS:\n`;
+                    output += 'NEXT STEPS:\n';
                     output += `${'='.repeat(80)}\n\n`;
-                    output += `View version history:\n`;
+                    output += 'View version history:\n';
                     output += `   GetVersionHistory(object_type="${objectType}", object_name="${objectName}")\n\n`;
                 }
             }
@@ -181,10 +183,10 @@ export async function handleGetTransportVersions(args: any) {
             output += `✗ NO VERSIONS FOUND in transport ${searchTransport}\n\n`;
 
             if (isTask) {
-                output += `TROUBLESHOOTING:\n`;
+                output += 'TROUBLESHOOTING:\n';
                 output += `  - Checked parent request ${parentRequest} (versions usually recorded there)\n`;
-                output += `  - Object may have been added without activation\n`;
-                output += `  - Object may be in a different transport\n\n`;
+                output += '  - Object may have been added without activation\n';
+                output += '  - Object may be in a different transport\n\n';
             }
 
             output += `Showing all available versions for ${objectName}:\n\n`;
@@ -200,7 +202,7 @@ export async function handleGetTransportVersions(args: any) {
         }
 
         output += `\n${'='.repeat(80)}\n`;
-        output += `\nFULL VERSION HISTORY:\n`;
+        output += '\nFULL VERSION HISTORY:\n';
         output += `${'='.repeat(80)}\n\n`;
         output += versionHistory;
 

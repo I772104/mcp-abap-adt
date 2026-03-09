@@ -157,20 +157,20 @@ export async function handleListUserTransports(args: any) {
                     {
                         type: 'text',
                         text:
-                            `No transport requests found for:\n` +
+                            'No transport requests found for:\n' +
                             `- ${filters.join('\n- ')}\n\n` +
-                            `TIP: If you expected to find recent transports, try:\n` +
-                            `  1. Add from_date parameter (e.g., from_date: "20260101" for 2026 onwards)\n` +
-                            `  2. Check status filter - modifiable transports have status 'D'\n` +
-                            `  3. Verify the username is correct\n\n` +
-                            `Note: This tool queries E070 table directly and shows ALL transports (modifiable and released).\n` +
+                            'TIP: If you expected to find recent transports, try:\n' +
+                            '  1. Add from_date parameter (e.g., from_date: "20260101" for 2026 onwards)\n' +
+                            "  2. Check status filter - modifiable transports have status 'D'\n" +
+                            '  3. Verify the username is correct\n\n' +
+                            'Note: This tool queries E070 table directly and shows ALL transports (modifiable and released).\n' +
                             `Due to API limitations, only ${ADT_API_ROW_LIMIT} rows can be fetched. Use from_date to focus on recent transports.\n\n` +
-                            `Common status values:\n` +
-                            `- D: Modifiable (in development)\n` +
-                            `- R: Released\n` +
-                            `- L: Modifiable, Protected\n` +
-                            `- O: Released, Import\n\n` +
-                            `Use GetTransportRequest(transport_number) to see details of a specific transport.`,
+                            'Common status values:\n' +
+                            '- D: Modifiable (in development)\n' +
+                            '- R: Released\n' +
+                            '- L: Modifiable, Protected\n' +
+                            '- O: Released, Import\n\n' +
+                            'Use GetTransportRequest(transport_number) to see details of a specific transport.',
                     },
                 ],
             };
@@ -247,12 +247,12 @@ export async function handleListUserTransports(args: any) {
         if (resultLimitReached) {
             const currentYear = new Date().getFullYear();
             output += `${'='.repeat(120)}\n`;
-            output += `⚠️  WARNING: RESULT LIMIT REACHED\n`;
+            output += '⚠️  WARNING: RESULT LIMIT REACHED\n';
             output += `${'='.repeat(120)}\n`;
             output += `Found ${filteredRows.length} transports (reached maximum limit).\n`;
-            output += `More recent transports may exist but are NOT visible due to API limitations.\n`;
-            output += `\n`;
-            output += `RECOMMENDED ACTION:\n`;
+            output += 'More recent transports may exist but are NOT visible due to API limitations.\n';
+            output += '\n';
+            output += 'RECOMMENDED ACTION:\n';
             output += `  Use from_date: "${currentYear}0101" to see ${currentYear} transports\n`;
             output += `${'='.repeat(120)}\n\n`;
         }
@@ -283,21 +283,21 @@ export async function handleListUserTransports(args: any) {
 
         // Add bottom reminder if limit was reached
         if (resultLimitReached) {
-            output += `\n⚠️  LIMIT REACHED: Showing results up to limit. Use from_date to narrow search.\n\n`;
+            output += '\n⚠️  LIMIT REACHED: Showing results up to limit. Use from_date to narrow search.\n\n';
         }
 
-        output += `LEGEND:\n`;
-        output += `- Status 'D' (Modifiable): Transport is in development (not released)\n`;
-        output += `- Status 'R' (Released): Transport has been released\n`;
-        output += `- Status 'L' (Mod+Prot): Modifiable and protected\n`;
-        output += `- Status 'O' (Rel+Import): Released and ready for import\n`;
-        output += `- Type 'K': Workbench request\n`;
-        output += `- Type 'S': Task (subtransport)\n`;
-        output += `- Type 'W': Workbench request (customizing)\n\n`;
+        output += 'LEGEND:\n';
+        output += "- Status 'D' (Modifiable): Transport is in development (not released)\n";
+        output += "- Status 'R' (Released): Transport has been released\n";
+        output += "- Status 'L' (Mod+Prot): Modifiable and protected\n";
+        output += "- Status 'O' (Rel+Import): Released and ready for import\n";
+        output += "- Type 'K': Workbench request\n";
+        output += "- Type 'S': Task (subtransport)\n";
+        output += "- Type 'W': Workbench request (customizing)\n\n";
 
-        output += `Use GetTransportRequest(<transport_number>) to see details of a specific transport.\n\n`;
+        output += 'Use GetTransportRequest(<transport_number>) to see details of a specific transport.\n\n';
 
-        output += `Query Performance:\n`;
+        output += 'Query Performance:\n';
         output += `- E070 query time: ${transportData.stats.query_time_ms}ms\n`;
         output += `- Total rows: ${transportData.total_rows}\n`;
 

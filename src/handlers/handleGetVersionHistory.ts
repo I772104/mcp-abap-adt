@@ -182,19 +182,19 @@ function formatVersionHistory(xmlData: string, objectName: string, objectType: s
     });
 
     output += `\n${'='.repeat(100)}\n`;
-    output += `\nNOTE: Version numbering for all object types:\n`;
-    output += `      - Version "00000" = CURRENT/ACTIVE version (most recent code in system)\n`;
-    output += `      - Numbered versions (00001+) = Historical transported versions\n`;
-    output += `      - Version 00000 may have earlier timestamp but contains current code\n`;
-    output += `      [TEST] = Generated test transport\n`;
-    output += `\n`;
-    output += `TRANSPORT HIERARCHY:\n`;
-    output += `      - Transport numbers can be either TASKS or REQUESTS (parent transports)\n`;
-    output += `      - Tasks belong to a parent Request (e.g., ER1K8AK0XI is task of ER1K8AK0XH)\n`;
-    output += `      - When analyzing a transport, the version may be recorded under the parent request\n`;
-    output += `      - Use GetTransportRequest(<transport_number>) to see hierarchy and objects\n`;
-    output += `\n`;
-    output += `Use CompareObjectVersions with version IDs shown above to see changes between versions.\n`;
+    output += '\nNOTE: Version numbering for all object types:\n';
+    output += '      - Version "00000" = CURRENT/ACTIVE version (most recent code in system)\n';
+    output += '      - Numbered versions (00001+) = Historical transported versions\n';
+    output += '      - Version 00000 may have earlier timestamp but contains current code\n';
+    output += '      [TEST] = Generated test transport\n';
+    output += '\n';
+    output += 'TRANSPORT HIERARCHY:\n';
+    output += '      - Transport numbers can be either TASKS or REQUESTS (parent transports)\n';
+    output += '      - Tasks belong to a parent Request (e.g., ER1K8AK0XI is task of ER1K8AK0XH)\n';
+    output += '      - When analyzing a transport, the version may be recorded under the parent request\n';
+    output += '      - Use GetTransportRequest(<transport_number>) to see hierarchy and objects\n';
+    output += '\n';
+    output += 'Use CompareObjectVersions with version IDs shown above to see changes between versions.\n';
 
     return output;
 }
