@@ -1,6 +1,16 @@
-# PR Reviewer Agent - Quick Reference
+# Agents - Quick Reference
 
-## 🚀 Quick Commands
+## Available Agents
+
+### 🔍 pr-reviewer
+**Purpose**: Review pull requests for code quality
+
+### 📋 issue-analyzer
+**Purpose**: Analyze GitHub issues for clarity and feasibility
+
+---
+
+## 🚀 PR Reviewer Commands
 
 ```bash
 # Standard review
@@ -16,7 +26,25 @@ npm run review:quick
 claude "Review my PR using pr-reviewer agent"
 ```
 
-## 📋 What It Checks
+## 🔍 Issue Analyzer Commands
+
+```bash
+# By issue number
+npm run analyze-issue -- --issue 42
+
+# By URL
+npm run analyze-issue -- --url https://github.com/user/repo/issues/42
+
+# From file
+npm run analyze-issue -- --file issue.txt
+
+# Direct with Claude Code
+claude "Analyze issue #42 using issue-analyzer agent"
+```
+
+---
+
+## 📋 What PR Reviewer Checks
 
 | Check | Severity | Description |
 |-------|----------|-------------|
@@ -43,9 +71,18 @@ Edit: `.claude/agents/pr-reviewer-config.json`
 
 ## 📚 Documentation
 
+### PR Reviewer
 - **Full Guide**: `.claude/agents/PR_REVIEWER_GUIDE.md`
+- **Agent Definition**: `.claude/agents/pr-reviewer.md`
+
+### Issue Analyzer
+- **Full Guide**: `.claude/agents/ISSUE_ANALYZER_GUIDE.md`
+- **Quick Start**: `.claude/agents/ISSUE_ANALYZER_QUICK.md`
+- **Agent Definition**: `.claude/agents/issue-analyzer.md`
+
+### General
 - **Agents Overview**: `.claude/agents/README.md`
-- **Implementation**: `.claude/agents/IMPLEMENTATION_SUMMARY.md`
+- **Architecture**: `.claude/agents/ARCHITECTURE.md`
 
 ## 🎯 Common Use Cases
 
@@ -53,6 +90,19 @@ Edit: `.claude/agents/pr-reviewer-config.json`
 ```bash
 npm run review:full
 claude "Review my changes before I create a PR"
+```
+
+### Before Starting Work on Issue
+```bash
+npm run analyze-issue -- --issue 42
+# Review analysis report, then start implementation
+```
+
+### Issue Triage
+```bash
+npm run analyze-issue -- --issue 45
+# Determine if issue needs clarification
+# Generate questions to ask
 ```
 
 ### Quick Check During Development
@@ -68,6 +118,11 @@ claude "Check my code for any types and security issues only"
 ### Review Specific Files
 ```bash
 claude "Review these files: src/handlers/handleNewTool.ts"
+```
+
+### Compare Implementation Approaches
+```bash
+claude "Analyze issue #50 and propose 3 different implementation approaches"
 ```
 
 ## 🐛 Troubleshooting

@@ -1,0 +1,12 @@
+Title: Add support for retrieving method signatures
+
+Description:
+It would be useful to retrieve the signature of ABAP methods including:
+- Parameter names and types
+- Return type
+- Exceptions raised
+
+This would help when exploring classes and understanding how to use them.
+
+Use case: When I'm looking at a class with many methods, I want to quickly
+see what parameters each method needs without reading the full implementation.

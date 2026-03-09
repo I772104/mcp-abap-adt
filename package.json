@@ -24,6 +24,7 @@
     "review": "node .claude/agents/run-pr-review.js",
     "review:full": "node .claude/agents/run-pr-review.js --full",
     "review:quick": "node .claude/agents/run-pr-review.js --quick",
+    "analyze-issue": "node .claude/agents/run-issue-analyzer.js",
     "prepare": "husky"
   },
   "keywords": [

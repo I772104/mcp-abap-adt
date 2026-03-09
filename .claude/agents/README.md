@@ -24,13 +24,47 @@ This directory contains custom Claude Code agents for automating project mainten
 claude "Review my PR using the pr-reviewer agent"
 
 # With helper script
-node .claude/agents/run-pr-review.js --full
+npm run review:full
 
 # Focused review
 claude "Review PR focusing on TypeScript types and security"
 ```
 
 **Documentation**: [PR_REVIEWER_GUIDE.md](PR_REVIEWER_GUIDE.md)
+
+---
+
+### 📋 issue-analyzer (v1.0.0)
+
+**Status**: ✅ Implemented
+**Purpose**: Analyze GitHub issues for clarity, feasibility, and implementation planning
+
+**Capabilities**:
+- Assess issue clarity and completeness
+- Generate specific clarifying questions
+- Conduct feasibility analysis with complexity ratings
+- Propose multiple implementation approaches with trade-offs
+- Draft detailed implementation plans
+- Estimate effort and timeline
+- Check ABAP ADT API availability
+- Identify affected components and dependencies
+
+**Usage**:
+```bash
+# By issue number
+npm run analyze-issue -- --issue 42
+
+# By URL
+npm run analyze-issue -- --url https://github.com/user/repo/issues/42
+
+# From file
+npm run analyze-issue -- --file issue.txt
+
+# With Claude Code
+claude "Analyze GitHub issue #42 using the issue-analyzer agent"
+```
+
+**Documentation**: [ISSUE_ANALYZER_GUIDE.md](ISSUE_ANALYZER_GUIDE.md) | [Quick Reference](ISSUE_ANALYZER_QUICK.md)
 
 ---
 
@@ -267,7 +301,8 @@ Add to **package.json**:
   "scripts": {
     "review": "node .claude/agents/run-pr-review.js",
     "review:full": "node .claude/agents/run-pr-review.js --full",
-    "review:quick": "node .claude/agents/run-pr-review.js --quick"
+    "review:quick": "node .claude/agents/run-pr-review.js --quick",
+    "analyze-issue": "node .claude/agents/run-issue-analyzer.js"
   }
 }
 ```
@@ -279,6 +314,24 @@ Add to **package.json**:
 # Before creating PR
 npm run review:full
 claude "Review my PR using pr-reviewer agent"
+```
+
+### Issue Analysis
+```bash
+# Before starting work
+npm run analyze-issue -- --issue 42
+claude "Analyze issue #42"
+
+# From issue file
+npm run analyze-issue -- --file issue-description.txt
+```
+
+### Pre-Implementation Planning
+```bash
+# Get implementation plan
+npm run analyze-issue -- --issue 45
+# Review the analysis report
+# Follow the implementation plan when building
 ```
 
 ### Focused Review
@@ -360,6 +413,12 @@ npm run review:full
   - pr-reviewer agent (v1.0.0)
   - Agent infrastructure setup
   - Documentation and guidelines
+
+- **v1.1.0** (2024-03-09): Issue analyzer agent
+  - issue-analyzer agent (v1.0.0)
+  - Automated issue clarity assessment
+  - Feasibility analysis and implementation planning
+  - Helper script and comprehensive documentation
 
 ## Related Issues
 
