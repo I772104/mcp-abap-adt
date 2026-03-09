@@ -13,13 +13,13 @@ interface ColumnMetadata {
 }
 
 interface WhereOperator {
-    eq?: string;                    // Equals (=) - Only supported operator in ADT Data Preview API
+    eq?: string; // Equals (=) - Only supported operator in ADT Data Preview API
 }
 
 interface SingleQuery {
     id?: string;
     view_name: string;
-    parameters?: Record<string, string>;  // CDS view parameters
+    parameters?: Record<string, string>; // CDS view parameters
     columns?: string[];
     max_rows?: number;
     where_conditions?: Record<string, string | WhereOperator>;
@@ -49,13 +49,13 @@ async function parseMetadataResponse(xmlResponse: string): Promise<{
 }> {
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const tableData = parsed?.['dataPreview:tableData'];
-    
+
     if (!tableData || !tableData['dataPreview:columns']) {
         throw new McpError(ErrorCode.InternalError, 'Invalid metadata response format');
     }
 
-    const columns = Array.isArray(tableData['dataPreview:columns']) 
-        ? tableData['dataPreview:columns'] 
+    const columns = Array.isArray(tableData['dataPreview:columns'])
+        ? tableData['dataPreview:columns']
         : [tableData['dataPreview:columns']];
 
     const columnMetadata = columns.map((col: any) => {
@@ -70,33 +70,30 @@ async function parseMetadataResponse(xmlResponse: string): Promise<{
             description: metadata['dataPreview:description'] || '',
             length: metadata['dataPreview:length'],
             keyAttribute: metadata['dataPreview:keyAttribute'] === 'true',
-            isKeyFigure: metadata['dataPreview:isKeyFigure'] === 'true'
+            isKeyFigure: metadata['dataPreview:isKeyFigure'] === 'true',
         };
     });
 
     return {
         columns: columnMetadata,
         cdsTypeKind: tableData.$?.['dataPreview:cdsTypeKind'] || 'UNKNOWN',
-        cdsEntityName: tableData['dataPreview:cdsEntityName'] || tableData['dataPreview:name']
+        cdsEntityName: tableData['dataPreview:cdsEntityName'] || tableData['dataPreview:name'],
     };
 }
 
 /**
  * Parse CDS view contents XML response and convert to structured JSON
  */
-async function parseViewContentsResponse(
-    xmlResponse: string,
-    includeColumnMetadata: boolean
-): Promise<any> {
+async function parseViewContentsResponse(xmlResponse: string, includeColumnMetadata: boolean): Promise<any> {
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const tableData = parsed?.['dataPreview:tableData'];
-    
+
     if (!tableData) {
         throw new McpError(ErrorCode.InternalError, 'Invalid view contents response format');
     }
 
-    const columns = Array.isArray(tableData['dataPreview:columns']) 
-        ? tableData['dataPreview:columns'] 
+    const columns = Array.isArray(tableData['dataPreview:columns'])
+        ? tableData['dataPreview:columns']
         : [tableData['dataPreview:columns']];
 
     // Extract column metadata
@@ -108,7 +105,7 @@ async function parseViewContentsResponse(
             type: metadata['dataPreview:type'],
             description: metadata['dataPreview:description'] || '',
             keyAttribute: metadata['dataPreview:keyAttribute'] === 'true',
-            isKeyFigure: metadata['dataPreview:isKeyFigure'] === 'true'
+            isKeyFigure: metadata['dataPreview:isKeyFigure'] === 'true',
         };
     });
 
@@ -124,7 +121,7 @@ async function parseViewContentsResponse(
                 const metadata = col['dataPreview:metadata']?.$;
                 const colName = metadata['dataPreview:name'];
                 const dataSet = col['dataPreview:dataSet']?.['dataPreview:data'];
-                
+
                 if (dataSet) {
                     row[colName] = Array.isArray(dataSet) ? dataSet[i] : dataSet;
                 } else {
@@ -139,7 +136,7 @@ async function parseViewContentsResponse(
         view_name: tableData['dataPreview:cdsEntityName'] || tableData['dataPreview:name'],
         cds_type: tableData.$?.['dataPreview:cdsTypeKind'] || 'UNKNOWN',
         total_rows: rows.length,
-        execution_time: tableData['dataPreview:queryExecutionTime'] || '0'
+        execution_time: tableData['dataPreview:queryExecutionTime'] || '0',
     };
 
     // Only include column metadata if requested
@@ -156,13 +153,13 @@ async function parseViewContentsResponse(
  * Validate column names against available view columns
  */
 function validateColumns(requestedColumns: string[], availableColumns: ColumnMetadata[]): void {
-    const availableColumnNames = new Set(availableColumns.map(c => c.name));
-    
+    const availableColumnNames = new Set(availableColumns.map((c) => c.name));
+
     for (const col of requestedColumns) {
         if (!availableColumnNames.has(col)) {
             const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
-                ErrorCode.InvalidParams, 
+                ErrorCode.InvalidParams,
                 `Invalid column name: ${col}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
@@ -176,13 +173,13 @@ function validateWhereConditions(
     conditions: Record<string, string | WhereOperator>,
     availableColumns: ColumnMetadata[]
 ): void {
-    const availableColumnNames = new Set(availableColumns.map(c => c.name));
-    
+    const availableColumnNames = new Set(availableColumns.map((c) => c.name));
+
     for (const col of Object.keys(conditions)) {
         if (!availableColumnNames.has(col)) {
             const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
-                ErrorCode.InvalidParams, 
+                ErrorCode.InvalidParams,
                 `Invalid column in WHERE condition: ${col}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
@@ -203,24 +200,21 @@ function buildParameterClause(parameters: Record<string, string>): string {
     if (!parameters || Object.keys(parameters).length === 0) {
         return '';
     }
-    
+
     const paramList = Object.entries(parameters)
         .map(([key, value]) => `${key} = '${escapeSqlValue(value)}'`)
         .join(', ');
-    
+
     return `( ${paramList} )`;
 }
 
 /**
  * Build WHERE clause from condition operators
- * 
+ *
  * Note: ADT Data Preview API only supports equality (=) operator.
  * Other operators (>, >=, <, <=, IN, LIKE, BETWEEN) are NOT supported by the API.
  */
-function buildWhereClause(
-    viewName: string,
-    conditions: Record<string, string | WhereOperator>
-): string {
+function buildWhereClause(viewName: string, conditions: Record<string, string | WhereOperator>): string {
     const clauses: string[] = [];
 
     for (const [col, condition] of Object.entries(conditions)) {
@@ -246,14 +240,12 @@ function buildWhereClause(
 function buildSelectStatement(
     viewName: string,
     parameters: Record<string, string> | undefined,
-    columns: string[], 
+    columns: string[],
     whereConditions?: Record<string, string | WhereOperator>,
     orderBy?: string[]
 ): string {
     // Build column list
-    const columnList = columns.length > 0 
-        ? columns.map(col => `${viewName}~${col}`).join(', ')
-        : `${viewName}~*`;
+    const columnList = columns.length > 0 ? columns.map((col) => `${viewName}~${col}`).join(', ') : `${viewName}~*`;
 
     // Build parameter clause if parameters provided
     const paramClause = buildParameterClause(parameters || {});
@@ -269,7 +261,7 @@ function buildSelectStatement(
 
     // Add ORDER BY clause if provided
     if (orderBy && orderBy.length > 0) {
-        const orderCols = orderBy.map(col => `${viewName}~${col}`).join(', ');
+        const orderCols = orderBy.map((col) => `${viewName}~${col}`).join(', ');
         sql += ` ORDER BY ${orderCols}`;
     }
 
@@ -285,7 +277,7 @@ async function executeSingleQuery(
     baseUrl: string
 ): Promise<{ result: any; stats: QueryStats }> {
     const startTime = Date.now();
-    
+
     // Validate required parameters
     if (!query.view_name) {
         throw new McpError(ErrorCode.InvalidParams, 'view_name is required');
@@ -310,14 +302,18 @@ async function executeSingleQuery(
     const metadataStartTime = Date.now();
     const metadataUrl = `${baseUrl}/sap/bc/adt/datapreview/cds/${encodedViewName}/metadata`;
     const metadataResponse = await makeAdtRequest(metadataUrl, 'GET', 30000);
-    
+
     if (!metadataResponse.data) {
         throw new McpError(ErrorCode.InvalidRequest, `CDS view ${query.view_name} not found or no access`);
     }
 
-    const { columns: availableColumns, cdsTypeKind, cdsEntityName } = await parseMetadataResponse(metadataResponse.data);
+    const {
+        columns: availableColumns,
+        cdsTypeKind,
+        cdsEntityName,
+    } = await parseMetadataResponse(metadataResponse.data);
     const metadataFetchTime = Date.now() - metadataStartTime;
-    
+
     if (availableColumns.length === 0) {
         throw new McpError(ErrorCode.InternalError, `No columns found for CDS view ${query.view_name}`);
     }
@@ -376,7 +372,7 @@ async function executeSingleQuery(
     formattedResult.pagination = {
         offset: offset,
         limit: maxRows,
-        has_more: rowsReturned === maxRows
+        has_more: rowsReturned === maxRows,
     };
 
     // Step 10: Add performance warning for pagination
@@ -384,7 +380,7 @@ async function executeSingleQuery(
     if (offset > 0) {
         warnings.push(
             'CDS view queries with offset recalculate data on each request. ' +
-            'Consider using WHERE conditions to filter data instead for better performance.'
+                'Consider using WHERE conditions to filter data instead for better performance.'
         );
     }
     if (warnings.length > 0) {
@@ -402,7 +398,7 @@ async function executeSingleQuery(
         metadata_fetch_ms: metadataFetchTime,
         query_time_ms: queryTime,
         rows_returned: rowsReturned,
-        total_time_ms: totalTime
+        total_time_ms: totalTime,
     };
 
     formattedResult.stats = stats;
@@ -412,7 +408,7 @@ async function executeSingleQuery(
 
 /**
  * Handle GetCDSViewContents request
- * 
+ *
  * Supports both single and batch queries with advanced filtering, pagination, and parameter support.
  */
 export async function handleGetCDSViewContents(args: any) {
@@ -429,7 +425,7 @@ export async function handleGetCDSViewContents(args: any) {
             }
             if (typedArgs.queries.length > 5) {
                 throw new McpError(
-                    ErrorCode.InvalidParams, 
+                    ErrorCode.InvalidParams,
                     'Cannot execute more than 5 CDS view queries in a batch (CDS views are more expensive than table queries)'
                 );
             }
@@ -448,7 +444,7 @@ export async function handleGetCDSViewContents(args: any) {
                 } catch (error: any) {
                     results[queryId] = {
                         error: true,
-                        message: error.message || 'Query failed'
+                        message: error.message || 'Query failed',
                     };
                     failCount++;
                 }
@@ -457,31 +453,38 @@ export async function handleGetCDSViewContents(args: any) {
             const batchTotalTime = Date.now() - batchStartTime;
 
             return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        batch_results: results,
-                        stats: {
-                            total_queries: typedArgs.queries.length,
-                            successful: successCount,
-                            failed: failCount,
-                            total_time_ms: batchTotalTime
-                        }
-                    }, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(
+                            {
+                                batch_results: results,
+                                stats: {
+                                    total_queries: typedArgs.queries.length,
+                                    successful: successCount,
+                                    failed: failCount,
+                                    total_time_ms: batchTotalTime,
+                                },
+                            },
+                            null,
+                            2
+                        ),
+                    },
+                ],
             };
         } else {
             // Single query mode
             const { result } = await executeSingleQuery(typedArgs, includeColumnMetadata, baseUrl);
 
             return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
             };
         }
-
     } catch (error) {
         return return_error(error);
     }

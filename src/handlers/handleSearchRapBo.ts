@@ -21,11 +21,11 @@ export async function handleSearchRapBo(args: any) {
         }
 
         const baseUrl = await getBaseUrl();
-        
+
         // Use the same approach as GetTableContents - send SQL as request body
         const encodedTableName = encodeURIComponent('RONT_HEADER_T');
         const url = `${baseUrl}/sap/bc/adt/datapreview/ddic?rowNumber=100&ddicEntityName=${encodedTableName}`;
-        
+
         // Build SQL query with LIKE pattern for fuzzy search
         // Note: ADT API requires table~column format and proper escaping
         // Use the same approach as GetBehaviorForRapBo with proper SQL escaping
@@ -34,7 +34,7 @@ export async function handleSearchRapBo(args: any) {
         const sqlQuery = `SELECT ${tableName}~RONT_NAME, ${tableName}~DESCRIPTION FROM ${tableName} WHERE ${tableName}~DESCRIPTION LIKE '%${escapedSearchTerm}%'`;
 
         const response = await makeAdtRequest(url, 'POST', 30000, sqlQuery, {
-            'Content-Type': 'text/plain'
+            'Content-Type': 'text/plain',
         });
 
         if (!response.data) {
@@ -44,13 +44,13 @@ export async function handleSearchRapBo(args: any) {
         // Parse XML response similar to GetTableContents
         const parsed = await parseStringPromise(response.data, { explicitArray: false });
         const tableData = parsed?.['dataPreview:tableData'];
-        
+
         if (!tableData) {
             throw new McpError(ErrorCode.InternalError, 'Invalid table contents response format');
         }
 
-        const columns = Array.isArray(tableData['dataPreview:columns']) 
-            ? tableData['dataPreview:columns'] 
+        const columns = Array.isArray(tableData['dataPreview:columns'])
+            ? tableData['dataPreview:columns']
             : [tableData['dataPreview:columns']];
 
         // Extract row data
@@ -65,7 +65,7 @@ export async function handleSearchRapBo(args: any) {
                     const metadata = col['dataPreview:metadata']?.$;
                     const colName = metadata['dataPreview:name'];
                     const dataSet = col['dataPreview:dataSet']?.['dataPreview:data'];
-                    
+
                     if (dataSet) {
                         row[colName] = Array.isArray(dataSet) ? dataSet[i] : dataSet;
                     } else {
@@ -87,16 +87,20 @@ export async function handleSearchRapBo(args: any) {
             // Return just the RAP BO name (RONT_NAME) of the best match
             return {
                 isError: false,
-                content: [{
-                    type: 'text',
-                    text: rows[0].RONT_NAME
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: rows[0].RONT_NAME,
+                    },
+                ],
             };
         } else {
             // No matches found - return error
-            throw new McpError(ErrorCode.InvalidRequest, `No RAP Business Objects found matching the search term: ${searchTerm}`);
+            throw new McpError(
+                ErrorCode.InvalidRequest,
+                `No RAP Business Objects found matching the search term: ${searchTerm}`
+            );
         }
-
     } catch (error) {
         return return_error(error);
     }

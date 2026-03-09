@@ -76,7 +76,7 @@ export class RapAnalysisEngine {
             include_service_analysis: options.include_service_analysis ?? true,
             include_dependency_analysis: options.include_dependency_analysis ?? true,
             include_security_analysis: options.include_security_analysis ?? true,
-            analysis_depth: options.analysis_depth ?? 'detailed'
+            analysis_depth: options.analysis_depth ?? 'detailed',
         };
 
         const result: RapBoAnalysisResult = {
@@ -87,20 +87,20 @@ export class RapAnalysisEngine {
                 status: 'complete',
                 options_used: analysisOptions,
                 errors: [],
-                warnings: []
+                warnings: [],
             },
             behavior_definitions: {
                 interface_behaviors: [],
                 behavior_definitions: [],
                 implementation_classes: [],
-                operations_summary: {}
+                operations_summary: {},
             },
             cds_views: {
                 root_views: [],
                 projection_views: [],
-                dependencies: []
+                dependencies: [],
             },
-            recommendations: []
+            recommendations: [],
         };
 
         try {
@@ -120,7 +120,7 @@ export class RapAnalysisEngine {
                 result.service_exposure = {
                     service_definitions: [],
                     service_bindings: [],
-                    odata_services: []
+                    odata_services: [],
                 };
                 await this.analyzeServiceExposure(rapBoName, result);
             }
@@ -128,7 +128,7 @@ export class RapAnalysisEngine {
             if (analysisOptions.include_security_analysis) {
                 result.access_control = {
                     dcl_definitions: [],
-                    authorization_summary: {}
+                    authorization_summary: {},
                 };
                 await this.analyzeAccessControl(result);
             }
@@ -137,7 +137,7 @@ export class RapAnalysisEngine {
                 result.implementation_analysis = {
                     classes: [],
                     class_dependencies: [],
-                    usage_analysis: []
+                    usage_analysis: [],
                 };
                 await this.analyzeImplementation(result);
             }
@@ -149,7 +149,6 @@ export class RapAnalysisEngine {
             result.analysis_metadata.status = this.errors.length > 0 ? 'partial' : 'complete';
             result.analysis_metadata.errors = this.errors;
             result.analysis_metadata.warnings = this.warnings;
-
         } catch (error: any) {
             this.errors.push(`Critical analysis error: ${error.message}`);
             result.analysis_metadata.status = 'error';
@@ -167,11 +166,11 @@ export class RapAnalysisEngine {
     private async discoverInterfaceBehaviors(rapBoName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const behaviorResponse = await handleGetBehaviorForRapBo({ rap_bo_name: rapBoName });
-            
+
             if (behaviorResponse.content && behaviorResponse.content[0]) {
                 const behaviorData = JSON.parse(behaviorResponse.content[0].text);
                 result.behavior_definitions.interface_behaviors = behaviorData.behavior_definitions || [];
-                
+
                 if (behaviorData.matches_found === 0) {
                     this.warnings.push(`No interface behaviors found in RONT_NODE for: ${rapBoName}`);
                     // Try direct behavior definition lookup as fallback
@@ -192,36 +191,36 @@ export class RapAnalysisEngine {
         try {
             // Try to get behavior definition directly with the provided name
             const behaviorResponse = await handleGetBehaviorDefinition({ cds_view_name: rapBoName });
-            
+
             // Check if response is an error first - must check before accessing content
             if (!behaviorResponse || behaviorResponse.isError) {
                 return; // Silently skip - not all views have behavior definitions
             }
-            
+
             // Check if content exists and is valid
             if (!behaviorResponse.content || !behaviorResponse.content[0] || !behaviorResponse.content[0].text) {
                 return; // Silently skip - no content available
             }
-            
+
             try {
                 const behaviorData = JSON.parse(behaviorResponse.content[0].text);
-                
+
                 // Add to behavior definitions
                 result.behavior_definitions.behavior_definitions.push(behaviorData);
-                
+
                 // Extract implementation class
                 if (behaviorData.implementation_class) {
                     result.behavior_definitions.implementation_classes.push(behaviorData.implementation_class);
                 }
-                
+
                 // Summarize operations
                 if (behaviorData.operations) {
                     result.behavior_definitions.operations_summary = {
                         ...result.behavior_definitions.operations_summary,
-                        [rapBoName]: behaviorData.operations
+                        [rapBoName]: behaviorData.operations,
                     };
                 }
-                
+
                 this.warnings.push(`Found behavior definition directly for: ${rapBoName}`);
             } catch (parseError: any) {
                 // JSON parsing failed - silently skip
@@ -243,7 +242,7 @@ export class RapAnalysisEngine {
             if (rontName) {
                 // Try to extract CDS view name - common patterns: R_ViewName, ViewName_TP, etc.
                 const possibleViewNames = this.extractPossibleViewNames(rontName);
-                
+
                 for (const viewName of possibleViewNames) {
                     behaviorPromises.push(this.analyzeSingleBehaviorDefinition(viewName, result));
                 }
@@ -259,21 +258,21 @@ export class RapAnalysisEngine {
     private async analyzeSingleBehaviorDefinition(cdsViewName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const behaviorResponse = await handleGetBehaviorDefinition({ cds_view_name: cdsViewName });
-            
+
             if (behaviorResponse.content && behaviorResponse.content[0] && !behaviorResponse.isError) {
                 const behaviorData = JSON.parse(behaviorResponse.content[0].text);
                 result.behavior_definitions.behavior_definitions.push(behaviorData);
-                
+
                 // Extract implementation class
                 if (behaviorData.implementation_class) {
                     result.behavior_definitions.implementation_classes.push(behaviorData.implementation_class);
                 }
-                
+
                 // Summarize operations
                 if (behaviorData.operations) {
                     result.behavior_definitions.operations_summary = {
                         ...result.behavior_definitions.operations_summary,
-                        [cdsViewName]: behaviorData.operations
+                        [cdsViewName]: behaviorData.operations,
                     };
                 }
             }
@@ -287,10 +286,10 @@ export class RapAnalysisEngine {
      */
     private async analyzeCdsViews(result: RapBoAnalysisResult): Promise<void> {
         const viewNames = new Set<string>();
-        
+
         // Always try the original RAP BO name first
         viewNames.add(result.analysis_metadata.rap_bo_name);
-        
+
         // Collect view names from behavior definitions
         for (const behavior of result.behavior_definitions.behavior_definitions) {
             if (behavior.cds_view_name) {
@@ -301,7 +300,7 @@ export class RapAnalysisEngine {
         // Collect view names from interface behaviors
         for (const interfaceBehavior of result.behavior_definitions.interface_behaviors) {
             const possibleNames = this.extractPossibleViewNames(interfaceBehavior.ront_name);
-            possibleNames.forEach(name => viewNames.add(name));
+            possibleNames.forEach((name) => viewNames.add(name));
         }
 
         const viewPromises: Promise<void>[] = [];
@@ -318,15 +317,15 @@ export class RapAnalysisEngine {
     private async analyzeSingleCdsView(viewName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const cdsResponse = await handleGetCDSView({ view_name: viewName, include_annotations: true });
-            
+
             // Check if response is an error first
             if (cdsResponse.isError || !cdsResponse.content || !cdsResponse.content[0]) {
                 return; // Silently skip - view might not exist
             }
-            
+
             try {
                 const cdsData = JSON.parse(cdsResponse.content[0].text);
-                
+
                 // Classify as root or projection view
                 if (viewName.startsWith('R_') || viewName.endsWith('TP')) {
                     result.cds_views.root_views.push(cdsData);
@@ -350,7 +349,7 @@ export class RapAnalysisEngine {
     private async analyzeDependencies(result: RapBoAnalysisResult): Promise<void> {
         // Analyze dependencies for all discovered CDS views
         const allViews = [...result.cds_views.root_views, ...result.cds_views.projection_views];
-        
+
         for (const view of allViews) {
             if (view.view_name) {
                 await this.analyzeSingleViewDependencies(view.view_name, result);
@@ -365,12 +364,12 @@ export class RapAnalysisEngine {
         try {
             const { handleGetCDSViewDependencies } = await import('../handlers/handleGetCDSViewDependencies.js');
             const depsResponse = await handleGetCDSViewDependencies({ view_name: viewName });
-            
+
             if (depsResponse.content && depsResponse.content[0] && !depsResponse.isError) {
                 const depsData = JSON.parse(depsResponse.content[0].text);
                 result.cds_views.dependencies.push({
                     view_name: viewName,
-                    dependencies: depsData
+                    dependencies: depsData,
                 });
             }
         } catch (error: any) {
@@ -384,9 +383,9 @@ export class RapAnalysisEngine {
     private async analyzeServiceExposure(rapBoName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             // Search for service definitions related to the RAP BO
-            const searchResponse = await handleSearchObject({ 
-                query: `*${rapBoName.toUpperCase()}*`, 
-                maxResults: 50 
+            const searchResponse = await handleSearchObject({
+                query: `*${rapBoName.toUpperCase()}*`,
+                maxResults: 50,
             });
 
             // Check if response is an error first
@@ -396,12 +395,16 @@ export class RapAnalysisEngine {
 
             try {
                 const searchData = JSON.parse(searchResponse.content[0].text);
-                
+
                 // Filter for service-related objects
-                const serviceObjects = searchData.objects?.filter((obj: any) => 
-                    obj.type === 'SRVD' || obj.type === 'SRVB' || 
-                    obj.name?.includes('UI_') || obj.name?.includes('API_')
-                ) || [];
+                const serviceObjects =
+                    searchData.objects?.filter(
+                        (obj: any) =>
+                            obj.type === 'SRVD' ||
+                            obj.type === 'SRVB' ||
+                            obj.name?.includes('UI_') ||
+                            obj.name?.includes('API_')
+                    ) || [];
 
                 // Analyze each service object
                 for (const serviceObj of serviceObjects) {
@@ -425,7 +428,7 @@ export class RapAnalysisEngine {
     private async analyzeServiceDefinition(serviceName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const serviceResponse = await handleGetServiceDefinition({ service_name: serviceName });
-            
+
             if (serviceResponse.content && serviceResponse.content[0] && !serviceResponse.isError) {
                 const serviceData = JSON.parse(serviceResponse.content[0].text);
                 result.service_exposure!.service_definitions.push(serviceData);
@@ -441,7 +444,7 @@ export class RapAnalysisEngine {
     private async analyzeServiceBinding(bindingName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const bindingResponse = await handleGetServiceBinding({ binding_name: bindingName });
-            
+
             if (bindingResponse.content && bindingResponse.content[0] && !bindingResponse.isError) {
                 const bindingData = JSON.parse(bindingResponse.content[0].text);
                 result.service_exposure!.service_bindings.push(bindingData);
@@ -456,7 +459,7 @@ export class RapAnalysisEngine {
      */
     private async analyzeAccessControl(result: RapBoAnalysisResult): Promise<void> {
         const rootViews = result.cds_views.root_views;
-        
+
         for (const view of rootViews) {
             if (view.view_name) {
                 await this.analyzeSingleAccessControl(view.view_name, result);
@@ -470,7 +473,7 @@ export class RapAnalysisEngine {
     private async analyzeSingleAccessControl(viewName: string, result: RapBoAnalysisResult): Promise<void> {
         try {
             const aclResponse = await handleGetAccessControl({ dcl_name: viewName });
-            
+
             if (aclResponse.content && aclResponse.content[0] && !aclResponse.isError) {
                 const aclData = JSON.parse(aclResponse.content[0].text);
                 result.access_control!.dcl_definitions.push(aclData);
@@ -485,7 +488,7 @@ export class RapAnalysisEngine {
      */
     private async analyzeImplementation(result: RapBoAnalysisResult): Promise<void> {
         const implementationClasses = result.behavior_definitions.implementation_classes;
-        
+
         for (const className of implementationClasses) {
             await this.analyzeSingleImplementationClass(className, result);
         }
@@ -498,7 +501,7 @@ export class RapAnalysisEngine {
         try {
             // Get class details
             const classResponse = await handleGetClass({ class_name: className });
-            
+
             if (classResponse.content && classResponse.content[0] && !classResponse.isError) {
                 const classData = JSON.parse(classResponse.content[0].text);
                 result.implementation_analysis!.classes.push(classData);
@@ -506,7 +509,7 @@ export class RapAnalysisEngine {
 
             // Get class usages
             const usageResponse = await handleGetClassUsages({ class_name: className });
-            
+
             if (usageResponse.content && usageResponse.content[0] && !usageResponse.isError) {
                 const usageData = JSON.parse(usageResponse.content[0].text);
                 result.implementation_analysis!.usage_analysis.push(usageData);
@@ -524,27 +527,37 @@ export class RapAnalysisEngine {
 
         // Check for missing behavior definitions
         if (result.behavior_definitions.behavior_definitions.length === 0) {
-            recommendations.push("No behavior definitions found. Consider implementing RAP behavior for this business object.");
+            recommendations.push(
+                'No behavior definitions found. Consider implementing RAP behavior for this business object.'
+            );
         }
 
         // Check for missing access control
         if (result.access_control && result.access_control.dcl_definitions.length === 0) {
-            recommendations.push("No access control definitions found. Consider implementing authorization rules for security.");
+            recommendations.push(
+                'No access control definitions found. Consider implementing authorization rules for security.'
+            );
         }
 
         // Check for service exposure
         if (result.service_exposure && result.service_exposure.service_definitions.length === 0) {
-            recommendations.push("No service definitions found. Consider exposing this RAP BO as an OData service if external access is needed.");
+            recommendations.push(
+                'No service definitions found. Consider exposing this RAP BO as an OData service if external access is needed.'
+            );
         }
 
         // Check for implementation classes
         if (result.behavior_definitions.implementation_classes.length === 0) {
-            recommendations.push("No implementation classes found. Behavior definitions may be using managed implementation.");
+            recommendations.push(
+                'No implementation classes found. Behavior definitions may be using managed implementation.'
+            );
         }
 
         // Check for projection views
         if (result.cds_views.projection_views.length === 0) {
-            recommendations.push("No projection views found. Consider creating consumption views for better separation of concerns.");
+            recommendations.push(
+                'No projection views found. Consider creating consumption views for better separation of concerns.'
+            );
         }
 
         result.recommendations = recommendations;
@@ -555,7 +568,7 @@ export class RapAnalysisEngine {
      */
     private extractPossibleViewNames(rontName: string): string[] {
         const names: string[] = [];
-        
+
         if (!rontName) return names;
 
         // Add the original name
@@ -572,7 +585,7 @@ export class RapAnalysisEngine {
         ];
 
         // Remove duplicates and add to names
-        patterns.forEach(pattern => {
+        patterns.forEach((pattern) => {
             if (!names.includes(pattern)) {
                 names.push(pattern);
             }

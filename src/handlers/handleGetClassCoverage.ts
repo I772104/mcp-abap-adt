@@ -7,7 +7,7 @@ import { attemptClassActivation, ActivationAttemptResult } from '../lib/activati
 const POLLING_CONFIG = {
     INTERVAL: 2000, // 2 seconds
     MAX_ATTEMPTS: 150, // 5 minutes maximum
-    TIMEOUT: 30000 // 30 seconds per request
+    TIMEOUT: 30000, // 30 seconds per request
 } as const;
 
 // TypeScript interfaces for better type safety
@@ -75,25 +75,34 @@ async function pollForRunCompletion(statusUrl: string): Promise<void> {
         try {
             const pollUrl = `${statusUrl}?withLongPolling=true`;
             const headers = {
-                'Accept': 'application/vnd.sap.adt.api.abapunit.run-status.v1+xml'
+                Accept: 'application/vnd.sap.adt.api.abapunit.run-status.v1+xml',
             };
-            
-            const response = await makeAdtRequest(pollUrl, 'GET', POLLING_CONFIG.TIMEOUT, undefined, undefined, headers);
-            
+
+            const response = await makeAdtRequest(
+                pollUrl,
+                'GET',
+                POLLING_CONFIG.TIMEOUT,
+                undefined,
+                undefined,
+                headers
+            );
+
             if (response.data.includes('status="FINISHED"')) {
                 return; // Successfully completed
             }
 
             // Wait before next polling attempt
-            await new Promise(resolve => setTimeout(resolve, POLLING_CONFIG.INTERVAL));
+            await new Promise((resolve) => setTimeout(resolve, POLLING_CONFIG.INTERVAL));
         } catch (error) {
             // Log error but continue polling
             console.error(`Polling attempt ${attempt + 1} failed, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, POLLING_CONFIG.INTERVAL));
+            await new Promise((resolve) => setTimeout(resolve, POLLING_CONFIG.INTERVAL));
         }
     }
 
-    throw new Error(`Coverage run did not complete within ${POLLING_CONFIG.MAX_ATTEMPTS * POLLING_CONFIG.INTERVAL / 1000} seconds`);
+    throw new Error(
+        `Coverage run did not complete within ${(POLLING_CONFIG.MAX_ATTEMPTS * POLLING_CONFIG.INTERVAL) / 1000} seconds`
+    );
 }
 
 /**
@@ -101,7 +110,7 @@ async function pollForRunCompletion(statusUrl: string): Promise<void> {
  */
 async function initiateCoverageRun(config: CoverageRunConfig): Promise<string> {
     const baseUrl = await getBaseUrl();
-    
+
     const payload = `<?xml version="1.0" encoding="UTF-8"?>
 <aunit:run xmlns:aunit="http://www.sap.com/adt/api/aunit" title="${config.className}" context="ADT4Eclipse ABAP Unit Test Runner">
   <aunit:options>
@@ -117,10 +126,11 @@ async function initiateCoverageRun(config: CoverageRunConfig): Promise<string> {
 
     const headers = {
         'Content-Type': 'application/vnd.sap.adt.api.abapunit.run.v2+xml',
-        'User-Agent': 'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
+        'User-Agent':
+            'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
         'X-sap-adt-profiling': 'server-time',
         'sap-adt-connection-id': config.connectionId,
-        'sap-adt-request-id': config.requestId
+        'sap-adt-request-id': config.requestId,
     };
 
     const runUrl = `${baseUrl}/sap/bc/adt/abapunit/runs`;
@@ -137,24 +147,28 @@ async function initiateCoverageRun(config: CoverageRunConfig): Promise<string> {
 /**
  * Retrieves test results and extracts coverage measurement ID
  */
-async function retrieveTestResults(runId: string, config: CoverageRunConfig): Promise<{ xml: string; measurementId: string }> {
+async function retrieveTestResults(
+    runId: string,
+    config: CoverageRunConfig
+): Promise<{ xml: string; measurementId: string }> {
     const baseUrl = await getBaseUrl();
     const resultsUrl = `${baseUrl}/sap/bc/adt/abapunit/results/${runId}?withNavigationUris=false`;
-    
+
     const headers = {
-        'Accept': 'application/vnd.sap.adt.api.abapunit.run-result.v1+xml',
-        'User-Agent': 'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
+        Accept: 'application/vnd.sap.adt.api.abapunit.run-result.v1+xml',
+        'User-Agent':
+            'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
         'X-sap-adt-profiling': 'server-time',
         'sap-adt-connection-id': config.connectionId,
-        'sap-adt-request-id': generateRequestId()
+        'sap-adt-request-id': generateRequestId(),
     };
-    
+
     const response = await makeAdtRequest(resultsUrl, 'GET', POLLING_CONFIG.TIMEOUT, undefined, undefined, headers);
     const measurementId = extractMeasurementId(response.data);
-    
+
     return {
         xml: response.data,
-        measurementId
+        measurementId,
     };
 }
 
@@ -163,28 +177,30 @@ async function retrieveTestResults(runId: string, config: CoverageRunConfig): Pr
  */
 function parseTestResults(xml: string): CoverageAnalysis {
     // Extract coverage URI
-    const coverageUriMatch = xml.match(/adtcore:uri="([^"]*coverage\/measurements\/[^"]*)"/)
+    const coverageUriMatch = xml.match(/adtcore:uri="([^"]*coverage\/measurements\/[^"]*)"/);
     const coverageUri = coverageUriMatch ? coverageUriMatch[1] : '';
-    
+
     // Extract test methods
     const testMethodMatches = xml.matchAll(/<testMethod[^>]*adtcore:name="([^"]*)"[^>]*executionTime="([^"]*)"[^>]*>/g);
-    const testMethods: TestMethodInfo[] = Array.from(testMethodMatches).map(match => ({
+    const testMethods: TestMethodInfo[] = Array.from(testMethodMatches).map((match) => ({
         name: match[1],
-        executionTime: parseFloat(match[2] || '0')
+        executionTime: parseFloat(match[2] || '0'),
     }));
-    
+
     // Extract test class information
-    const testClassMatch = xml.match(/<testClass[^>]*adtcore:name="([^"]*)"[^>]*durationCategory="([^"]*)"[^>]*riskLevel="([^"]*)"/);
-    
+    const testClassMatch = xml.match(
+        /<testClass[^>]*adtcore:name="([^"]*)"[^>]*durationCategory="([^"]*)"[^>]*riskLevel="([^"]*)"/
+    );
+
     const totalExecutionTime = testMethods.reduce((sum, method) => sum + method.executionTime, 0);
-    
+
     return {
         testClassName: testClassMatch ? testClassMatch[1] : 'Unknown',
         durationCategory: testClassMatch ? testClassMatch[2] : 'Unknown',
         riskLevel: testClassMatch ? testClassMatch[3] : 'Unknown',
         testMethods,
         totalExecutionTime,
-        coverageUri
+        coverageUri,
     };
 }
 
@@ -194,10 +210,11 @@ function parseTestResults(xml: string): CoverageAnalysis {
 async function attemptCoverageDataRetrieval(measurementId: string, className: string, config: CoverageRunConfig) {
     const baseUrl = await getBaseUrl();
     const commonHeaders = {
-        'User-Agent': 'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
+        'User-Agent':
+            'Eclipse/4.37.0.v20250905-0730 (win32; x86_64; Java 21.0.9) ADT/3.57.100 (devedition; adtproduct)',
         'X-sap-adt-profiling': 'server-time',
         'sap-adt-connection-id': config.connectionId,
-        'sap-adt-request-id': generateRequestId()
+        'sap-adt-request-id': generateRequestId(),
     };
 
     // Strategy 1: Try statements endpoint
@@ -216,8 +233,8 @@ async function attemptCoverageDataRetrieval(measurementId: string, className: st
 
         const headers = {
             ...commonHeaders,
-            'Accept': 'application/vnd.sap.adt.coverage.statements.v1+xml, application/xml',
-            'Content-Type': 'application/xml'
+            Accept: 'application/vnd.sap.adt.coverage.statements.v1+xml, application/xml',
+            'Content-Type': 'application/xml',
         };
 
         return await makeAdtRequest(statementsUrl, 'POST', POLLING_CONFIG.TIMEOUT, payload, undefined, headers);
@@ -241,8 +258,8 @@ async function attemptCoverageDataRetrieval(measurementId: string, className: st
 
         const headers = {
             ...commonHeaders,
-            'Accept': 'application/vnd.sap.adt.coverage.measurements.v1+xml, application/xml',
-            'Content-Type': 'application/xml'
+            Accept: 'application/vnd.sap.adt.coverage.measurements.v1+xml, application/xml',
+            'Content-Type': 'application/xml',
         };
 
         return await makeAdtRequest(measurementsUrl, 'POST', POLLING_CONFIG.TIMEOUT, payload, undefined, headers);
@@ -255,7 +272,7 @@ async function attemptCoverageDataRetrieval(measurementId: string, className: st
         const directUrl = `${baseUrl}/sap/bc/adt/runtime/traces/coverage/measurements/${measurementId}`;
         const headers = {
             ...commonHeaders,
-            'Accept': '*/*'
+            Accept: '*/*',
         };
 
         return await makeAdtRequest(directUrl, 'GET', POLLING_CONFIG.TIMEOUT, undefined, undefined, headers);
@@ -301,7 +318,7 @@ function extractCoverageMetrics(sapCoverageXml: string): {
         lineCoverage: { percentage: linePercentage, covered: lineCovered, total: lineTotal },
         statementCoverage: { percentage: statementPercentage, covered: statementCovered, total: statementTotal },
         branchCoverage: { percentage: branchPercentage, covered: branchCovered, total: branchTotal },
-        procedureCoverage: { percentage: procedurePercentage, covered: procedureCovered, total: procedureTotal }
+        procedureCoverage: { percentage: procedurePercentage, covered: procedureCovered, total: procedureTotal },
     };
 }
 
@@ -310,14 +327,13 @@ function extractCoverageMetrics(sapCoverageXml: string): {
  */
 function createSimplifiedXmlFromSapData(sapCoverageXml: string, className: string, measurementId: string): string {
     const metrics = extractCoverageMetrics(sapCoverageXml);
-    
+
     // Calculate overall coverage as weighted average
-    const overallCoverage = (
+    const overallCoverage =
         metrics.lineCoverage.percentage * 0.3 +
         metrics.statementCoverage.percentage * 0.3 +
         metrics.branchCoverage.percentage * 0.2 +
-        metrics.procedureCoverage.percentage * 0.2
-    );
+        metrics.procedureCoverage.percentage * 0.2;
 
     // Extract class information from XML
     const classNameMatch = sapCoverageXml.match(/adtcore:name="([^"]*)"[^>]*adtcore:description="([^"]*)"/);
@@ -343,16 +359,17 @@ function createSimplifiedXmlFromSapData(sapCoverageXml: string, className: strin
  */
 function createSimplifiedXmlFromAnalysis(analysis: CoverageAnalysis, className: string, measurementId: string): string {
     const successRate = analysis.testMethods.length > 0 ? 100 : 0;
-    
+
     // Calculate realistic coverage percentages based on test success
-    const lineCoverage = Math.min(95, 70 + (successRate * 0.25));
-    const statementCoverage = Math.min(92, 65 + (successRate * 0.27));
-    const branchCoverage = Math.min(88, 60 + (successRate * 0.28));
+    const lineCoverage = Math.min(95, 70 + successRate * 0.25);
+    const statementCoverage = Math.min(92, 65 + successRate * 0.27);
+    const branchCoverage = Math.min(88, 60 + successRate * 0.28);
     const procedureCoverage = successRate;
-    
+
     // Weighted overall coverage
-    const overallCoverage = (lineCoverage * 0.3 + statementCoverage * 0.3 + branchCoverage * 0.2 + procedureCoverage * 0.2);
-    
+    const overallCoverage =
+        lineCoverage * 0.3 + statementCoverage * 0.3 + branchCoverage * 0.2 + procedureCoverage * 0.2;
+
     // Estimate totals based on percentages
     const lineTotal = 200;
     const statementTotal = 180;
@@ -364,10 +381,10 @@ function createSimplifiedXmlFromAnalysis(analysis: CoverageAnalysis, className: 
     <class name="${className}" description="ABAP Class" timestamp="${new Date().toISOString()}">
         <summary>
             <overallCoverage percentage="${overallCoverage.toFixed(1)}"/>
-            <lineCoverage percentage="${lineCoverage.toFixed(1)}" covered="${Math.round(lineCoverage * lineTotal / 100)}" total="${lineTotal}"/>
-            <statementCoverage percentage="${statementCoverage.toFixed(1)}" covered="${Math.round(statementCoverage * statementTotal / 100)}" total="${statementTotal}"/>
-            <branchCoverage percentage="${branchCoverage.toFixed(1)}" covered="${Math.round(branchCoverage * branchTotal / 100)}" total="${branchTotal}"/>
-            <procedureCoverage percentage="${procedureCoverage.toFixed(1)}" covered="${Math.round(procedureCoverage * procedureTotal / 100)}" total="${procedureTotal}"/>
+            <lineCoverage percentage="${lineCoverage.toFixed(1)}" covered="${Math.round((lineCoverage * lineTotal) / 100)}" total="${lineTotal}"/>
+            <statementCoverage percentage="${statementCoverage.toFixed(1)}" covered="${Math.round((statementCoverage * statementTotal) / 100)}" total="${statementTotal}"/>
+            <branchCoverage percentage="${branchCoverage.toFixed(1)}" covered="${Math.round((branchCoverage * branchTotal) / 100)}" total="${branchTotal}"/>
+            <procedureCoverage percentage="${procedureCoverage.toFixed(1)}" covered="${Math.round((procedureCoverage * procedureTotal) / 100)}" total="${procedureTotal}"/>
         </summary>
         <testExecution>
             <testClass name="${analysis.testClassName}" executionTime="${analysis.totalExecutionTime.toFixed(3)}"/>
@@ -377,7 +394,7 @@ function createSimplifiedXmlFromAnalysis(analysis: CoverageAnalysis, className: 
             <durationCategory>${analysis.durationCategory.toUpperCase()}</durationCategory>
         </testExecution>
         <methods>
-${analysis.testMethods.map(method => `            <method name="${method.name}" executionTime="${method.executionTime.toFixed(3)}" status="PASSED"/>`).join('\n')}
+${analysis.testMethods.map((method) => `            <method name="${method.name}" executionTime="${method.executionTime.toFixed(3)}" status="PASSED"/>`).join('\n')}
         </methods>
         <measurementId>${measurementId}</measurementId>
     </class>
@@ -404,7 +421,7 @@ export async function handleGetClassCoverage(args: any) {
         if (autoActivate) {
             console.log(`Auto-activation requested before coverage analysis for class ${className}`);
             activationResult = await attemptClassActivation(className, preauditRequested);
-            
+
             // If activation failed critically, we might still want to try coverage analysis
             if (activationResult.status === 'error') {
                 console.warn(`Auto-activation failed for class ${className}, but proceeding with coverage analysis`);
@@ -415,7 +432,7 @@ export async function handleGetClassCoverage(args: any) {
         const config: CoverageRunConfig = {
             className,
             connectionId: generateConnectionId(),
-            requestId: generateRequestId()
+            requestId: generateRequestId(),
         };
 
         // Step 1: Initiate coverage test run
@@ -437,25 +454,24 @@ export async function handleGetClassCoverage(args: any) {
         try {
             const coverageResponse = await attemptCoverageDataRetrieval(measurementId, className, config);
             console.error('Detailed coverage data retrieved successfully');
-            
+
             // Return the complete coverage response directly
             return return_response(coverageResponse);
         } catch (coverageError) {
             // Fallback: Return the raw test results XML
             console.error('Returning raw test results XML as fallback');
-            
+
             const xmlResponse = {
                 data: testResultsXml,
                 status: 200,
                 statusText: 'OK',
                 headers: { 'Content-Type': 'application/xml' },
                 config: {},
-                request: {}
+                request: {},
             } as any;
-            
+
             return return_response(xmlResponse);
         }
-
     } catch (error) {
         console.error(`Coverage analysis failed for class ${args?.class_name || 'unknown'}:`, error);
         return return_error(error);

@@ -27,17 +27,17 @@ export async function handleGetPackageContents(args: any) {
         // Get package contents using the nodestructure endpoint
         const nodeContentsUrl = `${baseUrl}/sap/bc/adt/repository/nodestructure`;
         const nodeContentsParams = {
-            parent_type: "DEVC/K",
+            parent_type: 'DEVC/K',
             parent_name: encodedPackageName,
-            withShortDescriptions: true
+            withShortDescriptions: true,
         };
 
         const response = await makeAdtRequest(nodeContentsUrl, 'POST', 30000, undefined, nodeContentsParams);
         const result = convert.xml2js(response.data, { compact: true });
-        
-        const nodes = result["asx:abap"]?.["asx:values"]?.DATA?.TREE_CONTENT?.SEU_ADT_REPOSITORY_OBJ_NODE || [];
+
+        const nodes = result['asx:abap']?.['asx:values']?.DATA?.TREE_CONTENT?.SEU_ADT_REPOSITORY_OBJ_NODE || [];
         const nodeArray = Array.isArray(nodes) ? nodes : [nodes];
-        
+
         // Extract and categorize objects
         const objects: any[] = [];
         const subPackages: any[] = [];
@@ -51,12 +51,12 @@ export async function handleGetPackageContents(args: any) {
                 type: extractText(node.OBJECT_TYPE),
                 name: extractText(node.OBJECT_NAME),
                 description: extractText(node.DESCRIPTION),
-                uri: extractText(node.OBJECT_URI)
+                uri: extractText(node.OBJECT_URI),
             };
 
             // Check if it's a sub-package
             const isSubPackage = objectData.type === 'DEVC/K';
-            
+
             if (isSubPackage) {
                 if (includeSubpackages) {
                     subPackages.push(objectData);
@@ -70,7 +70,7 @@ export async function handleGetPackageContents(args: any) {
         const packageContents: any = {
             package: args.package_name,
             objectCount: objects.length,
-            objects: objects
+            objects: objects,
         };
 
         if (includeSubpackages && subPackages.length > 0) {
@@ -81,14 +81,14 @@ export async function handleGetPackageContents(args: any) {
         // If recursive is enabled, fetch contents of sub-packages
         if (recursive && subPackages.length > 0) {
             packageContents.subPackageContents = [];
-            
+
             for (const subPkg of subPackages) {
                 try {
                     // Recursively get sub-package contents
                     const subPkgResult = await handleGetPackageContents({
                         package_name: subPkg.name,
                         include_subpackages: includeSubpackages,
-                        recursive: true
+                        recursive: true,
                     });
 
                     if (!subPkgResult.isError && subPkgResult.content?.[0]?.text) {
@@ -104,12 +104,13 @@ export async function handleGetPackageContents(args: any) {
 
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: JSON.stringify(packageContents, null, 2)
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(packageContents, null, 2),
+                },
+            ],
         };
-
     } catch (error) {
         return return_error(error);
     }

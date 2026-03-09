@@ -49,14 +49,15 @@ export class CookieAuthProvider implements AuthProvider {
                 }
 
                 // Convert cookie array to Cookie header format
-                this.cookies = cookieArray
-                    .map(cookie => `${cookie.name}=${cookie.value}`)
-                    .join('; ');
+                this.cookies = cookieArray.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
 
                 console.error(`[Auth] Loaded ${cookieArray.length} SSO cookies from ${this.cookiePath}`);
             }
         } catch (error) {
-            console.error(`[Auth] Failed to load SSO cookies from ${this.cookiePath}:`, error instanceof Error ? error.message : String(error));
+            console.error(
+                `[Auth] Failed to load SSO cookies from ${this.cookiePath}:`,
+                error instanceof Error ? error.message : String(error)
+            );
             this.cookies = null;
         }
     }
@@ -67,8 +68,8 @@ export class CookieAuthProvider implements AuthProvider {
         }
 
         return {
-            'Cookie': this.cookies,
-            'X-SAP-Client': this.client
+            Cookie: this.cookies,
+            'X-SAP-Client': this.client,
         };
     }
 

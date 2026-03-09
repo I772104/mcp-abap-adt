@@ -3,7 +3,7 @@ import { return_error } from '../lib/utils';
 
 /**
  * Handle RAP BO Analysis Resource requests
- * 
+ *
  * This resource provides comprehensive analysis of RAP Business Objects
  * by orchestrating multiple MCP tools to gather and analyze all related artifacts.
  */
@@ -12,7 +12,7 @@ export async function handleRapBoAnalysisResource(uri: string) {
         // Parse URI: rap-bo-analysis:///{rap_bo_name}?options
         const uriParts = uri.replace('rap-bo-analysis:///', '').split('?');
         const rapBoName = decodeURIComponent(uriParts[0]);
-        
+
         if (!rapBoName) {
             throw new Error('RAP BO name is required in URI path');
         }
@@ -21,12 +21,13 @@ export async function handleRapBoAnalysisResource(uri: string) {
         const options: RapBoAnalysisOptions = {};
         if (uriParts[1]) {
             const queryParams = new URLSearchParams(uriParts[1]);
-            
+
             options.include_implementation_analysis = queryParams.get('include_implementation') !== 'false';
             options.include_service_analysis = queryParams.get('include_services') !== 'false';
             options.include_dependency_analysis = queryParams.get('include_dependencies') !== 'false';
             options.include_security_analysis = queryParams.get('include_security') !== 'false';
-            options.analysis_depth = (queryParams.get('depth') as 'summary' | 'detailed' | 'comprehensive') || 'detailed';
+            options.analysis_depth =
+                (queryParams.get('depth') as 'summary' | 'detailed' | 'comprehensive') || 'detailed';
         }
 
         // Perform the analysis
@@ -35,13 +36,14 @@ export async function handleRapBoAnalysisResource(uri: string) {
 
         // Return the resource content
         return {
-            contents: [{
-                uri: uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(analysisResult, null, 2)
-            }]
+            contents: [
+                {
+                    uri: uri,
+                    mimeType: 'application/json',
+                    text: JSON.stringify(analysisResult, null, 2),
+                },
+            ],
         };
-
     } catch (error) {
         return return_error(error);
     }
@@ -49,7 +51,7 @@ export async function handleRapBoAnalysisResource(uri: string) {
 
 /**
  * List available RAP BO Analysis resources
- * 
+ *
  * This provides static example resources for common RAP BOs
  */
 export function listRapBoAnalysisResources() {
@@ -59,15 +61,15 @@ export function listRapBoAnalysisResources() {
                 uri: 'rap-bo-analysis:///I_SalesOrder',
                 name: 'RAP BO Analysis: Sales Order',
                 description: 'Comprehensive analysis of Sales Order RAP Business Object (I_SalesOrder)',
-                mimeType: 'application/json'
+                mimeType: 'application/json',
             },
             {
                 uri: 'rap-bo-analysis:///I_PurchaseOrder',
-                name: 'RAP BO Analysis: Purchase Order', 
+                name: 'RAP BO Analysis: Purchase Order',
                 description: 'Comprehensive analysis of Purchase Order RAP Business Object (I_PurchaseOrder)',
-                mimeType: 'application/json'
-            }
-        ]
+                mimeType: 'application/json',
+            },
+        ],
     };
 }
 
@@ -79,88 +81,88 @@ export function getRapBoAnalysisResourceInfo() {
         name: 'RAP Business Object Analysis Resource',
         version: '1.0',
         description: 'Provides comprehensive analysis of RAP Business Objects by orchestrating multiple MCP tools',
-        
+
         uri_pattern: 'rap-bo-analysis:///{rap_bo_name}',
-        
+
         supported_parameters: {
             include_implementation: {
                 type: 'boolean',
                 default: true,
-                description: 'Include analysis of implementation classes and their dependencies'
+                description: 'Include analysis of implementation classes and their dependencies',
             },
             include_services: {
-                type: 'boolean', 
+                type: 'boolean',
                 default: true,
-                description: 'Include analysis of service definitions and bindings'
+                description: 'Include analysis of service definitions and bindings',
             },
             include_dependencies: {
                 type: 'boolean',
                 default: true,
-                description: 'Include analysis of CDS view dependencies'
+                description: 'Include analysis of CDS view dependencies',
             },
             include_security: {
                 type: 'boolean',
                 default: true,
-                description: 'Include analysis of access control definitions'
+                description: 'Include analysis of access control definitions',
             },
             depth: {
                 type: 'string',
                 enum: ['summary', 'detailed', 'comprehensive'],
                 default: 'detailed',
-                description: 'Level of analysis detail to provide'
-            }
+                description: 'Level of analysis detail to provide',
+            },
         },
 
         examples: [
             {
                 uri: 'rap-bo-analysis:///SalesOrder',
-                description: 'Full analysis of SalesOrder RAP BO with all options enabled'
+                description: 'Full analysis of SalesOrder RAP BO with all options enabled',
             },
             {
                 uri: 'rap-bo-analysis:///SalesOrder?depth=summary',
-                description: 'Summary analysis of SalesOrder RAP BO'
+                description: 'Summary analysis of SalesOrder RAP BO',
             },
             {
                 uri: 'rap-bo-analysis:///SalesOrder?include_services=false&include_security=false',
-                description: 'Analysis of SalesOrder RAP BO excluding services and security'
+                description: 'Analysis of SalesOrder RAP BO excluding services and security',
             },
             {
                 uri: 'rap-bo-analysis:///CustomBO?depth=comprehensive',
-                description: 'Comprehensive analysis of a custom RAP Business Object'
-            }
+                description: 'Comprehensive analysis of a custom RAP Business Object',
+            },
         ],
 
         analysis_phases: [
             {
                 phase: 'Discovery',
                 description: 'Find interface behaviors from RONT_NODE table',
-                tools_used: ['GetBehaviorForRapBo']
+                tools_used: ['GetBehaviorForRapBo'],
             },
             {
                 phase: 'Core Analysis',
                 description: 'Analyze behavior definitions and CDS views',
-                tools_used: ['GetBehaviorDefinition', 'GetCDSView']
+                tools_used: ['GetBehaviorDefinition', 'GetCDSView'],
             },
             {
                 phase: 'Dependency Analysis',
                 description: 'Map CDS view dependencies and associations',
-                tools_used: ['GetCDSViewDependencies']
+                tools_used: ['GetCDSViewDependencies'],
             },
             {
                 phase: 'Service Analysis',
                 description: 'Analyze service definitions and bindings',
-                tools_used: ['SearchObject', 'GetServiceDefinition', 'GetServiceBinding']
+                tools_used: ['SearchObject', 'GetServiceDefinition', 'GetServiceBinding'],
             },
             {
                 phase: 'Security Analysis',
                 description: 'Analyze access control definitions',
-                tools_used: ['GetAccessControl']
+                tools_used: ['GetAccessControl'],
             },
             {
                 phase: 'Implementation Analysis',
                 description: 'Analyze implementation classes and their usage',
-                tools_used: ['GetClass', 'GetClassUsages']
-            }
+                tools_used: ['GetClass', 'GetClassUsages'],
+            },
         ],
 
         output_structure: {
@@ -170,7 +172,7 @@ export function getRapBoAnalysisResourceInfo() {
             service_exposure: 'Service definitions, bindings, and OData services',
             access_control: 'DCL definitions and authorization rules',
             implementation_analysis: 'Implementation classes and their dependencies',
-            recommendations: 'Analysis-based recommendations for improvement'
-        }
+            recommendations: 'Analysis-based recommendations for improvement',
+        },
     };
 }

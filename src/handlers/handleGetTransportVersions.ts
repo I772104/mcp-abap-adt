@@ -86,7 +86,7 @@ export async function handleGetTransportVersions(args: any) {
 
         const versionResult = await handleGetVersionHistory({
             object_type: objectType,
-            object_name: objectName
+            object_name: objectName,
         });
 
         if (versionResult.isError) {
@@ -100,17 +100,18 @@ export async function handleGetTransportVersions(args: any) {
 
         // Parse version history to find relevant versions
         const lines = versionHistory.split('\n');
-        const versionLines = lines.filter(line => {
+        const versionLines = lines.filter((line) => {
             // Match lines that contain version data (have date pattern YYYY-MM-DD)
-            return line.match(/\d{4}-\d{2}-\d{2}/) &&
-                   (line.includes(searchTransport) || line.includes(transportNumber));
+            return (
+                line.match(/\d{4}-\d{2}-\d{2}/) && (line.includes(searchTransport) || line.includes(transportNumber))
+            );
         });
 
         if (versionLines.length > 0) {
             output += `VERSIONS IN TRANSPORT ${searchTransport}:\n`;
             output += `${'='.repeat(80)}\n`;
 
-            versionLines.forEach(line => {
+            versionLines.forEach((line) => {
                 output += `${line}\n`;
             });
 
@@ -125,7 +126,7 @@ export async function handleGetTransportVersions(args: any) {
                 output += `VERSION FOUND: ${versionId}\n\n`;
 
                 // Find previous version for comparison (skip test transports and untransported versions)
-                const allVersionLines = lines.filter(line => {
+                const allVersionLines = lines.filter((line) => {
                     if (!line.match(/\d{4}-\d{2}-\d{2}/)) return false;
                     if (line.includes('[TEST]') || line.includes('Generated test transport')) return false;
 
@@ -141,7 +142,9 @@ export async function handleGetTransportVersions(args: any) {
 
                     return true;
                 });
-                const currentIndex = allVersionLines.findIndex(line => line.includes(searchTransport) || line.includes(transportNumber));
+                const currentIndex = allVersionLines.findIndex(
+                    (line) => line.includes(searchTransport) || line.includes(transportNumber)
+                );
 
                 if (currentIndex >= 0 && currentIndex < allVersionLines.length - 1) {
                     const previousLine = allVersionLines[currentIndex + 1];
@@ -187,9 +190,9 @@ export async function handleGetTransportVersions(args: any) {
             output += `Showing all available versions for ${objectName}:\n\n`;
 
             // Show first few lines of version history for context
-            const versionHeaderEnd = lines.findIndex(l => l.includes('---'));
+            const versionHeaderEnd = lines.findIndex((l) => l.includes('---'));
             const dataLines = lines.slice(versionHeaderEnd + 1, versionHeaderEnd + 11);
-            dataLines.forEach(line => {
+            dataLines.forEach((line) => {
                 if (line.trim() && !line.includes('='.repeat(10))) {
                     output += `  ${line}\n`;
                 }
@@ -203,12 +206,13 @@ export async function handleGetTransportVersions(args: any) {
 
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: output
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: output,
+                },
+            ],
         };
-
     } catch (error) {
         return return_error(error);
     }

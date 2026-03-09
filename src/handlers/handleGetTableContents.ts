@@ -10,7 +10,7 @@ interface ColumnMetadata {
 }
 
 interface WhereOperator {
-    eq?: string;                    // Equals (=) - Only supported operator in ADT Data Preview API
+    eq?: string; // Equals (=) - Only supported operator in ADT Data Preview API
 }
 
 interface SingleQuery {
@@ -41,13 +41,13 @@ interface QueryStats {
 async function parseMetadataResponse(xmlResponse: string): Promise<ColumnMetadata[]> {
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const tableData = parsed?.['dataPreview:tableData'];
-    
+
     if (!tableData || !tableData['dataPreview:columns']) {
         throw new McpError(ErrorCode.InternalError, 'Invalid metadata response format');
     }
 
-    const columns = Array.isArray(tableData['dataPreview:columns']) 
-        ? tableData['dataPreview:columns'] 
+    const columns = Array.isArray(tableData['dataPreview:columns'])
+        ? tableData['dataPreview:columns']
         : [tableData['dataPreview:columns']];
 
     return columns.map((col: any) => {
@@ -59,7 +59,7 @@ async function parseMetadataResponse(xmlResponse: string): Promise<ColumnMetadat
             name: metadata['dataPreview:name'],
             type: metadata['dataPreview:type'],
             description: metadata['dataPreview:description'],
-            length: metadata['dataPreview:length']
+            length: metadata['dataPreview:length'],
         };
     });
 }
@@ -67,19 +67,16 @@ async function parseMetadataResponse(xmlResponse: string): Promise<ColumnMetadat
 /**
  * Parse table contents XML response and convert to structured JSON
  */
-async function parseTableContentsResponse(
-    xmlResponse: string,
-    includeColumnMetadata: boolean
-): Promise<any> {
+async function parseTableContentsResponse(xmlResponse: string, includeColumnMetadata: boolean): Promise<any> {
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const tableData = parsed?.['dataPreview:tableData'];
-    
+
     if (!tableData) {
         throw new McpError(ErrorCode.InternalError, 'Invalid table contents response format');
     }
 
-    const columns = Array.isArray(tableData['dataPreview:columns']) 
-        ? tableData['dataPreview:columns'] 
+    const columns = Array.isArray(tableData['dataPreview:columns'])
+        ? tableData['dataPreview:columns']
         : [tableData['dataPreview:columns']];
 
     // Extract column metadata
@@ -88,7 +85,7 @@ async function parseTableContentsResponse(
         return {
             name: metadata['dataPreview:name'],
             type: metadata['dataPreview:type'],
-            description: metadata['dataPreview:description']
+            description: metadata['dataPreview:description'],
         };
     });
 
@@ -104,7 +101,7 @@ async function parseTableContentsResponse(
                 const metadata = col['dataPreview:metadata']?.$;
                 const colName = metadata['dataPreview:name'];
                 const dataSet = col['dataPreview:dataSet']?.['dataPreview:data'];
-                
+
                 if (dataSet) {
                     row[colName] = Array.isArray(dataSet) ? dataSet[i] : dataSet;
                 } else {
@@ -118,7 +115,7 @@ async function parseTableContentsResponse(
     const result: any = {
         table: tableData['dataPreview:name'],
         total_rows: rows.length,
-        execution_time: tableData['dataPreview:queryExecutionTime'] || '0'
+        execution_time: tableData['dataPreview:queryExecutionTime'] || '0',
     };
 
     // Only include column metadata if requested
@@ -135,7 +132,7 @@ async function parseTableContentsResponse(
  * Validate column names against available table columns
  */
 function validateColumns(requestedColumns: string[], availableColumns: ColumnMetadata[]): void {
-    const availableColumnNames = new Set(availableColumns.map(c => c.name));
+    const availableColumnNames = new Set(availableColumns.map((c) => c.name));
 
     for (const col of requestedColumns) {
         if (!availableColumnNames.has(col)) {
@@ -152,7 +149,7 @@ function validateColumns(requestedColumns: string[], availableColumns: ColumnMet
  * Validate ORDER BY column names (strips DESC/ASC suffixes before validation)
  */
 function validateOrderByColumns(orderByColumns: string[], availableColumns: ColumnMetadata[]): void {
-    const availableColumnNames = new Set(availableColumns.map(c => c.name));
+    const availableColumnNames = new Set(availableColumns.map((c) => c.name));
 
     for (const orderCol of orderByColumns) {
         // Extract column name from "COLUMN DESC" or "COLUMN ASC" or just "COLUMN"
@@ -176,13 +173,13 @@ function validateWhereConditions(
     conditions: Record<string, string | WhereOperator>,
     availableColumns: ColumnMetadata[]
 ): void {
-    const availableColumnNames = new Set(availableColumns.map(c => c.name));
-    
+    const availableColumnNames = new Set(availableColumns.map((c) => c.name));
+
     for (const col of Object.keys(conditions)) {
         if (!availableColumnNames.has(col)) {
             const columnList = Array.from(availableColumnNames).sort().join('\n  - ');
             throw new McpError(
-                ErrorCode.InvalidParams, 
+                ErrorCode.InvalidParams,
                 `Invalid column in WHERE condition: ${col}\n\nAvailable columns:\n  - ${columnList}`
             );
         }
@@ -198,14 +195,11 @@ function escapeSqlValue(value: string): string {
 
 /**
  * Build WHERE clause from condition operators
- * 
+ *
  * Note: ADT Data Preview API only supports equality (=) operator.
  * Other operators (>, >=, <, <=, IN, LIKE, BETWEEN) are NOT supported by the API.
  */
-function buildWhereClause(
-    tableName: string,
-    conditions: Record<string, string | WhereOperator>
-): string {
+function buildWhereClause(tableName: string, conditions: Record<string, string | WhereOperator>): string {
     const clauses: string[] = [];
 
     for (const [col, condition] of Object.entries(conditions)) {
@@ -229,17 +223,15 @@ function buildWhereClause(
  * Build safe SELECT statement
  */
 function buildSelectStatement(
-    tableName: string, 
-    columns: string[], 
+    tableName: string,
+    columns: string[],
     whereConditions?: Record<string, string | WhereOperator>,
     orderBy?: string[],
     maxRows?: number,
     offset?: number
 ): string {
     // Build column list
-    const columnList = columns.length > 0 
-        ? columns.map(col => `${tableName}~${col}`).join(', ')
-        : `${tableName}~*`;
+    const columnList = columns.length > 0 ? columns.map((col) => `${tableName}~${col}`).join(', ') : `${tableName}~*`;
 
     let sql = `SELECT ${columnList} FROM ${tableName}`;
 
@@ -251,14 +243,16 @@ function buildSelectStatement(
 
     // Add ORDER BY clause if provided
     if (orderBy && orderBy.length > 0) {
-        const orderCols = orderBy.map(col => {
-            // Support DESC suffix: "COLUMN DESC" or "COLUMN ASC" or just "COLUMN"
-            const parts = col.trim().split(/\s+/);
-            const colName = parts[0];
-            const direction = parts[1]?.toUpperCase() === 'DESC' ? ' DESC' :
-                            parts[1]?.toUpperCase() === 'ASC' ? ' ASC' : '';
-            return `${tableName}~${colName}${direction}`;
-        }).join(', ');
+        const orderCols = orderBy
+            .map((col) => {
+                // Support DESC suffix: "COLUMN DESC" or "COLUMN ASC" or just "COLUMN"
+                const parts = col.trim().split(/\s+/);
+                const colName = parts[0];
+                const direction =
+                    parts[1]?.toUpperCase() === 'DESC' ? ' DESC' : parts[1]?.toUpperCase() === 'ASC' ? ' ASC' : '';
+                return `${tableName}~${colName}${direction}`;
+            })
+            .join(', ');
         sql += ` ORDER BY ${orderCols}`;
     }
 
@@ -277,7 +271,7 @@ async function executeSingleQuery(
     baseUrl: string
 ): Promise<{ result: any; stats: QueryStats }> {
     const startTime = Date.now();
-    
+
     // Validate required parameters
     if (!query.table_name) {
         throw new McpError(ErrorCode.InvalidParams, 'table_name is required');
@@ -302,14 +296,14 @@ async function executeSingleQuery(
     const metadataStartTime = Date.now();
     const metadataUrl = `${baseUrl}/sap/bc/adt/datapreview/ddic/${encodedTableName}/metadata`;
     const metadataResponse = await makeAdtRequest(metadataUrl, 'GET', 30000);
-    
+
     if (!metadataResponse.data) {
         throw new McpError(ErrorCode.InvalidRequest, `Table ${query.table_name} not found or no access`);
     }
 
     const availableColumns = await parseMetadataResponse(metadataResponse.data);
     const metadataFetchTime = Date.now() - metadataStartTime;
-    
+
     if (availableColumns.length === 0) {
         throw new McpError(ErrorCode.InternalError, `No columns found for table ${query.table_name}`);
     }
@@ -370,7 +364,7 @@ async function executeSingleQuery(
     formattedResult.pagination = {
         offset: offset,
         limit: maxRows,
-        has_more: rowsReturned === maxRows
+        has_more: rowsReturned === maxRows,
     };
 
     // Step 10: Add stats
@@ -379,7 +373,7 @@ async function executeSingleQuery(
         metadata_fetch_ms: metadataFetchTime,
         query_time_ms: queryTime,
         rows_returned: rowsReturned,
-        total_time_ms: totalTime
+        total_time_ms: totalTime,
     };
 
     formattedResult.stats = stats;
@@ -389,7 +383,7 @@ async function executeSingleQuery(
 
 /**
  * Handle GetTableContents request
- * 
+ *
  * Supports both single and batch queries with advanced filtering and pagination.
  */
 export async function handleGetTableContents(args: any) {
@@ -422,7 +416,7 @@ export async function handleGetTableContents(args: any) {
                 } catch (error: any) {
                     results[queryId] = {
                         error: true,
-                        message: error.message || 'Query failed'
+                        message: error.message || 'Query failed',
                     };
                     failCount++;
                 }
@@ -431,31 +425,38 @@ export async function handleGetTableContents(args: any) {
             const batchTotalTime = Date.now() - batchStartTime;
 
             return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify({
-                        batch_results: results,
-                        stats: {
-                            total_queries: typedArgs.queries.length,
-                            successful: successCount,
-                            failed: failCount,
-                            total_time_ms: batchTotalTime
-                        }
-                    }, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(
+                            {
+                                batch_results: results,
+                                stats: {
+                                    total_queries: typedArgs.queries.length,
+                                    successful: successCount,
+                                    failed: failCount,
+                                    total_time_ms: batchTotalTime,
+                                },
+                            },
+                            null,
+                            2
+                        ),
+                    },
+                ],
             };
         } else {
             // Single query mode
             const { result } = await executeSingleQuery(typedArgs, includeColumnMetadata, baseUrl);
 
             return {
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
             };
         }
-
     } catch (error) {
         return return_error(error);
     }

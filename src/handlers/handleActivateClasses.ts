@@ -44,13 +44,13 @@ function validateAndFormatClassNames(classNames: string[]): string[] {
         throw new McpError(ErrorCode.InvalidParams, 'At least one class name is required');
     }
 
-    return classNames.map(className => {
+    return classNames.map((className) => {
         if (!className || typeof className !== 'string') {
             throw new McpError(ErrorCode.InvalidParams, 'All class names must be non-empty strings');
         }
 
         const upperClassName = className.trim().toUpperCase();
-        
+
         // Basic validation - class name should not be empty after trimming
         if (!upperClassName) {
             throw new McpError(ErrorCode.InvalidParams, 'Class names cannot be empty');
@@ -58,7 +58,10 @@ function validateAndFormatClassNames(classNames: string[]): string[] {
 
         // Check length limit (ABAP object names are typically max 30 characters)
         if (upperClassName.length > ABAP_CLASS_NAME_MAX_LENGTH) {
-            throw new McpError(ErrorCode.InvalidParams, `Class name '${upperClassName}' exceeds ${ABAP_CLASS_NAME_MAX_LENGTH} character limit`);
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `Class name '${upperClassName}' exceeds ${ABAP_CLASS_NAME_MAX_LENGTH} character limit`
+            );
         }
 
         return upperClassName;
@@ -69,18 +72,20 @@ function validateAndFormatClassNames(classNames: string[]): string[] {
  * Creates XML payload for class activation request
  */
 function createActivationPayload(classNames: string[]): string {
-    const objectReferences = classNames.map(className => {
-        // XML escape the class name
-        const escapedClassName = className
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+    const objectReferences = classNames
+        .map((className) => {
+            // XML escape the class name
+            const escapedClassName = className
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
 
-        const uri = `/sap/bc/adt/oo/classes/${className.toLowerCase()}`;
-        
-        return `  <adtcore:objectReference adtcore:uri="${uri}" adtcore:name="${escapedClassName}"/>`;
-    }).join('\n');
+            const uri = `/sap/bc/adt/oo/classes/${className.toLowerCase()}`;
+
+            return `  <adtcore:objectReference adtcore:uri="${uri}" adtcore:name="${escapedClassName}"/>`;
+        })
+        .join('\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?><adtcore:objectReferences xmlns:adtcore="http://www.sap.com/adt/core">
 ${objectReferences}
@@ -100,26 +105,30 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
         // Check if activation was cancelled or failed
         const activationCancelled = responseData.includes('Activation was cancelled');
         const activationFailed = responseData.includes('activationExecuted="false"');
-        
+
         // Extract error and warning messages from XML
         const errorMessages: string[] = [];
         const warningMessages: string[] = [];
-        
+
         // Parse XML messages with type="E" (Error) and type="W" (Warning)
-        const errorMatches = responseData.match(/<msg[^>]*type="E"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g);
-        const warningMatches = responseData.match(/<msg[^>]*type="W"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g);
-        
+        const errorMatches = responseData.match(
+            /<msg[^>]*type="E"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g
+        );
+        const warningMatches = responseData.match(
+            /<msg[^>]*type="W"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt><\/shortText>[\s\S]*?<\/msg>/g
+        );
+
         if (errorMatches) {
-            errorMatches.forEach(match => {
+            errorMatches.forEach((match) => {
                 const textMatch = match.match(/<txt>(.*?)<\/txt>/);
                 if (textMatch) {
                     errorMessages.push(textMatch[1]);
                 }
             });
         }
-        
+
         if (warningMatches) {
-            warningMatches.forEach(match => {
+            warningMatches.forEach((match) => {
                 const textMatch = match.match(/<txt>(.*?)<\/txt>/);
                 if (textMatch) {
                     warningMessages.push(textMatch[1]);
@@ -135,7 +144,7 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
         // For each class, determine activation status
         for (const className of classNames) {
             const uri = `/sap/bc/adt/oo/classes/${className.toLowerCase()}`;
-            
+
             let status: 'success' | 'error' | 'warning';
             let message: string | undefined;
 
@@ -161,11 +170,11 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
                 className,
                 uri,
                 status,
-                message
+                message,
             });
         }
 
-        const overallStatus = errorCount > 0 ? 'error' : (warningCount > 0 ? 'warning' : 'success');
+        const overallStatus = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'success';
 
         return {
             status: overallStatus,
@@ -174,18 +183,17 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
                 totalClasses: classNames.length,
                 successCount,
                 errorCount,
-                warningCount
+                warningCount,
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
-
     } catch (error) {
         // If parsing fails, assume all activations failed
-        const results = classNames.map(className => ({
+        const results = classNames.map((className) => ({
             className,
             uri: `/sap/bc/adt/oo/classes/${className.toLowerCase()}`,
             status: 'error' as const,
-            message: `Failed to parse activation result for class ${className}: ${error instanceof Error ? error.message : 'Unknown parsing error'}`
+            message: `Failed to parse activation result for class ${className}: ${error instanceof Error ? error.message : 'Unknown parsing error'}`,
         }));
 
         return {
@@ -195,9 +203,9 @@ function parseActivationResponse(responseData: string, classNames: string[]): Ac
                 totalClasses: classNames.length,
                 successCount: 0,
                 errorCount: classNames.length,
-                warningCount: 0
+                warningCount: 0,
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
     }
 }
@@ -215,7 +223,7 @@ export async function handleActivateClasses(args: any): Promise<any> {
         const params: ActivateClassesParams = {
             class_name: args.class_name,
             class_names: args.class_names,
-            preaudit_requested: args.preaudit_requested !== false // default to true
+            preaudit_requested: args.preaudit_requested !== false, // default to true
         };
 
         // Normalize input to always work with an array
@@ -241,7 +249,7 @@ export async function handleActivateClasses(args: any): Promise<any> {
         // Set request headers
         const headers = {
             'Content-Type': 'application/xml; charset=utf-8',
-            'Accept': 'application/xml'
+            Accept: 'application/xml',
         };
 
         // Make the activation request
@@ -257,9 +265,9 @@ export async function handleActivateClasses(args: any): Promise<any> {
                 endpoint: activationUrl,
                 classNames: validatedClassNames,
                 preauditRequested: params.preaudit_requested,
-                method: 'POST'
+                method: 'POST',
             },
-            rawResponse: response.data || 'No response data'
+            rawResponse: response.data || 'No response data',
         };
 
         const enhancedAxiosResponse = {
@@ -267,22 +275,31 @@ export async function handleActivateClasses(args: any): Promise<any> {
             status: activationResults.status === 'error' ? 400 : 200,
             statusText: activationResults.status === 'error' ? 'Bad Request' : 'OK',
             headers: response.headers || {},
-            config: { headers: {} }
+            config: { headers: {} },
         } as any;
 
         return return_response(enhancedAxiosResponse);
-
     } catch (error) {
         // Enhanced error handling for common scenarios
         if (error instanceof Error) {
             if (error.message.includes('authorization') || error.message.includes('403')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to activate classes. Check S_DEVELOP authorization.'));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        'Insufficient authorization to activate classes. Check S_DEVELOP authorization.'
+                    )
+                );
             }
             if (error.message.includes('404') || error.message.includes('Not Found')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 'One or more classes not found. Ensure classes exist before activation.'));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        'One or more classes not found. Ensure classes exist before activation.'
+                    )
+                );
             }
         }
-        
+
         return return_error(error);
     }
 }

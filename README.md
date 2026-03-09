@@ -35,6 +35,8 @@
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-purple.svg)](https://modelcontextprotocol.io)
+[![CI](https://github.tools.sap/D020426/mcp-abap-adt/actions/workflows/ci.yml/badge.svg)](https://github.tools.sap/D020426/mcp-abap-adt/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/D020426/mcp-abap-adt/branch/main/graph/badge.svg)](https://codecov.io/gh/D020426/mcp-abap-adt)
 
 <a href="https://glama.ai/mcp/servers/gwkh12xlu7">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/gwkh12xlu7/badge" alt="ABAP ADT MCP server" />

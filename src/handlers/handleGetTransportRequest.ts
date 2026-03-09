@@ -13,10 +13,7 @@ export async function handleGetTransportRequest(args: any) {
         const transportNumber = args?.transport_number;
 
         if (!transportNumber) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'Missing required parameter: transport_number'
-            );
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: transport_number');
         }
 
         const baseUrl = await getBaseUrl();
@@ -25,14 +22,9 @@ export async function handleGetTransportRequest(args: any) {
         const url = `${baseUrl}/sap/bc/adt/cts/transportrequests/${encodeURIComponent(transportNumber)}`;
 
         // Make request with 30 second timeout and Accept header for SAP ADT transport organizer XML
-        const response = await makeAdtRequest(
-            url,
-            'GET',
-            30000,
-            undefined,
-            undefined,
-            { 'Accept': 'application/vnd.sap.adt.transportorganizer.v1+xml' }
-        );
+        const response = await makeAdtRequest(url, 'GET', 30000, undefined, undefined, {
+            Accept: 'application/vnd.sap.adt.transportorganizer.v1+xml',
+        });
 
         // Parse and format the response
         const formatted = formatTransportResponse(response.data, transportNumber);
@@ -40,10 +32,12 @@ export async function handleGetTransportRequest(args: any) {
         // Return formatted output
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: formatted
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: formatted,
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);
@@ -57,7 +51,9 @@ function formatTransportResponse(xml: string, transportNumber: string): string {
     let output = '';
 
     // Extract root element info
-    const rootMatch = xml.match(/<tm:root[^>]*tm:object_type="([^"]+)"[^>]*adtcore:name="([^"]+)"[^>]*adtcore:description="([^"]+)"[^>]*adtcore:changedAt="([^"]+)"[^>]*adtcore:changedBy="([^"]+)"/);
+    const rootMatch = xml.match(
+        /<tm:root[^>]*tm:object_type="([^"]+)"[^>]*adtcore:name="([^"]+)"[^>]*adtcore:description="([^"]+)"[^>]*adtcore:changedAt="([^"]+)"[^>]*adtcore:changedBy="([^"]+)"/
+    );
 
     if (rootMatch) {
         output += `${'='.repeat(80)}\n`;
@@ -69,8 +65,12 @@ function formatTransportResponse(xml: string, transportNumber: string): string {
     }
 
     // Check if this is a request with tasks or a standalone task
-    const requestMatch = xml.match(/<tm:request[^>]*tm:number="([^"]+)"[^>]*tm:owner="([^"]+)"[^>]*tm:desc="([^"]+)"[^>]*tm:type="([^"]+)"[^>]*tm:status_text="([^"]+)"[^>]*tm:target="([^"]*)"/);
-    const taskMatch = xml.match(/<tm:task[^>]*tm:number="([^"]+)"[^>]*tm:parent="([^"]+)"[^>]*tm:owner="([^"]+)"[^>]*tm:desc="([^"]+)"[^>]*tm:type="([^"]+)"[^>]*tm:status_text="([^"]+)"/);
+    const requestMatch = xml.match(
+        /<tm:request[^>]*tm:number="([^"]+)"[^>]*tm:owner="([^"]+)"[^>]*tm:desc="([^"]+)"[^>]*tm:type="([^"]+)"[^>]*tm:status_text="([^"]+)"[^>]*tm:target="([^"]*)"/
+    );
+    const taskMatch = xml.match(
+        /<tm:task[^>]*tm:number="([^"]+)"[^>]*tm:parent="([^"]+)"[^>]*tm:owner="([^"]+)"[^>]*tm:desc="([^"]+)"[^>]*tm:type="([^"]+)"[^>]*tm:status_text="([^"]+)"/
+    );
 
     if (requestMatch) {
         output += `REQUEST: ${requestMatch[1]}\n`;
@@ -91,7 +91,9 @@ function formatTransportResponse(xml: string, transportNumber: string): string {
     }
 
     // Extract objects
-    const objectMatches = [...xml.matchAll(/<tm:abap_object[^>]*tm:name="([^"]+)"[^>]*tm:obj_info="([^"]+)"[^>]*tm:position="([^"]+)"/g)];
+    const objectMatches = [
+        ...xml.matchAll(/<tm:abap_object[^>]*tm:name="([^"]+)"[^>]*tm:obj_info="([^"]+)"[^>]*tm:position="([^"]+)"/g),
+    ];
 
     if (objectMatches.length > 0) {
         output += `${'='.repeat(80)}\n`;

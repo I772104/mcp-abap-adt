@@ -51,7 +51,7 @@ function validateBasicSyntax(sourceCode: string): any[] | null {
                 type: 'error',
                 message: 'Missing period in METHODS declaration',
                 line: i + 1,
-                severity: 'error'
+                severity: 'error',
             });
         }
 
@@ -61,7 +61,7 @@ function validateBasicSyntax(sourceCode: string): any[] | null {
                 type: 'error',
                 message: 'Missing parameter name in RETURNING VALUE()',
                 line: i + 1,
-                severity: 'error'
+                severity: 'error',
             });
         }
     }
@@ -78,7 +78,7 @@ function createClassMetadataPayload(className: string, description: string, pack
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
-    
+
     return `<?xml version="1.0" encoding="UTF-8"?><class:abapClass xmlns:class="http://www.sap.com/adt/oo/classes" xmlns:adtcore="http://www.sap.com/adt/core" adtcore:description="${xmlDescription}" adtcore:language="EN" adtcore:name="${className}" adtcore:type="CLAS/OC" adtcore:masterLanguage="EN" class:final="true" class:visibility="public">
   <adtcore:packageRef adtcore:name="${packageName}"/>
   <class:include adtcore:name="CLAS/OC" adtcore:type="CLAS/OC" class:includeType="testclasses"/>
@@ -92,14 +92,14 @@ function createClassMetadataPayload(className: string, description: string, pack
 async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<void> {
     const baseHeaders = {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Accept': 'text/plain'
+        Accept: 'text/plain',
     };
 
     // Try direct upload first
     try {
         await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
             ...baseHeaders,
-            'If-Match': '*'
+            'If-Match': '*',
         });
         return;
     } catch (directUploadError) {
@@ -107,11 +107,11 @@ async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<
         try {
             const getResponse = await makeAdtRequest(sourceUrl, 'GET', 10000);
             const etag = getResponse.headers['etag'] || getResponse.headers['ETag'];
-            
+
             if (etag) {
                 await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
                     ...baseHeaders,
-                    'If-Match': etag
+                    'If-Match': etag,
                 });
                 return;
             }
@@ -128,19 +128,19 @@ async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<
 async function backupExistingClass(className: string): Promise<ClassBackup | null> {
     try {
         const classResult = await handleGetClass({ class_name: className });
-        
+
         // If getting class failed, we can't create a backup
         if (classResult.isError) {
             return null;
         }
-        
+
         // Extract the class content from the response
         const classContent = classResult.content?.[0]?.text || '';
-        
+
         return {
             class_name: className,
             timestamp: new Date().toISOString(),
-            original_content: classContent
+            original_content: classContent,
         };
     } catch (error) {
         // If backup fails, we'll proceed without backup but note it in the response
@@ -155,35 +155,36 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
     const action = isReplacing ? 'replacement' : 'creation';
     const errorMessage = originalError.message || String(originalError);
     const isETagError = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
-    const isSyntaxRelated = isETagError || errorMessage.toLowerCase().includes('syntax') || errorMessage.toLowerCase().includes('invalid');
-    
+    const isSyntaxRelated =
+        isETagError || errorMessage.toLowerCase().includes('syntax') || errorMessage.toLowerCase().includes('invalid');
+
     let mainMessage: string;
     let recommendations: string[];
-    
+
     if (isReplacing && isETagError) {
         mainMessage = `Class ${action} failed with ETag mismatch. This commonly occurs when there are syntax errors in the new source code.`;
         recommendations = [
-            "Check your ABAP source code for syntax errors",
-            "The original class remains unchanged due to this error"
+            'Check your ABAP source code for syntax errors',
+            'The original class remains unchanged due to this error',
         ];
     } else if (isSyntaxRelated) {
         mainMessage = `Class ${action} failed due to syntax errors in the provided source code.`;
         recommendations = [
-            "Review your ABAP code for syntax errors",
-            "Use the CheckSyntax tool to validate your code before creating the class",
-            isReplacing ? "The original class remains unchanged" : "No class was created due to syntax errors"
+            'Review your ABAP code for syntax errors',
+            'Use the CheckSyntax tool to validate your code before creating the class',
+            isReplacing ? 'The original class remains unchanged' : 'No class was created due to syntax errors',
         ];
     } else {
         mainMessage = `Class ${action} failed due to an unexpected error.`;
         recommendations = [
-            "Check system connectivity and authorization",
-            "Verify the class name follows naming conventions (Z*/Y*)",
-            "Ensure the package is a local package ($TMP, $LOCAL)",
-            "Try the operation again",
-            isReplacing ? "The original class remains unchanged" : "No class was created"
+            'Check system connectivity and authorization',
+            'Verify the class name follows naming conventions (Z*/Y*)',
+            'Ensure the package is a local package ($TMP, $LOCAL)',
+            'Try the operation again',
+            isReplacing ? 'The original class remains unchanged' : 'No class was created',
         ];
     }
-    
+
     const errorResponse = {
         status: 'error',
         message: mainMessage,
@@ -191,10 +192,10 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
             className: params.class_name,
             action: isReplacing ? 'replace' : 'create',
             originalError: errorMessage,
-            errorType: isETagError ? 'ETag_Mismatch_Likely_Syntax' : (isSyntaxRelated ? 'Syntax_Error' : 'General_Error'),
-            recommendations: recommendations
+            errorType: isETagError ? 'ETag_Mismatch_Likely_Syntax' : isSyntaxRelated ? 'Syntax_Error' : 'General_Error',
+            recommendations: recommendations,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     };
 
     return {
@@ -202,21 +203,26 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
         status: 400,
         statusText: isETagError ? 'Bad Request - ETag Mismatch (Likely Syntax Error)' : 'Bad Request - Syntax Error',
         headers: {},
-        config: { headers: {} }
+        config: { headers: {} },
     } as any;
 }
 
 /**
  * Handles fallback when class creation succeeds but source upload fails due to syntax issues
  */
-async function handleFallbackSyntaxCheck(params: CreateClassParams, originalError: any, baseUrl: string, encodedClassName: string): Promise<any> {
+async function handleFallbackSyntaxCheck(
+    params: CreateClassParams,
+    originalError: any,
+    baseUrl: string,
+    encodedClassName: string
+): Promise<any> {
     // Try to clean up the created class since upload failed
     try {
         await handleDeleteLocalClass({ class_name: params.class_name });
     } catch (cleanupError) {
         // Cleanup failed, but continue with error reporting
     }
-    
+
     // Return improved error response
     return return_response(createSyntaxErrorResponse(params, originalError, false));
 }
@@ -238,7 +244,7 @@ export async function handleCreateClass(args: any): Promise<any> {
             package: args.package || '$TMP',
             backup_existing: args.backup_existing === true,
             auto_activate: args.auto_activate !== false, // default to true
-            preaudit_requested: args.preaudit_requested !== false // default to true
+            preaudit_requested: args.preaudit_requested !== false, // default to true
         };
 
         // Validate inputs
@@ -249,20 +255,20 @@ export async function handleCreateClass(args: any): Promise<any> {
         const baseUrl = await getBaseUrl();
         const encodedClassName = encodeURIComponent(params.class_name);
         const sourceUrl = `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}/source/main`;
-        
+
         let backup: ClassBackup | null = null;
         let isReplacing = false;
-        
+
         // Check if class exists
         try {
             await makeAdtRequest(sourceUrl, 'GET', 10000);
             isReplacing = true;
-            
+
             // Create backup if requested
             if (params.backup_existing) {
                 backup = await backupExistingClass(params.class_name);
             }
-            
+
             // If replacing, upload new source code with enhanced error handling
             try {
                 await uploadSourceCode(sourceUrl, params.source_code);
@@ -270,39 +276,42 @@ export async function handleCreateClass(args: any): Promise<any> {
                 // Enhanced error handling for class replacement failures
                 const uploadErrorMessage = uploadError?.message || String(uploadError);
                 const isETagError = uploadErrorMessage.includes('HTTP 412') || uploadErrorMessage.includes('412');
-                
+
                 if (isETagError) {
                     // ETag mismatch during replacement - likely syntax errors
                     const errorResponse = createSyntaxErrorResponse(params, uploadError, true);
                     return return_response(errorResponse);
                 }
-                
+
                 // Other upload errors during replacement
                 throw uploadError;
             }
-            
         } catch (getError: any) {
             // Class doesn't exist, proceed with normal creation
             // Check for 404 error (class not found) - be flexible with error format
-            const is404Error = 
-                getError.message?.includes('404') || 
+            const is404Error =
+                getError.message?.includes('404') ||
                 getError.message?.includes('Not Found') ||
                 getError.status === 404 ||
                 getError.response?.status === 404;
-            
+
             if (is404Error) {
                 isReplacing = false;
-                
+
                 const createUrl = `${baseUrl}/sap/bc/adt/oo/classes`;
-                const metadataPayload = createClassMetadataPayload(params.class_name, params.description!, params.package!);
+                const metadataPayload = createClassMetadataPayload(
+                    params.class_name,
+                    params.description!,
+                    params.package!
+                );
 
                 const createHeaders = {
                     'Content-Type': 'application/vnd.sap.adt.oo.classes+xml',
-                    'Accept': 'application/vnd.sap.adt.oo.classes+xml'
+                    Accept: 'application/vnd.sap.adt.oo.classes+xml',
                 };
 
                 let classCreated = false;
-                
+
                 try {
                     // Create class metadata
                     await makeAdtRequest(createUrl, 'POST', 30000, metadataPayload, undefined, createHeaders);
@@ -310,17 +319,16 @@ export async function handleCreateClass(args: any): Promise<any> {
 
                     // Upload custom source code
                     await uploadSourceCode(sourceUrl, params.source_code);
-                    
                 } catch (creationError: any) {
                     // Check for HTTP 412 ETag mismatch during source upload - likely due to syntax issues
-                    const errorMessage = (creationError?.message || creationError?.toString?.() || String(creationError));
+                    const errorMessage = creationError?.message || creationError?.toString?.() || String(creationError);
                     const isHttp412Error = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
-                    
+
                     if (classCreated && isHttp412Error) {
                         // Don't cleanup the class, instead run fallback syntax check
                         return await handleFallbackSyntaxCheck(params, creationError, baseUrl, encodedClassName);
                     }
-                    
+
                     // For other errors, try to clean up the created class using proper deletion
                     if (classCreated) {
                         try {
@@ -347,23 +355,27 @@ export async function handleCreateClass(args: any): Promise<any> {
                 package: params.package,
                 description: params.description,
                 action: isReplacing ? 'replace' : 'create',
-                backup: backup ? {
-                    created: true,
-                    timestamp: backup.timestamp,
-                    message: 'Previous class content backed up'
-                } : params.backup_existing ? {
-                    created: false,
-                    message: 'Backup was requested but could not be created'
-                } : {
-                    created: false,
-                    message: 'No backup requested'
-                },
+                backup: backup
+                    ? {
+                          created: true,
+                          timestamp: backup.timestamp,
+                          message: 'Previous class content backed up',
+                      }
+                    : params.backup_existing
+                      ? {
+                            created: false,
+                            message: 'Backup was requested but could not be created',
+                        }
+                      : {
+                            created: false,
+                            message: 'No backup requested',
+                        },
                 location: {
                     metadataUrl: `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}`,
-                    sourceUrl: sourceUrl
-                }
+                    sourceUrl: sourceUrl,
+                },
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
 
         const enhancedResponse = {
@@ -371,44 +383,41 @@ export async function handleCreateClass(args: any): Promise<any> {
             status: isReplacing ? 200 : 201,
             statusText: isReplacing ? 'OK' : 'Created',
             headers: {},
-            config: { headers: {} }
+            config: { headers: {} },
         } as any;
 
         // Handle auto-activation if requested
         if (params.auto_activate) {
-            const activationResult = await attemptClassActivation(
-                params.class_name,
-                params.preaudit_requested || true
-            );
-            
+            const activationResult = await attemptClassActivation(params.class_name, params.preaudit_requested || true);
+
             // Create comprehensive workflow response
-            const workflowResponse = createWorkflowResponse(
-                enhancedResponse,
-                activationResult,
-                true
-            );
-            
+            const workflowResponse = createWorkflowResponse(enhancedResponse, activationResult, true);
+
             const workflowResponseFormatted = {
                 data: JSON.stringify(workflowResponse, null, 2),
                 status: enhancedResponse.status,
                 statusText: enhancedResponse.statusText,
                 headers: {},
-                config: { headers: {} }
+                config: { headers: {} },
             } as any;
-            
+
             return return_response(workflowResponseFormatted);
         }
 
         return return_response(enhancedResponse);
-
     } catch (error) {
         // Enhanced error handling for common scenarios
         if (error instanceof Error) {
             if (error.message.includes('authorization') || error.message.includes('403')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to create/modify classes. Check S_DEVELOP authorization.'));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        'Insufficient authorization to create/modify classes. Check S_DEVELOP authorization.'
+                    )
+                );
             }
         }
-        
+
         return return_error(error);
     }
 }

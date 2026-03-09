@@ -42,10 +42,7 @@ export function ensureTmpDir(): void {
         const tmpDir = getTmpDir();
         fs.mkdirSync(tmpDir, { recursive: true }); // No-op if already exists
     } catch (error: any) {
-        throw new McpError(
-            ErrorCode.InternalError,
-            `Failed to create tmp directory: ${error.message}`
-        );
+        throw new McpError(ErrorCode.InternalError, `Failed to create tmp directory: ${error.message}`);
     }
 }
 
@@ -69,7 +66,7 @@ export function convertToZClassName(className: string): ClassNameConversionResul
         return {
             zClassName: upperClassName.substring(0, ABAP_CLASS_NAME_MAX_LENGTH),
             wasConverted: false,
-            wasTruncated: upperClassName.length > ABAP_CLASS_NAME_MAX_LENGTH
+            wasTruncated: upperClassName.length > ABAP_CLASS_NAME_MAX_LENGTH,
         };
     }
 
@@ -96,7 +93,7 @@ export function convertToZClassName(className: string): ClassNameConversionResul
     return {
         zClassName,
         wasConverted: true,
-        wasTruncated
+        wasTruncated,
     };
 }
 
@@ -120,7 +117,7 @@ export function getFileMetadata(filePath: string, sourceCode: string): FileMetad
             fileName: path.basename(filePath),
             size: Buffer.byteLength(sourceCode, 'utf-8'),
             lines,
-            modified: stats.mtime.toISOString()
+            modified: stats.mtime.toISOString(),
         };
     } catch (error: any) {
         throw new McpError(
@@ -155,10 +152,7 @@ export function readAbapSourceFile(filePath: string): string {
                 `File not found: ${filePath}\nPlease ensure the file exists in the ${TMP_DIR_NAME} folder or provide an absolute path.`
             );
         }
-        throw new McpError(
-            ErrorCode.InternalError,
-            `Failed to read file ${filePath}: ${error.message}`
-        );
+        throw new McpError(ErrorCode.InternalError, `Failed to read file ${filePath}: ${error.message}`);
     }
 }
 
@@ -186,7 +180,10 @@ export function extractClassNameFromFile(filePath: string): string {
 /**
  * Write ABAP source file to tmp folder
  */
-export function writeAbapSourceFile(className: string, sourceCode: string): { filePath: string; metadata: FileMetadata } {
+export function writeAbapSourceFile(
+    className: string,
+    sourceCode: string
+): { filePath: string; metadata: FileMetadata } {
     try {
         ensureTmpDir();
 
@@ -243,10 +240,7 @@ export function validateLocalClassName(className: string): string {
 
     // Check Z/Y prefix for customer namespace
     if (!isLocalClassName(upperClassName)) {
-        throw new McpError(
-            ErrorCode.InvalidParams,
-            'Class name must start with Z or Y for local development'
-        );
+        throw new McpError(ErrorCode.InvalidParams, 'Class name must start with Z or Y for local development');
     }
 
     // Check length limit

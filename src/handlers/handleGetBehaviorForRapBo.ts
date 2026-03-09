@@ -17,13 +17,13 @@ interface BehaviorDefinitionResult {
 async function parseRontNodeResponse(xmlResponse: string): Promise<any[]> {
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const tableData = parsed?.['dataPreview:tableData'];
-    
+
     if (!tableData) {
         throw new McpError(ErrorCode.InternalError, 'Invalid table contents response format');
     }
 
-    const columns = Array.isArray(tableData['dataPreview:columns']) 
-        ? tableData['dataPreview:columns'] 
+    const columns = Array.isArray(tableData['dataPreview:columns'])
+        ? tableData['dataPreview:columns']
         : [tableData['dataPreview:columns']];
 
     // Extract row data
@@ -38,7 +38,7 @@ async function parseRontNodeResponse(xmlResponse: string): Promise<any[]> {
                 const metadata = col['dataPreview:metadata']?.$;
                 const colName = metadata['dataPreview:name'];
                 const dataSet = col['dataPreview:dataSet']?.['dataPreview:data'];
-                
+
                 if (dataSet) {
                     row[colName] = Array.isArray(dataSet) ? dataSet[i] : dataSet;
                 } else {
@@ -61,7 +61,7 @@ function escapeSqlValue(value: string): string {
 
 /**
  * Handle GetBehaviorForRapBo request
- * 
+ *
  * Queries RONT_NODE table to find RAP BO behavior definitions by searching for entries
  * where RONT_NAME contains the provided RAP BO name (in uppercase) and returns the
  * INTERFACE_BEHAVIOR_DEFINITION field content when it's not empty.
@@ -69,7 +69,7 @@ function escapeSqlValue(value: string): string {
 export async function handleGetBehaviorForRapBo(args: any) {
     try {
         const typedArgs: BehaviorForRapBoArgs = args;
-        
+
         // Validate required parameters
         if (!typedArgs.rap_bo_name) {
             throw new McpError(ErrorCode.InvalidParams, 'rap_bo_name is required');
@@ -97,26 +97,27 @@ export async function handleGetBehaviorForRapBo(args: any) {
 
         // Filter results to only include rows where INTERFACE_BEHAVIOR_DEFINITION is not empty
         const behaviorDefinitions: BehaviorDefinitionResult[] = rows
-            .filter(row => row.INTERFACE_BEHAVIOR_DEFINITION && row.INTERFACE_BEHAVIOR_DEFINITION.trim() !== '')
-            .map(row => ({
+            .filter((row) => row.INTERFACE_BEHAVIOR_DEFINITION && row.INTERFACE_BEHAVIOR_DEFINITION.trim() !== '')
+            .map((row) => ({
                 ront_name: row.RONT_NAME || '',
-                interface_behavior_definition: row.INTERFACE_BEHAVIOR_DEFINITION || ''
+                interface_behavior_definition: row.INTERFACE_BEHAVIOR_DEFINITION || '',
             }));
 
         const result = {
             rap_bo_name: typedArgs.rap_bo_name,
             search_term: searchTerm,
             matches_found: behaviorDefinitions.length,
-            behavior_definitions: behaviorDefinitions
+            behavior_definitions: behaviorDefinitions,
         };
 
         return {
-            content: [{
-                type: 'text',
-                text: JSON.stringify(result, null, 2)
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(result, null, 2),
+                },
+            ],
         };
-
     } catch (error) {
         return return_error(error);
     }

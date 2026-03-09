@@ -8,22 +8,22 @@ export async function handleGetAccessControl(args: any) {
         }
 
         const encodedDclName = encodeURIComponent(args.dcl_name);
-        
+
         // Try different ADT endpoints for access control definitions
         const baseUrl = await getBaseUrl();
         const endpoints = [
             `/sap/bc/adt/ddic/dcls/sources/${encodedDclName}`, // DCL source endpoint
             `/sap/bc/adt/ddic/accesscontrols/${encodedDclName}`, // Alternative access control endpoint
-            `/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedDclName}&objectType=DCLS/AC`
+            `/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedDclName}&objectType=DCLS/AC`,
         ];
 
         let lastError: any;
-        
+
         for (const endpoint of endpoints) {
             try {
                 const url = `${baseUrl}${endpoint}`;
                 const response = await makeAdtRequest(url, 'GET', 30000);
-                
+
                 // If we got a successful response, parse and enhance it
                 if (response.data) {
                     let result = {
@@ -35,15 +35,17 @@ export async function handleGetAccessControl(args: any) {
                         conditions: extractConditions(response.data),
                         mapping_role: extractMappingRole(response.data),
                         access_type: extractAccessType(response.data),
-                        grant_statements: extractGrantStatements(response.data)
+                        grant_statements: extractGrantStatements(response.data),
                     };
-                    
+
                     return {
                         isError: false,
-                        content: [{
-                            type: 'text',
-                            text: JSON.stringify(result, null, 2)
-                        }]
+                        content: [
+                            {
+                                type: 'text',
+                                text: JSON.stringify(result, null, 2),
+                            },
+                        ],
                     };
                 }
             } catch (error) {
@@ -52,10 +54,9 @@ export async function handleGetAccessControl(args: any) {
                 continue;
             }
         }
-        
+
         // If all endpoints failed, throw the last error
         throw lastError || new Error('Failed to retrieve access control definition from any endpoint');
-        
     } catch (error) {
         return return_error(error);
     }
@@ -63,54 +64,54 @@ export async function handleGetAccessControl(args: any) {
 
 function extractProtectedView(sourceCode: string): string | null {
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         // Match define role patterns like: define role ZMyRole {
         const roleMatch = trimmed.match(/define\s+role\s+(\w+)/i);
         if (roleMatch) {
             // Look for grant select on in the following lines
             continue;
         }
-        
+
         // Match grant select patterns like: grant select on R_SalesOrderTP
         const grantMatch = trimmed.match(/grant\s+select\s+on\s+(\w+)/i);
         if (grantMatch) {
             return grantMatch[1].trim();
         }
     }
-    
+
     return null;
 }
 
 function extractRoles(sourceCode: string): any[] {
     const roles: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         // Match define role patterns like: define role ZMyRole {
         const roleMatch = trimmed.match(/define\s+role\s+(\w+)/i);
         if (roleMatch) {
             roles.push({
                 name: roleMatch[1].trim(),
-                type: 'custom'
+                type: 'custom',
             });
         }
     }
-    
+
     return roles;
 }
 
 function extractAuthorizationChecks(sourceCode: string): any[] {
     const authChecks: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         // Match aspect pfcg_auth patterns
         const pfcgAuthMatch = trimmed.match(/aspect\s+pfcg_auth\s*\(\s*([^,]+),\s*([^,]+),\s*([^)]+)\s*\)/i);
         if (pfcgAuthMatch) {
@@ -118,29 +119,29 @@ function extractAuthorizationChecks(sourceCode: string): any[] {
                 type: 'pfcg_auth',
                 authorization_object: pfcgAuthMatch[1].trim(),
                 field: pfcgAuthMatch[2].trim(),
-                activity: pfcgAuthMatch[3].trim()
+                activity: pfcgAuthMatch[3].trim(),
             });
         }
-        
+
         // Match aspect pfcg_mapping patterns
         const pfcgMappingMatch = trimmed.match(/aspect\s+pfcg_mapping\s*\(\s*([^)]+)\s*\)/i);
         if (pfcgMappingMatch) {
             authChecks.push({
                 type: 'pfcg_mapping',
-                mapping: pfcgMappingMatch[1].trim()
+                mapping: pfcgMappingMatch[1].trim(),
             });
         }
-        
+
         // Match aspect user patterns
         const userMatch = trimmed.match(/aspect\s+user\s*\(\s*([^)]+)\s*\)/i);
         if (userMatch) {
             authChecks.push({
                 type: 'user',
-                condition: userMatch[1].trim()
+                condition: userMatch[1].trim(),
             });
         }
     }
-    
+
     return authChecks;
 }
 
@@ -149,22 +150,22 @@ function extractConditions(sourceCode: string): any[] {
     const lines = sourceCode.split('\n');
     let inWhereClause = false;
     let currentCondition = '';
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         if (trimmed.toLowerCase().startsWith('where')) {
             inWhereClause = true;
             currentCondition = trimmed.substring(5).trim(); // Remove 'where'
             continue;
         }
-        
+
         if (inWhereClause) {
             if (trimmed === ';' || trimmed === '}') {
                 if (currentCondition) {
                     conditions.push({
                         type: 'where_clause',
-                        condition: currentCondition.trim()
+                        condition: currentCondition.trim(),
                     });
                     currentCondition = '';
                 }
@@ -173,18 +174,18 @@ function extractConditions(sourceCode: string): any[] {
                 currentCondition += ' ' + trimmed;
             }
         }
-        
+
         // Match literal conditions
         const literalMatch = trimmed.match(/\(\s*([^)]+)\s*\)\s*=\s*(.+)/);
         if (literalMatch) {
             conditions.push({
                 type: 'literal',
                 field: literalMatch[1].trim(),
-                value: literalMatch[2].trim()
+                value: literalMatch[2].trim(),
             });
         }
     }
-    
+
     return conditions;
 }
 
@@ -195,7 +196,7 @@ function extractMappingRole(sourceCode: string): boolean {
 
 function extractAccessType(sourceCode: string): string {
     const source = sourceCode.toLowerCase();
-    
+
     if (source.includes('grant select')) {
         return 'SELECT';
     } else if (source.includes('grant update')) {
@@ -207,7 +208,7 @@ function extractAccessType(sourceCode: string): string {
     } else if (source.includes('grant all')) {
         return 'ALL';
     }
-    
+
     return 'UNKNOWN';
 }
 
@@ -216,10 +217,10 @@ function extractGrantStatements(sourceCode: string): any[] {
     const lines = sourceCode.split('\n');
     let inGrantBlock = false;
     let currentGrant: any = null;
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         // Match grant statements
         const grantMatch = trimmed.match(/grant\s+(\w+)\s+on\s+(\w+)/i);
         if (grantMatch) {
@@ -227,12 +228,12 @@ function extractGrantStatements(sourceCode: string): any[] {
                 operation: grantMatch[1].trim().toUpperCase(),
                 entity: grantMatch[2].trim(),
                 conditions: [],
-                aspects: []
+                aspects: [],
             };
             inGrantBlock = true;
             continue;
         }
-        
+
         if (inGrantBlock) {
             if (trimmed === ';' || (trimmed === '}' && currentGrant)) {
                 if (currentGrant) {
@@ -244,7 +245,7 @@ function extractGrantStatements(sourceCode: string): any[] {
                 if (currentGrant) {
                     currentGrant.conditions.push({
                         type: 'where',
-                        condition: trimmed.substring(5).trim()
+                        condition: trimmed.substring(5).trim(),
                     });
                 }
             } else if (trimmed.includes('aspect')) {
@@ -254,6 +255,6 @@ function extractGrantStatements(sourceCode: string): any[] {
             }
         }
     }
-    
+
     return grantStatements;
 }

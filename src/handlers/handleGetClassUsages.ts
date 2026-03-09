@@ -6,12 +6,12 @@ export async function handleGetClassUsages(args: any) {
         if (!args?.class_name) {
             throw new McpError(ErrorCode.InvalidParams, 'Class name is required');
         }
-        
+
         const className = args.class_name.toUpperCase();
         const encodedClassName = encodeURIComponent(className);
         const baseUrl = await getBaseUrl();
         const url = `${baseUrl}/sap/bc/adt/repository/informationsystem/usageReferences?uri=%2Fsap%2Fbc%2Fadt%2Foo%2Fclasses%2F${encodedClassName}`;
-        
+
         // XML payload for usage references request
         const xmlPayload = `<?xml version="1.0" encoding="ASCII"?>
 <usagereferences:usageReferenceRequest xmlns:usagereferences="http://www.sap.com/adt/ris/usageReferences">
@@ -71,7 +71,7 @@ export async function handleGetClassUsages(args: any) {
 </usagereferences:usageReferenceRequest>`;
 
         const customHeaders = {
-            'Content-Type': 'application/vnd.sap.adt.repository.usagereferences.request.v1+xml'
+            'Content-Type': 'application/vnd.sap.adt.repository.usagereferences.request.v1+xml',
         };
 
         const response = await makeAdtRequest(url, 'POST', 30000, xmlPayload, undefined, customHeaders);

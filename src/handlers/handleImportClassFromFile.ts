@@ -5,7 +5,7 @@ import {
     getTmpDir,
     readAbapSourceFile,
     getFileMetadata,
-    buildAbapFileName
+    buildAbapFileName,
 } from '../lib/fileUtils';
 import * as path from 'path';
 import { handleCreateClass } from './handleCreateClass';
@@ -51,8 +51,8 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
 
         // Extract description from source code (look for class definition comment or use default)
         const descriptionMatch = sourceCode.match(/^\*\s*(.+?)$/m);
-        const description = args.description ||
-                          (descriptionMatch ? descriptionMatch[1].trim() : `Imported from ${fileName}`);
+        const description =
+            args.description || (descriptionMatch ? descriptionMatch[1].trim() : `Imported from ${fileName}`);
 
         // Get additional options
         const packageName = args.package || '$TMP';
@@ -66,16 +66,17 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
             description: description,
             package: packageName,
             auto_activate: autoActivate,
-            preaudit_requested: preauditRequested
+            preaudit_requested: preauditRequested,
         });
 
         // Get file metadata
         const metadata = getFileMetadata(filePath, sourceCode);
 
         // Build conversion notes section if any conversions occurred
-        const conversionSection = conversionNotes.length > 0
-            ? `\n📝 Name Conversions:\n${conversionNotes.map(note => `   ${note}`).join('\n')}\n`
-            : '';
+        const conversionSection =
+            conversionNotes.length > 0
+                ? `\n📝 Name Conversions:\n${conversionNotes.map((note) => `   ${note}`).join('\n')}\n`
+                : '';
 
         // Check if the result is an error by examining the response data
         let isError = createResult.isError;
@@ -92,34 +93,39 @@ export async function handleImportClassFromFile(args: ImportClassParams) {
             // Success case
             return {
                 isError: false,
-                content: [{
-                    type: 'text',
-                    text: `✅ Class imported successfully from file!\n\n` +
-                          `📁 Source File: ${fileName}\n` +
-                          `📊 File Size: ${metadata.size} bytes\n` +
-                          `📝 Lines: ${metadata.lines}\n` +
-                          (wasConverted || wasTruncated ? `✨ Target Class: ${zClassName}\n` : '') +
-                          conversionSection +
-                          `\n${createResult.content[0].text}`
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text:
+                            `✅ Class imported successfully from file!\n\n` +
+                            `📁 Source File: ${fileName}\n` +
+                            `📊 File Size: ${metadata.size} bytes\n` +
+                            `📝 Lines: ${metadata.lines}\n` +
+                            (wasConverted || wasTruncated ? `✨ Target Class: ${zClassName}\n` : '') +
+                            conversionSection +
+                            `\n${createResult.content[0].text}`,
+                    },
+                ],
             };
         } else {
             // Error case - provide clear feedback about failure
             return {
                 isError: true,
-                content: [{
-                    type: 'text',
-                    text: `❌ Class import from file failed!\n\n` +
-                          `📁 Source File: ${fileName}\n` +
-                          `📊 File Size: ${metadata.size} bytes\n` +
-                          `📝 Lines: ${metadata.lines}\n` +
-                          (wasConverted || wasTruncated ? `✨ Target Class: ${zClassName}\n` : '') +
-                          conversionSection +
-                          `\n⚠️ Import Error Details:\n${createResult.content[0].text}`
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text:
+                            `❌ Class import from file failed!\n\n` +
+                            `📁 Source File: ${fileName}\n` +
+                            `📊 File Size: ${metadata.size} bytes\n` +
+                            `📝 Lines: ${metadata.lines}\n` +
+                            (wasConverted || wasTruncated ? `✨ Target Class: ${zClassName}\n` : '') +
+                            conversionSection +
+                            `\n⚠️ Import Error Details:\n${createResult.content[0].text}`,
+                    },
+                ],
             };
         }
-
     } catch (error) {
         return return_error(error);
     }

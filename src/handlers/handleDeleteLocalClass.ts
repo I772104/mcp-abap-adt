@@ -53,19 +53,22 @@ function createDeletionRequestPayload(className: string): string {
 /**
  * Parses deletion check response to verify if class is deletable and is local
  */
-function parseDeletionCheckResponse(xmlResponse: string, className: string): { isDeletable: boolean; isLocal: boolean; packageName: string } {
+function parseDeletionCheckResponse(
+    xmlResponse: string,
+    className: string
+): { isDeletable: boolean; isLocal: boolean; packageName: string } {
     try {
         // Extract package name
         const packageMatch = xmlResponse.match(/adtcore:packageName="([^"]*)"/);
         const packageName = packageMatch ? packageMatch[1] : '';
-        
+
         // Extract isDeletable flag
         const deletableMatch = xmlResponse.match(/del:isDeletable="([^"]*)"/);
         const isDeletable = deletableMatch ? deletableMatch[1] === 'true' : false;
-        
+
         // Check if it's a local package
         const isLocal = isLocalPackage(packageName);
-        
+
         return { isDeletable, isLocal, packageName };
     } catch (error) {
         throw new Error(`Failed to parse deletion check response: ${error}`);
@@ -80,11 +83,11 @@ function parseDeletionResult(xmlResponse: string): { isDeleted: boolean; classNa
         // Extract isDeleted flag
         const deletedMatch = xmlResponse.match(/del:isDeleted="([^"]*)"/);
         const isDeleted = deletedMatch ? deletedMatch[1] === 'true' : false;
-        
+
         // Extract class name
         const nameMatch = xmlResponse.match(/adtcore:name="([^"]*)"/);
         const className = nameMatch ? nameMatch[1] : '';
-        
+
         return { isDeleted, className };
     } catch (error) {
         throw new Error(`Failed to parse deletion result response: ${error}`);
@@ -102,7 +105,7 @@ export async function handleDeleteLocalClass(args: any): Promise<any> {
         }
 
         const params: DeleteLocalClassParams = {
-            class_name: args.class_name.toUpperCase()
+            class_name: args.class_name.toUpperCase(),
         };
 
         // Validate class name
@@ -114,41 +117,47 @@ export async function handleDeleteLocalClass(args: any): Promise<any> {
         // Step 1: Check if class can be deleted
         const checkUrl = `${baseUrl}/sap/bc/adt/deletion/check`;
         const checkPayload = createDeletionCheckPayload(lowerClassName);
-        
+
         const checkHeaders = {
             'Content-Type': 'application/vnd.sap.adt.deletion.check.request.v1+xml',
-            'Accept': 'application/vnd.sap.adt.deletion.check.response.v1+xml'
+            Accept: 'application/vnd.sap.adt.deletion.check.response.v1+xml',
         };
 
         const checkResponse = await makeAdtRequest(checkUrl, 'POST', 10000, checkPayload, undefined, checkHeaders);
-        
+
         // Parse check response
         const checkResult = parseDeletionCheckResponse(checkResponse.data, params.class_name);
-        
+
         // Verify class is local
         if (!checkResult.isLocal) {
-            throw new McpError(ErrorCode.InvalidParams, `Class ${params.class_name} is in package '${checkResult.packageName}' which is not a local package. Only classes in local packages ($TMP, $LOCAL, etc.) can be deleted.`);
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `Class ${params.class_name} is in package '${checkResult.packageName}' which is not a local package. Only classes in local packages ($TMP, $LOCAL, etc.) can be deleted.`
+            );
         }
-        
+
         // Verify class is deletable
         if (!checkResult.isDeletable) {
-            throw new McpError(ErrorCode.InvalidParams, `Class ${params.class_name} cannot be deleted. It may be locked, have dependencies, or be in use.`);
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `Class ${params.class_name} cannot be deleted. It may be locked, have dependencies, or be in use.`
+            );
         }
 
         // Step 2: Perform the deletion
         const deleteUrl = `${baseUrl}/sap/bc/adt/deletion/delete`;
         const deletePayload = createDeletionRequestPayload(lowerClassName);
-        
+
         const deleteHeaders = {
             'Content-Type': 'application/vnd.sap.adt.deletion.request.v1+xml',
-            'Accept': 'application/vnd.sap.adt.deletion.response.v1+xml'
+            Accept: 'application/vnd.sap.adt.deletion.response.v1+xml',
         };
 
         const deleteResponse = await makeAdtRequest(deleteUrl, 'POST', 30000, deletePayload, undefined, deleteHeaders);
-        
+
         // Parse deletion result
         const deleteResult = parseDeletionResult(deleteResponse.data);
-        
+
         if (!deleteResult.isDeleted) {
             throw new Error(`Deletion failed for class ${params.class_name}`);
         }
@@ -161,8 +170,8 @@ export async function handleDeleteLocalClass(args: any): Promise<any> {
                 className: params.class_name,
                 package: checkResult.packageName,
                 deletionConfirmed: deleteResult.isDeleted,
-                timestamp: new Date().toISOString()
-            }
+                timestamp: new Date().toISOString(),
+            },
         };
 
         const enhancedResponse = {
@@ -170,25 +179,39 @@ export async function handleDeleteLocalClass(args: any): Promise<any> {
             status: 200,
             statusText: 'OK',
             headers: {},
-            config: { headers: {} }
+            config: { headers: {} },
         } as any;
 
         return return_response(enhancedResponse);
-
     } catch (error) {
         // Enhanced error handling for common scenarios
         if (error instanceof Error) {
             if (error.message.includes('not found') || error.message.includes('404')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, `Class ${args?.class_name} not found. Verify the class exists and the name is correct.`));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        `Class ${args?.class_name} not found. Verify the class exists and the name is correct.`
+                    )
+                );
             }
             if (error.message.includes('authorization') || error.message.includes('403')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to delete classes. Check S_DEVELOP authorization with delete activity.'));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        'Insufficient authorization to delete classes. Check S_DEVELOP authorization with delete activity.'
+                    )
+                );
             }
             if (error.message.includes('locked') || error.message.includes('409')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, `Class ${args?.class_name} is locked by another user or process. Try again later.`));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        `Class ${args?.class_name} is locked by another user or process. Try again later.`
+                    )
+                );
             }
         }
-        
+
         return return_error(error);
     }
 }

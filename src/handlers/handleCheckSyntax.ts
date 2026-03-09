@@ -8,7 +8,7 @@ import {
     readAbapSourceFile,
     getFileMetadata,
     extractClassNameFromFile,
-    ABAP_FILE_EXTENSION
+    ABAP_FILE_EXTENSION,
 } from '../lib/fileUtils';
 import * as path from 'path';
 
@@ -48,7 +48,7 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
 
     try {
         console.error('Raw ADT response for parsing:', xmlResponse.substring(0, 500) + '...');
-        
+
         // Enhanced XML parsing for check messages - handle different ADT response formats
         // Updated regex to properly handle self-closing tags and various attribute orders
         const messageRegex = /<chkrun:checkMessage[^>]*>/g;
@@ -56,11 +56,11 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
 
         while ((match = messageRegex.exec(xmlResponse)) !== null) {
             const fullMatch = match[0];
-            
+
             // Extract type attribute
             const typeMatch = fullMatch.match(/chkrun:type="([^"]*)"/);
             const messageType = typeMatch ? typeMatch[1] : null;
-            
+
             // Extract shortText attribute
             const textMatch = fullMatch.match(/chkrun:shortText="([^"]*)"/);
             const messageText = textMatch ? textMatch[1] : null;
@@ -77,16 +77,12 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
             const checkItem: SyntaxCheckItem = {
                 type: messageType,
                 message: decodedText,
-                severity: messageType === 'E' ? 'error' : messageType === 'W' ? 'warning' : 'info'
+                severity: messageType === 'E' ? 'error' : messageType === 'W' ? 'warning' : 'info',
             };
 
             // Try to extract line number from URI or other attributes
-            const lineRegexes = [
-                /chkrun:uri="[^"]*#start=(\d+),\d+"/,
-                /line="(\d+)"/,
-                /startLine="(\d+)"/
-            ];
-            
+            const lineRegexes = [/chkrun:uri="[^"]*#start=(\d+),\d+"/, /line="(\d+)"/, /startLine="(\d+)"/];
+
             for (const regex of lineRegexes) {
                 const lineMatch = xmlResponse.match(regex);
                 if (lineMatch) {
@@ -112,13 +108,13 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
             while ((altMatch = altRegex.exec(xmlResponse)) !== null) {
                 const messageType = altMatch[1];
                 const messageText = altMatch[2];
-                
+
                 const checkItem: SyntaxCheckItem = {
                     type: messageType,
                     message: messageText.trim(),
-                    severity: messageType === 'E' ? 'error' : messageType === 'W' ? 'warning' : 'info'
+                    severity: messageType === 'E' ? 'error' : messageType === 'W' ? 'warning' : 'info',
                 };
-                
+
                 if (messageType === 'E') {
                     errors.push(checkItem);
                 } else if (messageType === 'W') {
@@ -129,7 +125,7 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
             }
         }
 
-        const status = errors.length > 0 ? 'error' : (warnings.length > 0 ? 'warning' : 'success');
+        const status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'success';
 
         console.error(`Parsed ${errors.length} errors, ${warnings.length} warnings, ${info.length} info messages`);
 
@@ -142,26 +138,28 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
                 totalIssues: errors.length + warnings.length + info.length,
                 errorCount: errors.length,
                 warningCount: warnings.length,
-                infoCount: info.length
-            }
+                infoCount: info.length,
+            },
         };
     } catch (error) {
         console.error('Error parsing ADT check response:', error);
         return {
             status: 'error',
-            errors: [{
-                type: 'error',
-                message: 'Failed to parse syntax check response',
-                severity: 'error'
-            }],
+            errors: [
+                {
+                    type: 'error',
+                    message: 'Failed to parse syntax check response',
+                    severity: 'error',
+                },
+            ],
             warnings: [],
             info: [],
             summary: {
                 totalIssues: 1,
                 errorCount: 1,
                 warningCount: 0,
-                infoCount: 0
-            }
+                infoCount: 0,
+            },
         };
     }
 }
@@ -172,7 +170,7 @@ function parseAdtCheckResponse(xmlResponse: string): SyntaxCheckResults {
 function createAdtCheckPayload(className: string, sourceCode: string): string {
     // Base64 encode the source code
     const encodedContent = Buffer.from(sourceCode, 'utf8').toString('base64');
-    
+
     // Create the XML payload with proper structure for ADT checkruns
     return `<?xml version="1.0" encoding="UTF-8"?>
 <chkrun:checkObjectList xmlns:chkrun="http://www.sap.com/adt/checkrun" xmlns:adtcore="http://www.sap.com/adt/core">
@@ -199,78 +197,83 @@ function generateTempClassName(): string {
  */
 function isTestClassCode(sourceCode: string): boolean {
     if (!sourceCode) return false;
-    
+
     const upperCode = sourceCode.toUpperCase();
-    
+
     // Check for common test class patterns
     const testClassPatterns = [
-        /CLASS\s+LCL_TEST/i,           // Local test class naming pattern
-        /CLASS\s+.*_TEST/i,            // Any class ending with _TEST
+        /CLASS\s+LCL_TEST/i, // Local test class naming pattern
+        /CLASS\s+.*_TEST/i, // Any class ending with _TEST
         /CLASS\s+.*TEST.*DEFINITION/i, // Class definition containing TEST
-        /#[Tt][Ee][Ss][Tt]/,          // Pragma test
-        /FOR\s+TESTING/i,              // FOR TESTING declaration
-        /RISK\s+LEVEL/i,               // Test risk level declaration
+        /#[Tt][Ee][Ss][Tt]/, // Pragma test
+        /FOR\s+TESTING/i, // FOR TESTING declaration
+        /RISK\s+LEVEL/i, // Test risk level declaration
         /DURATION\s+(SHORT|MEDIUM|LONG)/i, // Test duration declaration
         /METHODS:\s*\w*[Tt][Ee][Ss][Tt]/i, // Test methods
-        /METHOD\s+\w*[Tt][Ee][Ss][Tt]/i,   // Test method implementation
-        /CLASS-TESTMETHODS/i,          // Test method section
+        /METHOD\s+\w*[Tt][Ee][Ss][Tt]/i, // Test method implementation
+        /CLASS-TESTMETHODS/i, // Test method section
     ];
-    
+
     // Check if any test pattern matches
-    return testClassPatterns.some(pattern => pattern.test(sourceCode));
+    return testClassPatterns.some((pattern) => pattern.test(sourceCode));
 }
 
 /**
  * Direct ADT syntax check - bypasses class creation to get real ADT errors
  */
-async function performDirectAdtSyntaxCheck(sourceCode: string, className: string): Promise<{syntaxCheck: SyntaxCheckResults, rawResponse: string}> {
+async function performDirectAdtSyntaxCheck(
+    sourceCode: string,
+    className: string
+): Promise<{ syntaxCheck: SyntaxCheckResults; rawResponse: string }> {
     try {
         console.error(`Performing direct ADT syntax check for class: ${className}`);
-        
+
         const baseUrl = await getBaseUrl();
         const checkUrl = `${baseUrl}/sap/bc/adt/checkruns?reporters=abapCheckRun`;
         const payload = createAdtCheckPayload(className, sourceCode);
-        
+
         const headers = {
-            'Accept': 'application/vnd.sap.adt.checkmessages+xml',
+            Accept: 'application/vnd.sap.adt.checkmessages+xml',
             'Content-Type': 'application/vnd.sap.adt.checkobjects+xml',
-            'User-Agent': 'Eclipse/4.38.0.v20251201-0920 (win32; x86_64; Java 21.0.9) ADT/3.57.200 (devedition; adtproduct)',
-            'X-sap-adt-profiling': 'server-time'
+            'User-Agent':
+                'Eclipse/4.38.0.v20251201-0920 (win32; x86_64; Java 21.0.9) ADT/3.57.200 (devedition; adtproduct)',
+            'X-sap-adt-profiling': 'server-time',
         };
-        
+
         console.error('Sending direct ADT checkrun request...');
         const response = await makeAdtRequest(checkUrl, 'POST', 15000, payload, undefined, headers);
-        
+
         console.error('Received ADT response, parsing...');
         const syntaxCheckResults = parseAdtCheckResponse(response.data);
-        
+
         return {
             syntaxCheck: syntaxCheckResults,
-            rawResponse: response.data || 'No response data'
+            rawResponse: response.data || 'No response data',
         };
-        
     } catch (error: any) {
         console.error('Direct ADT syntax check failed:', error);
-        
+
         // If the direct check fails, return error with more context
         return {
             syntaxCheck: {
                 status: 'error',
-                errors: [{
-                    type: 'error',
-                    message: `ADT syntax check failed: ${error?.message || 'Unknown error'}`,
-                    severity: 'error'
-                }],
+                errors: [
+                    {
+                        type: 'error',
+                        message: `ADT syntax check failed: ${error?.message || 'Unknown error'}`,
+                        severity: 'error',
+                    },
+                ],
                 warnings: [],
                 info: [],
                 summary: {
                     totalIssues: 1,
                     errorCount: 1,
                     warningCount: 0,
-                    infoCount: 0
-                }
+                    infoCount: 0,
+                },
             },
-            rawResponse: error?.response?.data || error?.message || 'No error response data'
+            rawResponse: error?.response?.data || error?.message || 'No error response data',
         };
     }
 }
@@ -278,12 +281,15 @@ async function performDirectAdtSyntaxCheck(sourceCode: string, className: string
 /**
  * Temp class syntax check - creates temporary class, checks syntax, then deletes it
  */
-async function performTempClassSyntaxCheck(sourceCode: string, originalClassName: string): Promise<{syntaxCheck: SyntaxCheckResults, rawResponse: string, tempClassName: string}> {
+async function performTempClassSyntaxCheck(
+    sourceCode: string,
+    originalClassName: string
+): Promise<{ syntaxCheck: SyntaxCheckResults; rawResponse: string; tempClassName: string }> {
     const tempClassName = generateTempClassName();
-    
+
     try {
         console.error(`Creating temporary class for syntax check: ${tempClassName}`);
-        
+
         // Create temporary class with minimal default source code
         const minimalSource = `CLASS ${tempClassName.toLowerCase()} DEFINITION
   PUBLIC
@@ -301,55 +307,61 @@ ENDCLASS.`;
             class_name: tempClassName,
             source_code: minimalSource,
             description: `Temp class for syntax check`,
-            package: '$TMP'
+            package: '$TMP',
         });
-        
+
         if (createResult.isError) {
-            const errorMessage = typeof createResult.content === 'string' ? 
-                createResult.content : 
-                JSON.stringify(createResult.content);
+            const errorMessage =
+                typeof createResult.content === 'string' ? createResult.content : JSON.stringify(createResult.content);
             throw new Error(`Failed to create temporary class: ${errorMessage}`);
         }
-        
+
         console.error(`Temporary class ${tempClassName} created, performing syntax check...`);
-        
+
         // Replace class names in source code to match temp class name
         let modifiedSourceCode = sourceCode;
         // Replace class definition and implementation names with temp class name
-        modifiedSourceCode = modifiedSourceCode.replace(/CLASS\s+\w+\s+DEFINITION/gi, `CLASS ${tempClassName.toLowerCase()} DEFINITION`);
-        modifiedSourceCode = modifiedSourceCode.replace(/CLASS\s+\w+\s+IMPLEMENTATION/gi, `CLASS ${tempClassName.toLowerCase()} IMPLEMENTATION`);
-        
+        modifiedSourceCode = modifiedSourceCode.replace(
+            /CLASS\s+\w+\s+DEFINITION/gi,
+            `CLASS ${tempClassName.toLowerCase()} DEFINITION`
+        );
+        modifiedSourceCode = modifiedSourceCode.replace(
+            /CLASS\s+\w+\s+IMPLEMENTATION/gi,
+            `CLASS ${tempClassName.toLowerCase()} IMPLEMENTATION`
+        );
+
         // Perform syntax check on the temporary class with modified source code
         const syntaxResult = await performDirectAdtSyntaxCheck(modifiedSourceCode, tempClassName);
-        
+
         return {
             syntaxCheck: syntaxResult.syntaxCheck,
             rawResponse: syntaxResult.rawResponse,
-            tempClassName: tempClassName
+            tempClassName: tempClassName,
         };
-        
     } catch (error: any) {
         console.error(`Temp class syntax check failed for ${tempClassName}:`, error);
-        
+
         return {
             syntaxCheck: {
                 status: 'error',
-                errors: [{
-                    type: 'error',
-                    message: `Temp class syntax check failed: ${error?.message || 'Unknown error'}`,
-                    severity: 'error'
-                }],
+                errors: [
+                    {
+                        type: 'error',
+                        message: `Temp class syntax check failed: ${error?.message || 'Unknown error'}`,
+                        severity: 'error',
+                    },
+                ],
                 warnings: [],
                 info: [],
                 summary: {
                     totalIssues: 1,
                     errorCount: 1,
                     warningCount: 0,
-                    infoCount: 0
-                }
+                    infoCount: 0,
+                },
             },
             rawResponse: error?.response?.data || error?.message || 'No error response data',
-            tempClassName: tempClassName
+            tempClassName: tempClassName,
         };
     }
 }
@@ -361,7 +373,10 @@ export async function handleCheckSyntax(args: any) {
     try {
         // Validate that at least one source is provided
         if (!args?.source_code && !args?.object_name && !args?.file_path) {
-            throw new McpError(ErrorCode.InvalidParams, 'Either source_code, object_name, or file_path parameter is required');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'Either source_code, object_name, or file_path parameter is required'
+            );
         }
 
         let sourceCode = args.source_code;
@@ -392,7 +407,9 @@ export async function handleCheckSyntax(args: any) {
 
             // Warn if file doesn't have .abap extension
             if (!filePath.toLowerCase().endsWith(ABAP_FILE_EXTENSION)) {
-                console.error(`Warning: File ${path.basename(filePath)} does not have ${ABAP_FILE_EXTENSION} extension`);
+                console.error(
+                    `Warning: File ${path.basename(filePath)} does not have ${ABAP_FILE_EXTENSION} extension`
+                );
             }
 
             console.error(`Successfully read ${fileMetadata.lines} lines from file: ${filePath}`);
@@ -410,7 +427,10 @@ export async function handleCheckSyntax(args: any) {
                     console.error(`Successfully fetched source code for existing class: ${objectName}`);
                 } else {
                     console.error(`Class ${objectName} does not exist`);
-                    throw new McpError(ErrorCode.InvalidParams, `Class ${objectName} does not exist or is not accessible`);
+                    throw new McpError(
+                        ErrorCode.InvalidParams,
+                        `Class ${objectName} does not exist or is not accessible`
+                    );
                 }
             } catch (fetchError) {
                 console.error(`Failed to fetch class ${objectName}:`, fetchError);
@@ -420,7 +440,10 @@ export async function handleCheckSyntax(args: any) {
 
         // If we still don't have source code, we can't proceed
         if (!sourceCode) {
-            throw new McpError(ErrorCode.InvalidParams, 'Could not obtain source code: either provide source_code parameter or specify an existing class name in object_name');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'Could not obtain source code: either provide source_code parameter or specify an existing class name in object_name'
+            );
         }
 
         // Generate object name if not provided
@@ -434,61 +457,70 @@ export async function handleCheckSyntax(args: any) {
         let tempClassName: string | undefined;
         let approach = 'direct_adt_api';
         let skippedTempCreation = false;
-        
+
         // Check if the source code is for a test class
         const isTestClass = isTestClassCode(sourceCode);
-        
+
         // Try direct ADT syntax check first
         console.error(`Starting direct ADT syntax check for: ${objectName}`);
         const directResults = await performDirectAdtSyntaxCheck(sourceCode, objectName);
-        
+
         // Check if the direct approach failed because class doesn't exist
-        const responseContainsNotExist = directResults.rawResponse && 
-            (directResults.rawResponse.includes('does not exist') || 
-             directResults.rawResponse.includes('notProcessed'));
-        
+        const responseContainsNotExist =
+            directResults.rawResponse &&
+            (directResults.rawResponse.includes('does not exist') ||
+                directResults.rawResponse.includes('notProcessed'));
+
         if (!classExists && responseContainsNotExist && !isTestClass) {
             // Use temporary class approach for non-existing classes (but NOT for test classes)
             console.error(`Direct ADT approach failed because class doesn't exist. Using temporary class approach...`);
             const tempResults = await performTempClassSyntaxCheck(sourceCode, objectName);
-            
+
             syntaxResults = {
                 syntaxCheck: tempResults.syntaxCheck,
-                rawAdtResponse: tempResults.rawResponse
+                rawAdtResponse: tempResults.rawResponse,
             };
-            
+
             tempClassUsed = true;
             tempClassName = tempResults.tempClassName;
             approach = 'temp_class';
-            
+
             // Clean up: Delete the temporary class
             try {
                 console.error(`Deleting temporary class: ${tempResults.tempClassName}`);
                 const deleteResult = await handleDeleteLocalClass({ class_name: tempResults.tempClassName });
-                
+
                 if (deleteResult.isError) {
-                    console.error(`Warning: Failed to delete temporary class ${tempResults.tempClassName}:`, deleteResult.content);
+                    console.error(
+                        `Warning: Failed to delete temporary class ${tempResults.tempClassName}:`,
+                        deleteResult.content
+                    );
                 } else {
                     console.error(`Temporary class ${tempResults.tempClassName} deleted successfully`);
                 }
             } catch (deleteError) {
-                console.error(`Warning: Exception during temporary class deletion ${tempResults.tempClassName}:`, deleteError);
+                console.error(
+                    `Warning: Exception during temporary class deletion ${tempResults.tempClassName}:`,
+                    deleteError
+                );
                 // Don't fail the entire operation if cleanup fails
             }
         } else {
             // Use direct results - either class exists, or it's a test class, or direct ADT worked
             if (isTestClass && !classExists && responseContainsNotExist) {
-                console.error(`Skipping temporary class creation for test class code - using direct results even if class doesn't exist`);
+                console.error(
+                    `Skipping temporary class creation for test class code - using direct results even if class doesn't exist`
+                );
                 skippedTempCreation = true;
                 approach = 'direct_adt_api_test_class';
             }
-            
+
             syntaxResults = {
                 syntaxCheck: directResults.syntaxCheck,
-                rawAdtResponse: directResults.rawResponse
+                rawAdtResponse: directResults.rawResponse,
             };
         }
-        
+
         // Create enhanced response with the REAL ADT error details
         const enhancedResponse: any = {
             syntaxCheck: syntaxResults.syntaxCheck,
@@ -505,8 +537,8 @@ export async function handleCheckSyntax(args: any) {
                 adtEndpoint: tempClassUsed ? 'Temp class + ADT checkruns API' : 'Direct ADT checkruns API',
                 method: tempClassUsed ? 'temp_class_adt_checkruns' : 'adt_checkruns',
                 timestamp: new Date().toISOString(),
-                approach: approach
-            }
+                approach: approach,
+            },
         };
 
         // Add file metadata if syntax check was from file
@@ -521,13 +553,12 @@ export async function handleCheckSyntax(args: any) {
             statusText: 'OK',
             headers: {},
             config: {
-                headers: {}
-            }
+                headers: {},
+            },
         } as any;
 
         console.error('Direct ADT syntax check completed successfully');
         return return_response(enhancedAxiosResponse);
-
     } catch (error) {
         console.error(`Direct ADT syntax check failed for object ${args?.object_name || 'unknown'}:`, error);
         return return_error(error);

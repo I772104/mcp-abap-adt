@@ -1,4 +1,4 @@
-import { Resource } from "@modelcontextprotocol/sdk/types.js";
+import { Resource } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Agent-specific guide resources
@@ -7,51 +7,51 @@ import { Resource } from "@modelcontextprotocol/sdk/types.js";
 
 // Agent detection patterns
 const AGENT_PATTERNS = {
-  cline: /cline|claude-dev/i,
-  claude: /claude|anthropic/i,
-  cursor: /cursor/i,
-  opencode: /opencode/i,
+    cline: /cline|claude-dev/i,
+    claude: /claude|anthropic/i,
+    cursor: /cursor/i,
+    opencode: /opencode/i,
 };
 
 /**
  * Detect agent type from user agent string or context
  */
 export function detectAgentType(userAgent?: string): string {
-  if (!userAgent) return "universal";
+    if (!userAgent) return 'universal';
 
-  for (const [agent, pattern] of Object.entries(AGENT_PATTERNS)) {
-    if (pattern.test(userAgent)) {
-      return agent;
+    for (const [agent, pattern] of Object.entries(AGENT_PATTERNS)) {
+        if (pattern.test(userAgent)) {
+            return agent;
+        }
     }
-  }
 
-  return "universal";
+    return 'universal';
 }
 
 /**
  * Get agent-specific guide content
  */
 export function getAgentGuide(agentType: string): string {
-  switch (agentType.toLowerCase()) {
-    case "cline":
-      return getClineGuide();
-    case "claude":
-      return getClaudeGuide();
-    case "cursor":
-      return getCursorGuide();
-    case "opencode":
-      return getOpenCodeGuide();
-    case "universal":
-    default:
-      return getUniversalGuide();
-  }
+    switch (agentType.toLowerCase()) {
+        case 'cline':
+            return getClineGuide();
+        case 'claude':
+            return getClaudeGuide();
+        case 'cursor':
+            return getCursorGuide();
+        case 'opencode':
+            return getOpenCodeGuide();
+        case 'universal':
+        default:
+            return getUniversalGuide();
+    }
 }
 
 /**
  * Universal guide for all agents
  */
 function getUniversalGuide(): string {
-  return `# Universal MCP ABAP ADT Server Guide
+    return `# Universal MCP ABAP ADT Server Guide
 
 ## Core Principles
 
@@ -141,7 +141,7 @@ CheckSyntax → CreateClass → CheckSyntax → CreateClassTests → RunClassTes
  * Cline-specific guide
  */
 function getClineGuide(): string {
-  return `# Cline-Specific MCP ABAP ADT Server Guide
+    return `# Cline-Specific MCP ABAP ADT Server Guide
 
 ## Cline Optimizations
 
@@ -213,7 +213,7 @@ Cline has excellent MCP support with:
  * Claude Desktop-specific guide
  */
 function getClaudeGuide(): string {
-  return `# Claude Desktop-Specific MCP ABAP ADT Server Guide
+    return `# Claude Desktop-Specific MCP ABAP ADT Server Guide
 
 ## Claude Desktop Optimizations
 
@@ -275,7 +275,7 @@ Claude excels at generating comprehensive test suites:
  * Cursor-specific guide
  */
 function getCursorGuide(): string {
-  return `# Cursor-Specific MCP ABAP ADT Server Guide
+    return `# Cursor-Specific MCP ABAP ADT Server Guide
 
 ## Cursor Optimizations
 
@@ -339,7 +339,7 @@ Cursor is excellent for refactoring:
  * OpenCode-specific guide
  */
 function getOpenCodeGuide(): string {
-  return `# OpenCode-Specific MCP ABAP ADT Server Guide
+    return `# OpenCode-Specific MCP ABAP ADT Server Guide
 
 ## OpenCode Optimizations
 
@@ -402,42 +402,42 @@ GetTableContents:
  * List available agent guide resources
  */
 export function listAgentGuideResources(): Resource[] {
-  return [
-    {
-      uri: "agent-guide://auto",
-      name: "Auto-Detect Agent Guide",
-      description: "Automatically detects your agent type and returns optimized guide",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "agent-guide://universal",
-      name: "Universal Agent Guide",
-      description: "Core guide for all AI agents",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "agent-guide://cline",
-      name: "Cline-Specific Guide",
-      description: "Optimizations and patterns for Cline",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "agent-guide://claude",
-      name: "Claude Desktop-Specific Guide",
-      description: "Optimizations and patterns for Claude Desktop",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "agent-guide://cursor",
-      name: "Cursor-Specific Guide",
-      description: "Optimizations and patterns for Cursor",
-      mimeType: "text/markdown",
-    },
-    {
-      uri: "agent-guide://opencode",
-      name: "OpenCode-Specific Guide",
-      description: "Optimizations and patterns for OpenCode",
-      mimeType: "text/markdown",
-    },
-  ];
+    return [
+        {
+            uri: 'agent-guide://auto',
+            name: 'Auto-Detect Agent Guide',
+            description: 'Automatically detects your agent type and returns optimized guide',
+            mimeType: 'text/markdown',
+        },
+        {
+            uri: 'agent-guide://universal',
+            name: 'Universal Agent Guide',
+            description: 'Core guide for all AI agents',
+            mimeType: 'text/markdown',
+        },
+        {
+            uri: 'agent-guide://cline',
+            name: 'Cline-Specific Guide',
+            description: 'Optimizations and patterns for Cline',
+            mimeType: 'text/markdown',
+        },
+        {
+            uri: 'agent-guide://claude',
+            name: 'Claude Desktop-Specific Guide',
+            description: 'Optimizations and patterns for Claude Desktop',
+            mimeType: 'text/markdown',
+        },
+        {
+            uri: 'agent-guide://cursor',
+            name: 'Cursor-Specific Guide',
+            description: 'Optimizations and patterns for Cursor',
+            mimeType: 'text/markdown',
+        },
+        {
+            uri: 'agent-guide://opencode',
+            name: 'OpenCode-Specific Guide',
+            description: 'Optimizations and patterns for OpenCode',
+            mimeType: 'text/markdown',
+        },
+    ];
 }

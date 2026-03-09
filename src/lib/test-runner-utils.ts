@@ -73,10 +73,10 @@ export async function pollRunStatus(statusUrl: string, maxAttempts: number = MAX
             }
 
             // Wait before polling again
-            await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
         } catch (error) {
             // If it's a 404 or other error, continue polling
-            await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
         }
     }
 
@@ -89,31 +89,35 @@ export async function pollRunStatus(statusUrl: string, maxAttempts: number = MAX
 export function extractResultsLink(runResponse: string): string {
     // Try multiple patterns for extracting the results link
     let junitLinkMatch;
-    
+
     // Pattern 1: Original pattern
-    junitLinkMatch = runResponse.match(/type="application\/vnd\.sap\.adt\.api\.junit\.run-result\.v1\+xml"[^>]*href="([^"]+)"/);
+    junitLinkMatch = runResponse.match(
+        /type="application\/vnd\.sap\.adt\.api\.junit\.run-result\.v1\+xml"[^>]*href="([^"]+)"/
+    );
     if (junitLinkMatch && junitLinkMatch[1]) {
         return junitLinkMatch[1];
     }
-    
+
     // Pattern 2: Try without version in content type
-    junitLinkMatch = runResponse.match(/type="application\/vnd\.sap\.adt\.api\.junit\.run-result[^"]*"[^>]*href="([^"]+)"/);
+    junitLinkMatch = runResponse.match(
+        /type="application\/vnd\.sap\.adt\.api\.junit\.run-result[^"]*"[^>]*href="([^"]+)"/
+    );
     if (junitLinkMatch && junitLinkMatch[1]) {
         return junitLinkMatch[1];
     }
-    
+
     // Pattern 3: Try any junit result link
     junitLinkMatch = runResponse.match(/junit[^>]*href="([^"]+)"/i);
     if (junitLinkMatch && junitLinkMatch[1]) {
         return junitLinkMatch[1];
     }
-    
+
     // Pattern 4: Try any href with result in the path
     junitLinkMatch = runResponse.match(/href="([^"]*result[^"]+)"/i);
     if (junitLinkMatch && junitLinkMatch[1]) {
         return junitLinkMatch[1];
     }
-    
+
     // Pattern 5: Generic href pattern as fallback
     junitLinkMatch = runResponse.match(/href="([^"]+)"/);
     if (junitLinkMatch && junitLinkMatch[1]) {
@@ -128,33 +132,33 @@ export function extractResultsLink(runResponse: string): string {
  */
 export function parseTestCases(junitXml: string): TestCase[] {
     const testCases: TestCase[] = [];
-    
+
     // Extract test case elements using regex
     const testCasePattern = /<testcase[^>]*>/g;
     const testCaseMatches = junitXml.matchAll(testCasePattern);
-    
+
     for (const match of testCaseMatches) {
         const testCaseElement = match[0];
-        
+
         // Extract attributes
         const classNameMatch = testCaseElement.match(/classname="([^"]*)"/);
         const nameMatch = testCaseElement.match(/name="([^"]*)"/);
         const timeMatch = testCaseElement.match(/time="([^"]*)"/);
         const assertsMatch = testCaseElement.match(/asserts="([^"]*)"/);
-        
+
         const testCase: TestCase = {
             name: nameMatch ? nameMatch[1] : 'Unknown',
             className: classNameMatch ? classNameMatch[1] : 'Unknown',
             status: 'passed', // Default to passed
             executionTime: timeMatch ? parseFloat(timeMatch[1]) : 0,
-            assertCount: assertsMatch ? parseInt(assertsMatch[1]) : 0
+            assertCount: assertsMatch ? parseInt(assertsMatch[1]) : 0,
         };
-        
+
         // Check for failures or errors in the following content
         const testCaseEndIndex = junitXml.indexOf('</testcase>', junitXml.indexOf(testCaseElement));
         if (testCaseEndIndex > -1) {
             const testCaseContent = junitXml.substring(junitXml.indexOf(testCaseElement), testCaseEndIndex);
-            
+
             if (testCaseContent.includes('<failure')) {
                 testCase.status = 'failed';
                 const failureMatch = testCaseContent.match(/<failure[^>]*message="([^"]*)"[^>]*>/);
@@ -171,10 +175,10 @@ export function parseTestCases(junitXml: string): TestCase[] {
                 testCase.status = 'skipped';
             }
         }
-        
+
         testCases.push(testCase);
     }
-    
+
     return testCases;
 }
 
@@ -183,14 +187,14 @@ export function parseTestCases(junitXml: string): TestCase[] {
  */
 export function parseTestSuites(junitXml: string): TestSuite[] {
     const testSuites: TestSuite[] = [];
-    
+
     // Extract test suite elements
     const testSuitePattern = /<testsuite[^>]*>/g;
     const testSuiteMatches = junitXml.matchAll(testSuitePattern);
-    
+
     for (const match of testSuiteMatches) {
         const testSuiteElement = match[0];
-        
+
         // Extract attributes
         const nameMatch = testSuiteElement.match(/name="([^"]*)"/);
         const packageMatch = testSuiteElement.match(/package="([^"]*)"/);
@@ -201,13 +205,13 @@ export function parseTestSuites(junitXml: string): TestSuite[] {
         const assertsMatch = testSuiteElement.match(/asserts="([^"]*)"/);
         const timeMatch = testSuiteElement.match(/time="([^"]*)"/);
         const timestampMatch = testSuiteElement.match(/timestamp="([^"]*)"/);
-        
+
         const totalTests = testsMatch ? parseInt(testsMatch[1]) : 0;
         const failed = failuresMatch ? parseInt(failuresMatch[1]) : 0;
         const errors = errorsMatch ? parseInt(errorsMatch[1]) : 0;
         const skipped = skippedMatch ? parseInt(skippedMatch[1]) : 0;
         const passed = totalTests - failed - errors - skipped;
-        
+
         const testSuite: TestSuite = {
             name: nameMatch ? nameMatch[1] : 'Test Suite',
             package: packageMatch ? packageMatch[1] : 'Unknown',
@@ -219,23 +223,27 @@ export function parseTestSuites(junitXml: string): TestSuite[] {
             totalAsserts: assertsMatch ? parseInt(assertsMatch[1]) : 0,
             executionTime: timeMatch ? parseFloat(timeMatch[1]) : 0,
             timestamp: timestampMatch ? timestampMatch[1] : new Date().toISOString(),
-            testCases: [] // Will be populated with test cases
+            testCases: [], // Will be populated with test cases
         };
-        
+
         testSuites.push(testSuite);
     }
-    
+
     return testSuites;
 }
 
 /**
  * Format JUnit XML results into structured JSON
  */
-export function formatTestResults(junitXml: string, testTarget: string, activationResult?: ActivationAttemptResult | null): FormattedTestResults {
+export function formatTestResults(
+    junitXml: string,
+    testTarget: string,
+    activationResult?: ActivationAttemptResult | null
+): FormattedTestResults {
     // Extract root testsuites attributes
     const testSuitesMatch = junitXml.match(/<testsuites[^>]*>/);
     const testSuitesElement = testSuitesMatch ? testSuitesMatch[0] : '';
-    
+
     const systemMatch = testSuitesElement.match(/system="([^"]*)"/);
     const clientMatch = testSuitesElement.match(/client="([^"]*)"/);
     const executedByMatch = testSuitesElement.match(/executedBy="([^"]*)"/);
@@ -246,18 +254,18 @@ export function formatTestResults(junitXml: string, testTarget: string, activati
     const totalSkippedMatch = testSuitesElement.match(/skipped="([^"]*)"/);
     const totalAssertsMatch = testSuitesElement.match(/asserts="([^"]*)"/);
     const totalTestsMatch = testSuitesElement.match(/tests="([^"]*)"/);
-    
+
     // Parse test suites and test cases
     const testSuites = parseTestSuites(junitXml);
     const allTestCases = parseTestCases(junitXml);
-    
+
     // Associate test cases with their test suites
-    testSuites.forEach(suite => {
-        suite.testCases = allTestCases.filter(testCase => 
-            testCase.className.includes(suite.package) || suite.name === ''
+    testSuites.forEach((suite) => {
+        suite.testCases = allTestCases.filter(
+            (testCase) => testCase.className.includes(suite.package) || suite.name === ''
         );
     });
-    
+
     // Calculate summary
     const totalTests = totalTestsMatch ? parseInt(totalTestsMatch[1]) : allTestCases.length;
     const totalFailures = totalFailuresMatch ? parseInt(totalFailuresMatch[1]) : 0;
@@ -265,7 +273,7 @@ export function formatTestResults(junitXml: string, testTarget: string, activati
     const totalSkipped = totalSkippedMatch ? parseInt(totalSkippedMatch[1]) : 0;
     const totalPassed = totalTests - totalFailures - totalErrors - totalSkipped;
     const successRate = totalTests > 0 ? (totalPassed / totalTests) * 100 : 100;
-    
+
     // Determine overall status
     let overallStatus: 'success' | 'failed' | 'error' = 'success';
     if (totalErrors > 0) {
@@ -273,7 +281,7 @@ export function formatTestResults(junitXml: string, testTarget: string, activati
     } else if (totalFailures > 0) {
         overallStatus = 'failed';
     }
-    
+
     const results: FormattedTestResults = {
         testTarget,
         system: systemMatch ? systemMatch[1] : 'Unknown',
@@ -288,17 +296,17 @@ export function formatTestResults(junitXml: string, testTarget: string, activati
             skipped: totalSkipped,
             totalAsserts: totalAssertsMatch ? parseInt(totalAssertsMatch[1]) : 0,
             executionTime: totalTimeMatch ? parseFloat(totalTimeMatch[1]) : 0,
-            successRate: Math.round(successRate * 100) / 100
+            successRate: Math.round(successRate * 100) / 100,
         },
         testSuites,
-        timestamp: timestampMatch ? timestampMatch[1] : new Date().toISOString()
+        timestamp: timestampMatch ? timestampMatch[1] : new Date().toISOString(),
     };
-    
+
     // Include activation results if available
     if (activationResult) {
         results.activation = activationResult;
     }
-    
+
     return results;
 }
 
@@ -323,7 +331,11 @@ export function createPackageObjectSet(packageName: string): string {
 /**
  * Create test run payload XML
  */
-export function createTestRunPayload(objectSetXml: string, title: string, context: string = 'MCP ABAP ADT Test Runner'): string {
+export function createTestRunPayload(
+    objectSetXml: string,
+    title: string,
+    context: string = 'MCP ABAP ADT Test Runner'
+): string {
     return `<?xml version="1.0" encoding="UTF-8"?><aunit:run xmlns:aunit="http://www.sap.com/adt/api/aunit" title="${title}" context="${context}">
   <aunit:options>
     <aunit:scope ownTests="true" foreignTests="false" addForeignTestsAsPreview="true"/>
@@ -344,23 +356,23 @@ export async function runAbapUnitTests(
     activationResult?: ActivationAttemptResult | null
 ): Promise<FormattedTestResults> {
     const baseUrl = await getBaseUrl();
-    
+
     // Create the XML payload
     const payload = createTestRunPayload(objectSetXml, title);
 
     // Trigger the test run
     const runUrl = `${baseUrl}/sap/bc/adt/abapunit/runs`;
     const customHeaders = {
-        'Content-Type': 'application/vnd.sap.adt.api.abapunit.run.v2+xml'
+        'Content-Type': 'application/vnd.sap.adt.api.abapunit.run.v2+xml',
     };
     const runResponse = await makeAdtRequest(runUrl, 'POST', 30000, payload, undefined, customHeaders);
-    
+
     // Log the POST response to stderr
     console.error('POST Response:', {
         status: runResponse.status,
         statusText: runResponse.statusText,
         headers: runResponse.headers,
-        data: runResponse.data
+        data: runResponse.data,
     });
 
     // Extract the Location header which contains the status endpoint
@@ -383,6 +395,6 @@ export async function runAbapUnitTests(
 
     // Parse and format the JUnit XML results
     const formattedResults = formatTestResults(resultsResponse.data, testTarget, activationResult);
-    
+
     return formattedResults;
 }

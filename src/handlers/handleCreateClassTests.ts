@@ -32,12 +32,15 @@ async function validateParentClassExists(className: string): Promise<void> {
         const baseUrl = await getBaseUrl();
         const encodedClassName = encodeURIComponent(className.toUpperCase());
         const url = `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}`;
-        
+
         // Attempt to get class metadata to verify it exists
         await makeAdtRequest(url, 'GET', 10000);
     } catch (error: any) {
         if (error.message?.includes('404') || error.message?.includes('Not Found')) {
-            throw new McpError(ErrorCode.InvalidParams, `Parent class ${className} does not exist or is not accessible`);
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `Parent class ${className} does not exist or is not accessible`
+            );
         }
         // Re-throw other errors (authorization, network, etc.)
         throw error;
@@ -50,19 +53,19 @@ async function validateParentClassExists(className: string): Promise<void> {
 async function backupExistingTests(className: string): Promise<TestClassBackup | null> {
     try {
         const testResult = await handleGetClassTests({ class_name: className });
-        
+
         // If getting tests failed, we can't create a backup
         if (testResult.isError) {
             return null;
         }
-        
+
         // Extract the test content from the response
         const testContent = testResult.content?.[0]?.text || '';
-        
+
         return {
             parent_class: className,
             timestamp: new Date().toISOString(),
-            original_content: testContent
+            original_content: testContent,
         };
     } catch (error) {
         // If backup fails, we'll proceed without backup but note it in the response
@@ -77,17 +80,17 @@ async function uploadTestClassSource(className: string, sourceCode: string): Pro
     const baseUrl = await getBaseUrl();
     const encodedClassName = encodeURIComponent(className.toUpperCase());
     const testUrl = `${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}/includes/testclasses`;
-    
+
     const baseHeaders = {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Accept': 'text/plain'
+        Accept: 'text/plain',
     };
 
     // Try direct upload with wildcard ETag first
     try {
         await makeAdtRequest(testUrl, 'PUT', 30000, sourceCode, undefined, {
             ...baseHeaders,
-            'If-Match': '*'
+            'If-Match': '*',
         });
         return;
     } catch (directUploadError) {
@@ -95,11 +98,11 @@ async function uploadTestClassSource(className: string, sourceCode: string): Pro
         try {
             const getResponse = await makeAdtRequest(testUrl, 'GET', 10000);
             const etag = getResponse.headers['etag'] || getResponse.headers['ETag'];
-            
+
             if (etag) {
                 await makeAdtRequest(testUrl, 'PUT', 30000, sourceCode, undefined, {
                     ...baseHeaders,
-                    'If-Match': etag
+                    'If-Match': etag,
                 });
                 return;
             }
@@ -107,7 +110,7 @@ async function uploadTestClassSource(className: string, sourceCode: string): Pro
             // If both approaches fail, throw the original error
             throw directUploadError;
         }
-        
+
         // If we couldn't get ETag, throw the original error
         throw directUploadError;
     }
@@ -120,7 +123,10 @@ export async function handleCreateClassTests(args: any): Promise<any> {
     try {
         // Validate required parameters
         if (!args?.parent_class_name || !args?.test_source_code) {
-            throw new McpError(ErrorCode.InvalidParams, 'parent_class_name and test_source_code parameters are required');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'parent_class_name and test_source_code parameters are required'
+            );
         }
 
         const params: CreateClassTestsParams = {
@@ -128,7 +134,7 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             test_source_code: args.test_source_code,
             backup_existing: args.backup_existing === true,
             auto_activate: args.auto_activate !== false, // default to true
-            preaudit_requested: args.preaudit_requested !== false // default to true
+            preaudit_requested: args.preaudit_requested !== false, // default to true
         };
 
         // Step 1: Validate parent class exists
@@ -146,12 +152,16 @@ export async function handleCreateClassTests(args: any): Promise<any> {
         } catch (uploadError: any) {
             // Enhanced error handling for common scenarios
             if (uploadError.message?.includes('403') || uploadError.message?.includes('authorization')) {
-                throw new McpError(ErrorCode.InvalidParams, 
-                    `Insufficient authorization to modify test classes for ${params.parent_class_name}. Check S_DEVELOP authorization.`);
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    `Insufficient authorization to modify test classes for ${params.parent_class_name}. Check S_DEVELOP authorization.`
+                );
             }
             if (uploadError.message?.includes('412') || uploadError.message?.includes('ETag')) {
-                throw new McpError(ErrorCode.InvalidParams, 
-                    `Concurrent modification detected. The test class may have been modified by another user. Please try again.`);
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    `Concurrent modification detected. The test class may have been modified by another user. Please try again.`
+                );
             }
             throw uploadError;
         }
@@ -162,22 +172,26 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             message: `Test classes for ${params.parent_class_name} created/updated successfully`,
             details: {
                 parentClass: params.parent_class_name,
-                backup: backup ? {
-                    created: true,
-                    timestamp: backup.timestamp,
-                    message: 'Previous test classes backed up'
-                } : params.backup_existing ? {
-                    created: false,
-                    message: 'Backup was requested but could not be created'
-                } : {
-                    created: false,
-                    message: 'No backup requested'
-                },
+                backup: backup
+                    ? {
+                          created: true,
+                          timestamp: backup.timestamp,
+                          message: 'Previous test classes backed up',
+                      }
+                    : params.backup_existing
+                      ? {
+                            created: false,
+                            message: 'Backup was requested but could not be created',
+                        }
+                      : {
+                            created: false,
+                            message: 'No backup requested',
+                        },
                 location: {
-                    testClassUrl: `${await getBaseUrl()}/sap/bc/adt/oo/classes/${encodeURIComponent(params.parent_class_name)}/includes/testclasses`
-                }
+                    testClassUrl: `${await getBaseUrl()}/sap/bc/adt/oo/classes/${encodeURIComponent(params.parent_class_name)}/includes/testclasses`,
+                },
             },
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         };
 
         const enhancedResponse = {
@@ -185,7 +199,7 @@ export async function handleCreateClassTests(args: any): Promise<any> {
             status: 200,
             statusText: 'OK',
             headers: {},
-            config: { headers: {} }
+            config: { headers: {} },
         } as any;
 
         // Handle auto-activation if requested
@@ -194,40 +208,43 @@ export async function handleCreateClassTests(args: any): Promise<any> {
                 params.parent_class_name,
                 params.preaudit_requested || true
             );
-            
+
             // Create comprehensive workflow response
-            const workflowResponse = createWorkflowResponse(
-                enhancedResponse,
-                activationResult,
-                true
-            );
-            
+            const workflowResponse = createWorkflowResponse(enhancedResponse, activationResult, true);
+
             const workflowResponseFormatted = {
                 data: JSON.stringify(workflowResponse, null, 2),
                 status: enhancedResponse.status,
                 statusText: enhancedResponse.statusText,
                 headers: {},
-                config: { headers: {} }
+                config: { headers: {} },
             } as any;
-            
+
             return return_response(workflowResponseFormatted);
         }
 
         return return_response(enhancedResponse);
-
     } catch (error) {
         // Enhanced error handling for common scenarios
         if (error instanceof Error) {
             if (error.message.includes('not found') || error.message.includes('404')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 
-                    `Parent class ${args?.parent_class_name} does not exist or is not accessible`));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        `Parent class ${args?.parent_class_name} does not exist or is not accessible`
+                    )
+                );
             }
             if (error.message.includes('authorization') || error.message.includes('403')) {
-                return return_error(new McpError(ErrorCode.InvalidParams, 
-                    'Insufficient authorization to create/modify test classes. Check S_DEVELOP authorization.'));
+                return return_error(
+                    new McpError(
+                        ErrorCode.InvalidParams,
+                        'Insufficient authorization to create/modify test classes. Check S_DEVELOP authorization.'
+                    )
+                );
             }
         }
-        
+
         return return_error(error);
     }
 }

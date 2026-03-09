@@ -8,14 +8,14 @@ export async function handleGetBehaviorDefinition(args: any) {
         }
 
         const encodedViewName = encodeURIComponent(args.cds_view_name);
-        
+
         // Use the correct ADT endpoint for behavior definitions
         const baseUrl = await getBaseUrl();
         const endpoint = `/sap/bc/adt/bo/behaviordefinitions/${encodedViewName}/source/main`;
 
         const url = `${baseUrl}${endpoint}`;
         const response = await makeAdtRequest(url, 'GET', 30000);
-        
+
         // If we got a successful response, parse and enhance it
         if (response.data) {
             let result = {
@@ -31,20 +31,21 @@ export async function handleGetBehaviorDefinition(args: any) {
                 validations: extractValidations(response.data),
                 authorization: extractAuthorization(response.data),
                 side_effects: extractSideEffects(response.data),
-                field_controls: extractFieldControls(response.data)
+                field_controls: extractFieldControls(response.data),
             };
-            
+
             return {
                 isError: false,
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
             };
         }
-        
+
         throw new Error('No data received from behavior definition endpoint');
-        
     } catch (error) {
         return return_error(error);
     }
@@ -52,19 +53,19 @@ export async function handleGetBehaviorDefinition(args: any) {
 
 function extractImplementationType(sourceCode: string): string {
     const source = sourceCode.toLowerCase();
-    
+
     if (source.includes('managed implementation')) {
         return 'managed';
     } else if (source.includes('unmanaged implementation')) {
         return 'unmanaged';
     }
-    
+
     return 'unknown';
 }
 
 function extractImplementationClass(sourceCode: string): string | null {
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match patterns like: managed implementation in class zbp_r_salesordertp unique;
@@ -73,13 +74,13 @@ function extractImplementationClass(sourceCode: string): string | null {
             return match[1].trim();
         }
     }
-    
+
     return null;
 }
 
 function extractStrictMode(sourceCode: string): number {
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match patterns like: strict ( 2 );
@@ -88,7 +89,7 @@ function extractStrictMode(sourceCode: string): number {
             return parseInt(match[1], 10);
         }
     }
-    
+
     return 0; // Default to 0 if not specified
 }
 
@@ -100,11 +101,11 @@ function extractOperations(sourceCode: string): any {
     const operations = {
         create: false,
         update: false,
-        delete: false
+        delete: false,
     };
-    
+
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim().toLowerCase();
         if (trimmed === 'create;') {
@@ -115,35 +116,37 @@ function extractOperations(sourceCode: string): any {
             operations.delete = true;
         }
     }
-    
+
     return operations;
 }
 
 function extractActions(sourceCode: string): any[] {
     const actions: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match action patterns like: action Release result [1] $self;
-        const match = trimmed.match(/action\s*(?:\(\s*features\s*:\s*instance\s*\))?\s*(\w+)(?:\s+result\s+\[([^\]]+)\]\s+(.+))?/i);
+        const match = trimmed.match(
+            /action\s*(?:\(\s*features\s*:\s*instance\s*\))?\s*(\w+)(?:\s+result\s+\[([^\]]+)\]\s+(.+))?/i
+        );
         if (match) {
             actions.push({
                 name: match[1].trim(),
                 result_cardinality: match[2] ? match[2].trim() : null,
                 result_type: match[3] ? match[3].trim() : null,
-                features_controlled: trimmed.includes('features : instance')
+                features_controlled: trimmed.includes('features : instance'),
             });
         }
     }
-    
+
     return actions;
 }
 
 function extractDeterminations(sourceCode: string): any[] {
     const determinations: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match determination patterns like: determination CalculateNetAmount on modify { field Quantity, Price; }
@@ -153,18 +156,18 @@ function extractDeterminations(sourceCode: string): any[] {
             determinations.push({
                 name: match[1].trim(),
                 trigger: match[2].trim(),
-                fields: fieldsMatch ? fieldsMatch[1].split(',').map(f => f.trim()) : []
+                fields: fieldsMatch ? fieldsMatch[1].split(',').map((f) => f.trim()) : [],
             });
         }
     }
-    
+
     return determinations;
 }
 
 function extractValidations(sourceCode: string): any[] {
     const validations: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match validation patterns like: validation ValidateSoldToParty on save { create; field SoldToParty; }
@@ -176,11 +179,11 @@ function extractValidations(sourceCode: string): any[] {
                 name: match[1].trim(),
                 trigger: match[2].trim(),
                 operations: content.includes('create') ? ['create'] : [],
-                fields: fieldsMatch ? fieldsMatch[1].split(',').map(f => f.trim()) : []
+                fields: fieldsMatch ? fieldsMatch[1].split(',').map((f) => f.trim()) : [],
             });
         }
     }
-    
+
     return validations;
 }
 
@@ -189,11 +192,11 @@ function extractAuthorization(sourceCode: string): any {
         master: false,
         dependent: false,
         global: false,
-        instance: false
+        instance: false,
     };
-    
+
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim().toLowerCase();
         if (trimmed.includes('authorization master')) {
@@ -204,7 +207,7 @@ function extractAuthorization(sourceCode: string): any {
             authorization.dependent = true;
         }
     }
-    
+
     return authorization;
 }
 
@@ -213,15 +216,15 @@ function extractSideEffects(sourceCode: string): any[] {
     const lines = sourceCode.split('\n');
     let inSideEffects = false;
     let currentEffect: any = null;
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         if (trimmed.toLowerCase().startsWith('side effects')) {
             inSideEffects = true;
             continue;
         }
-        
+
         if (inSideEffects) {
             if (trimmed === '}') {
                 if (currentEffect) {
@@ -236,46 +239,46 @@ function extractSideEffects(sourceCode: string): any[] {
                     sideEffects.push({
                         source_field: match[1].trim(),
                         target_field: match[2].trim(),
-                        type: 'field_affects_field'
+                        type: 'field_affects_field',
                     });
                 }
             }
         }
     }
-    
+
     return sideEffects;
 }
 
 function extractFieldControls(sourceCode: string): any[] {
     const fieldControls: any[] = [];
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         // Match field control patterns like: field ( readonly ) SalesOrder, CreationDate;
         const readonlyMatch = trimmed.match(/field\s*\(\s*readonly\s*\)\s*([^;]+)/i);
         if (readonlyMatch) {
-            const fields = readonlyMatch[1].split(',').map(f => f.trim());
-            fields.forEach(field => {
+            const fields = readonlyMatch[1].split(',').map((f) => f.trim());
+            fields.forEach((field) => {
                 fieldControls.push({
                     field_name: field,
-                    control_type: 'readonly'
+                    control_type: 'readonly',
                 });
             });
         }
-        
+
         // Match mandatory fields
         const mandatoryMatch = trimmed.match(/field\s*\(\s*mandatory\s*\)\s*([^;]+)/i);
         if (mandatoryMatch) {
-            const fields = mandatoryMatch[1].split(',').map(f => f.trim());
-            fields.forEach(field => {
+            const fields = mandatoryMatch[1].split(',').map((f) => f.trim());
+            fields.forEach((field) => {
                 fieldControls.push({
                     field_name: field,
-                    control_type: 'mandatory'
+                    control_type: 'mandatory',
                 });
             });
         }
     }
-    
+
     return fieldControls;
 }

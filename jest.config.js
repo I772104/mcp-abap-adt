@@ -16,6 +16,17 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
+  // Coverage threshold set to current level for pragmatic evaluation project
+  // Handler coverage is 66%+ (good), lower coverage is in complex parsers and static text
+  // See: https://github.tools.sap/D020426/mcp-abap-adt/issues/28 for rationale
+  coverageThreshold: {
+    global: {
+      statements: 50,
+      branches: 35,
+      functions: 50,
+      lines: 50
+    }
+  },
   // Separate test configurations
   projects: [
     {

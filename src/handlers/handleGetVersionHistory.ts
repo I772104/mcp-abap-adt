@@ -20,7 +20,10 @@ export async function handleGetVersionHistory(args: any) {
     try {
         // Validate required parameters
         if (!args?.object_type) {
-            throw new McpError(ErrorCode.InvalidParams, 'Object type is required (e.g., CLAS, PROG, INCL, FUGR, INTF, DDLS, BDEF, DCLS)');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'Object type is required (e.g., CLAS, PROG, INCL, FUGR, INTF, DDLS, BDEF, DCLS)'
+            );
         }
         if (!args?.object_name) {
             throw new McpError(ErrorCode.InvalidParams, 'Object name is required');
@@ -78,14 +81,9 @@ export async function handleGetVersionHistory(args: any) {
         const url = `${baseUrl}/sap/bc/adt/${objectPath}/versions`;
 
         // Make request with Accept header for Atom feed (note: requires ;type=feed suffix)
-        const response = await makeAdtRequest(
-            url,
-            'GET',
-            30000,
-            undefined,
-            undefined,
-            { 'Accept': 'application/atom+xml;type=feed' }
-        );
+        const response = await makeAdtRequest(url, 'GET', 30000, undefined, undefined, {
+            Accept: 'application/atom+xml;type=feed',
+        });
 
         // Parse the XML response and format it nicely
         const xmlData = response.data;
@@ -93,10 +91,12 @@ export async function handleGetVersionHistory(args: any) {
 
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: formattedHistory
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: formattedHistory,
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);
@@ -150,7 +150,7 @@ function formatVersionHistory(xmlData: string, objectName: string, objectType: s
             updated,
             title,
             transport,
-            isTestTransport
+            isTestTransport,
         });
     }
 

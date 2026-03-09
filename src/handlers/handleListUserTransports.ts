@@ -38,10 +38,7 @@ export async function handleListUserTransports(args: any) {
         let dateDefaultApplied = false;
 
         if (!user) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'Missing required parameter: user'
-            );
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: user');
         }
 
         // Apply smart default for from_date if not provided
@@ -54,10 +51,7 @@ export async function handleListUserTransports(args: any) {
 
         // Validate date format if provided
         if (!/^\d{8}$/.test(fromDate)) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'from_date must be in YYYYMMDD format (e.g., "20260101")'
-            );
+            throw new McpError(ErrorCode.InvalidParams, 'from_date must be in YYYYMMDD format (e.g., "20260101")');
         }
 
         // Build raw SQL query with date filtering
@@ -71,10 +65,7 @@ export async function handleListUserTransports(args: any) {
 
         // Validate year contains only digits for SQL safety
         if (!/^\d{4}$/.test(year)) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                `Invalid date format: year '${year}' must be 4 digits`
-            );
+            throw new McpError(ErrorCode.InvalidParams, `Invalid date format: year '${year}' must be 4 digits`);
         }
 
         let sqlQuery = `SELECT ${tableName}~TRKORR, ${tableName}~AS4DATE, ${tableName}~AS4TIME, ${tableName}~TRSTATUS, ${tableName}~TRFUNCTION, ${tableName}~KORRDEV, ${tableName}~STRKORR, ${tableName}~TARSYSTEM FROM ${tableName} WHERE ${tableName}~AS4USER = '${escapedUser}' AND ${tableName}~AS4DATE LIKE '${year}%'`;
@@ -94,7 +85,7 @@ export async function handleListUserTransports(args: any) {
 
         const startTime = Date.now();
         const response = await makeAdtRequest(url, 'POST', 30000, sqlQuery, {
-            'Content-Type': 'text/plain'
+            'Content-Type': 'text/plain',
         });
         const queryTime = Date.now() - startTime;
 
@@ -151,8 +142,8 @@ export async function handleListUserTransports(args: any) {
             rows: filteredRows,
             total_rows: filteredRows.length,
             stats: {
-                query_time_ms: queryTime
-            }
+                query_time_ms: queryTime,
+            },
         };
 
         if (transportData.total_rows === 0) {
@@ -162,23 +153,26 @@ export async function handleListUserTransports(args: any) {
 
             return {
                 isError: false,
-                content: [{
-                    type: 'text',
-                    text: `No transport requests found for:\n` +
-                        `- ${filters.join('\n- ')}\n\n` +
-                        `TIP: If you expected to find recent transports, try:\n` +
-                        `  1. Add from_date parameter (e.g., from_date: "20260101" for 2026 onwards)\n` +
-                        `  2. Check status filter - modifiable transports have status 'D'\n` +
-                        `  3. Verify the username is correct\n\n` +
-                        `Note: This tool queries E070 table directly and shows ALL transports (modifiable and released).\n` +
-                        `Due to API limitations, only ${ADT_API_ROW_LIMIT} rows can be fetched. Use from_date to focus on recent transports.\n\n` +
-                        `Common status values:\n` +
-                        `- D: Modifiable (in development)\n` +
-                        `- R: Released\n` +
-                        `- L: Modifiable, Protected\n` +
-                        `- O: Released, Import\n\n` +
-                        `Use GetTransportRequest(transport_number) to see details of a specific transport.`
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text:
+                            `No transport requests found for:\n` +
+                            `- ${filters.join('\n- ')}\n\n` +
+                            `TIP: If you expected to find recent transports, try:\n` +
+                            `  1. Add from_date parameter (e.g., from_date: "20260101" for 2026 onwards)\n` +
+                            `  2. Check status filter - modifiable transports have status 'D'\n` +
+                            `  3. Verify the username is correct\n\n` +
+                            `Note: This tool queries E070 table directly and shows ALL transports (modifiable and released).\n` +
+                            `Due to API limitations, only ${ADT_API_ROW_LIMIT} rows can be fetched. Use from_date to focus on recent transports.\n\n` +
+                            `Common status values:\n` +
+                            `- D: Modifiable (in development)\n` +
+                            `- R: Released\n` +
+                            `- L: Modifiable, Protected\n` +
+                            `- O: Released, Import\n\n` +
+                            `Use GetTransportRequest(transport_number) to see details of a specific transport.`,
+                    },
+                ],
             };
         }
 
@@ -192,12 +186,14 @@ export async function handleListUserTransports(args: any) {
         if (transportNumbers.length > 0) {
             try {
                 const e07tTableName = 'E07T';
-                const escapedTransportNumbers = transportNumbers.map((tr: string) => `'${escapeSqlValue(tr)}'`).join(', ');
+                const escapedTransportNumbers = transportNumbers
+                    .map((tr: string) => `'${escapeSqlValue(tr)}'`)
+                    .join(', ');
                 const e07tSqlQuery = `SELECT ${e07tTableName}~TRKORR, ${e07tTableName}~AS4TEXT FROM ${e07tTableName} WHERE ${e07tTableName}~LANGU = 'E' AND ${e07tTableName}~TRKORR IN (${escapedTransportNumbers})`;
 
                 const e07tUrl = `${baseUrl}/sap/bc/adt/datapreview/ddic?rowNumber=${maxResults}&ddicEntityName=${encodeURIComponent(e07tTableName)}`;
                 const e07tResponse = await makeAdtRequest(e07tUrl, 'POST', 30000, e07tSqlQuery, {
-                    'Content-Type': 'text/plain'
+                    'Content-Type': 'text/plain',
                 });
 
                 if (e07tResponse.data) {
@@ -236,7 +232,9 @@ export async function handleListUserTransports(args: any) {
                 }
             } catch (e) {
                 // If description fetch fails, continue without descriptions
-                console.error(`[DEBUG] ListUserTransports: Failed to fetch descriptions from E07T: ${e instanceof Error ? e.message : String(e)}`);
+                console.error(
+                    `[DEBUG] ListUserTransports: Failed to fetch descriptions from E07T: ${e instanceof Error ? e.message : String(e)}`
+                );
             }
         }
 
@@ -305,10 +303,12 @@ export async function handleListUserTransports(args: any) {
 
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: output
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: output,
+                },
+            ],
         };
     } catch (error) {
         if (error instanceof McpError) {
@@ -326,12 +326,18 @@ export async function handleListUserTransports(args: any) {
  */
 function getStatusDescription(status: string): string {
     switch (status) {
-        case 'D': return 'Modifiable';
-        case 'L': return 'Mod+Prot';
-        case 'R': return 'Released';
-        case 'O': return 'Rel+Import';
-        case 'N': return 'Rel+NoChg';
-        default: return status;
+        case 'D':
+            return 'Modifiable';
+        case 'L':
+            return 'Mod+Prot';
+        case 'R':
+            return 'Released';
+        case 'O':
+            return 'Rel+Import';
+        case 'N':
+            return 'Rel+NoChg';
+        default:
+            return status;
     }
 }
 
@@ -340,11 +346,17 @@ function getStatusDescription(status: string): string {
  */
 function getTypeDescription(type: string): string {
     switch (type) {
-        case 'K': return 'WB';    // Workbench request
-        case 'W': return 'Cust';  // Customizing request
-        case 'S': return 'Task';  // Task
-        case 'T': return 'TOC';   // Transport of Copies
-        case 'X': return 'Unrep'; // Unrepaired
-        default: return type;
+        case 'K':
+            return 'WB'; // Workbench request
+        case 'W':
+            return 'Cust'; // Customizing request
+        case 'S':
+            return 'Task'; // Task
+        case 'T':
+            return 'TOC'; // Transport of Copies
+        case 'X':
+            return 'Unrep'; // Unrepaired
+        default:
+            return type;
     }
 }

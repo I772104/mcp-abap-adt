@@ -1,4 +1,4 @@
-import { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import { Prompt } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * MCP Prompts for common ABAP development workflows
@@ -9,142 +9,142 @@ import { Prompt } from "@modelcontextprotocol/sdk/types.js";
  * List all available workflow prompts
  */
 export function listWorkflowPrompts(): Prompt[] {
-  return [
-    {
-      name: "create-class-workflow",
-      description: "Step-by-step workflow for creating and testing ABAP classes with mandatory validation steps",
-      arguments: [
+    return [
         {
-          name: "class_name",
-          description: "Name of the ABAP class to create (must start with Z or Y)",
-          required: true,
+            name: 'create-class-workflow',
+            description: 'Step-by-step workflow for creating and testing ABAP classes with mandatory validation steps',
+            arguments: [
+                {
+                    name: 'class_name',
+                    description: 'Name of the ABAP class to create (must start with Z or Y)',
+                    required: true,
+                },
+                {
+                    name: 'description',
+                    description: 'Brief description of the class purpose',
+                    required: false,
+                },
+            ],
         },
         {
-          name: "description",
-          description: "Brief description of the class purpose",
-          required: false,
-        },
-      ],
-    },
-    {
-      name: "quick-class-workflow",
-      description: "Optimized workflow for experienced users - 40% faster with batch validation and auto-activation",
-      arguments: [
-        {
-          name: "class_name",
-          description: "Name of the ABAP class to create (must start with Z or Y)",
-          required: true,
-        },
-        {
-          name: "description",
-          description: "Brief description of the class purpose",
-          required: false,
-        },
-      ],
-    },
-    {
-      name: "package-discovery-workflow",
-      description: "Token-efficient workflow for discovering and exploring ABAP packages",
-      arguments: [
-        {
-          name: "search_term",
-          description: "Optional search term or prefix to filter packages (e.g., 'FIN' for financial packages)",
-          required: false,
-        },
-      ],
-    },
-    {
-      name: "rap-bo-analysis-workflow",
-      description: "Comprehensive workflow for analyzing RAP Business Objects",
-      arguments: [
-        {
-          name: "rap_bo_name",
-          description: "Name of the RAP Business Object to analyze (e.g., I_SalesOrder)",
-          required: true,
+            name: 'quick-class-workflow',
+            description:
+                'Optimized workflow for experienced users - 40% faster with batch validation and auto-activation',
+            arguments: [
+                {
+                    name: 'class_name',
+                    description: 'Name of the ABAP class to create (must start with Z or Y)',
+                    required: true,
+                },
+                {
+                    name: 'description',
+                    description: 'Brief description of the class purpose',
+                    required: false,
+                },
+            ],
         },
         {
-          name: "depth",
-          description: "Analysis depth: summary, detailed, or comprehensive",
-          required: false,
-        },
-      ],
-    },
-    {
-      name: "refactor-class-workflow",
-      description: "Safe workflow for refactoring existing ABAP classes with backup and testing",
-      arguments: [
-        {
-          name: "class_name",
-          description: "Name of the existing ABAP class to refactor",
-          required: true,
-        },
-      ],
-    },
-    {
-      name: "table-analysis-workflow",
-      description: "Workflow for analyzing database tables and querying data",
-      arguments: [
-        {
-          name: "table_name",
-          description: "Name of the database table to analyze",
-          required: true,
+            name: 'package-discovery-workflow',
+            description: 'Token-efficient workflow for discovering and exploring ABAP packages',
+            arguments: [
+                {
+                    name: 'search_term',
+                    description:
+                        "Optional search term or prefix to filter packages (e.g., 'FIN' for financial packages)",
+                    required: false,
+                },
+            ],
         },
         {
-          name: "max_rows",
-          description: "Maximum number of rows to retrieve (default: 50)",
-          required: false,
+            name: 'rap-bo-analysis-workflow',
+            description: 'Comprehensive workflow for analyzing RAP Business Objects',
+            arguments: [
+                {
+                    name: 'rap_bo_name',
+                    description: 'Name of the RAP Business Object to analyze (e.g., I_SalesOrder)',
+                    required: true,
+                },
+                {
+                    name: 'depth',
+                    description: 'Analysis depth: summary, detailed, or comprehensive',
+                    required: false,
+                },
+            ],
         },
-      ],
-    },
-    {
-      name: "export-modify-import-workflow",
-      description: "Export a class, make modifications locally, and import back as a local class (99% token savings vs AI-generated code)",
-      arguments: [
         {
-          name: "class_name",
-          description: "Name of the ABAP class to export and modify",
-          required: true,
+            name: 'refactor-class-workflow',
+            description: 'Safe workflow for refactoring existing ABAP classes with backup and testing',
+            arguments: [
+                {
+                    name: 'class_name',
+                    description: 'Name of the existing ABAP class to refactor',
+                    required: true,
+                },
+            ],
         },
-      ],
-    },
-  ];
+        {
+            name: 'table-analysis-workflow',
+            description: 'Workflow for analyzing database tables and querying data',
+            arguments: [
+                {
+                    name: 'table_name',
+                    description: 'Name of the database table to analyze',
+                    required: true,
+                },
+                {
+                    name: 'max_rows',
+                    description: 'Maximum number of rows to retrieve (default: 50)',
+                    required: false,
+                },
+            ],
+        },
+        {
+            name: 'export-modify-import-workflow',
+            description:
+                'Export a class, make modifications locally, and import back as a local class (99% token savings vs AI-generated code)',
+            arguments: [
+                {
+                    name: 'class_name',
+                    description: 'Name of the ABAP class to export and modify',
+                    required: true,
+                },
+            ],
+        },
+    ];
 }
 
 /**
  * Get prompt content for a specific workflow
  */
-export function getWorkflowPrompt(
-  promptName: string,
-  args: Record<string, string>
-): string {
-  switch (promptName) {
-    case "create-class-workflow":
-      return getCreateClassWorkflow(args);
-    case "quick-class-workflow":
-      return getQuickClassWorkflow(args);
-    case "package-discovery-workflow":
-      return getPackageDiscoveryWorkflow(args);
-    case "rap-bo-analysis-workflow":
-      return getRapBoAnalysisWorkflow(args);
-    case "refactor-class-workflow":
-      return getRefactorClassWorkflow(args);
-    case "table-analysis-workflow":
-      return getTableAnalysisWorkflow(args);
-    case "export-modify-import-workflow":
-      return getExportModifyImportWorkflow(args);
-    default:
-      throw new Error(`Unknown workflow prompt: ${promptName}`);
-  }
+export function getWorkflowPrompt(promptName: string, args: Record<string, string>): string {
+    switch (promptName) {
+        case 'create-class-workflow':
+            return getCreateClassWorkflow(args);
+        case 'quick-class-workflow':
+            return getQuickClassWorkflow(args);
+        case 'package-discovery-workflow':
+            return getPackageDiscoveryWorkflow(args);
+        case 'rap-bo-analysis-workflow':
+            return getRapBoAnalysisWorkflow(args);
+        case 'refactor-class-workflow':
+            return getRefactorClassWorkflow(args);
+        case 'table-analysis-workflow':
+            return getTableAnalysisWorkflow(args);
+        case 'export-modify-import-workflow':
+            return getExportModifyImportWorkflow(args);
+        default:
+            throw new Error(`Unknown workflow prompt: ${promptName}`);
+    }
 }
 
 /**
  * Create Class Workflow (Standard - Safe and Thorough)
  */
 function getCreateClassWorkflow(args: Record<string, string>): string {
-  const className = args.class_name || "ZCL_EXAMPLE";
-  const description = args.description || "Example class";
+    const className = args.class_name || 'ZCL_EXAMPLE';
+    const description = args.description || 'Example class';
 
-  return `# Create and Test ABAP Class Workflow (Standard)
+    return `# Create and Test ABAP Class Workflow (Standard)
 
 ## Task: Create class ${className}
 **Description**: ${description}
@@ -285,10 +285,10 @@ Parameters:
  * Quick Class Workflow (Optimized - 40% Faster)
  */
 function getQuickClassWorkflow(args: Record<string, string>): string {
-  const className = args.class_name || "ZCL_EXAMPLE";
-  const description = args.description || "Example class";
+    const className = args.class_name || 'ZCL_EXAMPLE';
+    const description = args.description || 'Example class';
 
-  return `# Quick Class Creation Workflow (Optimized)
+    return `# Quick Class Creation Workflow (Optimized)
 
 ## Task: Create class ${className}
 **Description**: ${description}
@@ -452,12 +452,12 @@ Even with optimizations, safety is maintained:
  * Package Discovery Workflow
  */
 function getPackageDiscoveryWorkflow(args: Record<string, string>): string {
-  const searchTerm = args.search_term || "";
-  const hasSearch = searchTerm.length > 0;
+    const searchTerm = args.search_term || '';
+    const hasSearch = searchTerm.length > 0;
 
-  return `# Token-Efficient Package Discovery Workflow
+    return `# Token-Efficient Package Discovery Workflow
 
-${hasSearch ? `## Search Term: ${searchTerm}` : "## General Package Discovery"}
+${hasSearch ? `## Search Term: ${searchTerm}` : '## General Package Discovery'}
 
 ## Recommended Approach (90%+ token savings)
 
@@ -471,8 +471,8 @@ Use when: You need to know what packages exist
 **Result**: Array of ~757 package names
 
 ${
-  hasSearch
-    ? `
+    hasSearch
+        ? `
 ### Step 2: Filter to Relevant Packages (~500 tokens)
 \`\`\`
 Resource: abap://packages/top-level?prefix=${searchTerm}&fields=name,description
@@ -481,7 +481,7 @@ Returns: Filtered list with descriptions
 \`\`\`
 
 **Result**: Only packages starting with "${searchTerm}"`
-    : `
+        : `
 ### Step 2: Browse Packages with Descriptions (~2K tokens)
 \`\`\`
 Resource: abap://packages/top-level?fields=name,description&limit=50
@@ -549,10 +549,10 @@ Purpose: Get packages 100-150
  * RAP BO Analysis Workflow
  */
 function getRapBoAnalysisWorkflow(args: Record<string, string>): string {
-  const rapBoName = args.rap_bo_name || "I_SalesOrder";
-  const depth = args.depth || "detailed";
+    const rapBoName = args.rap_bo_name || 'I_SalesOrder';
+    const depth = args.depth || 'detailed';
 
-  return `# RAP Business Object Analysis Workflow
+    return `# RAP Business Object Analysis Workflow
 
 ## Target: ${rapBoName}
 **Analysis Depth**: ${depth}
@@ -561,7 +561,7 @@ function getRapBoAnalysisWorkflow(args: Record<string, string>): string {
 
 ### Step 1: Complete BO Analysis (Use Resource!)
 \`\`\`
-Resource: rap-bo-analysis:///${rapBoName}${depth !== "detailed" ? `?depth=${depth}` : ""}
+Resource: rap-bo-analysis:///${rapBoName}${depth !== 'detailed' ? `?depth=${depth}` : ''}
 Purpose: Get complete RAP BO structure in one call
 Token Usage: ~20-50K tokens (but cacheable!)
 \`\`\`
@@ -680,9 +680,9 @@ Access Control (Authorization)
  * Refactor Class Workflow
  */
 function getRefactorClassWorkflow(args: Record<string, string>): string {
-  const className = args.class_name || "ZCL_EXAMPLE";
+    const className = args.class_name || 'ZCL_EXAMPLE';
 
-  return `# Safe Class Refactoring Workflow
+    return `# Safe Class Refactoring Workflow
 
 ## Target: ${className}
 
@@ -840,10 +840,10 @@ If issues are found after activation:
  * Table Analysis Workflow
  */
 function getTableAnalysisWorkflow(args: Record<string, string>): string {
-  const tableName = args.table_name || "MARA";
-  const maxRows = args.max_rows || "50";
+    const tableName = args.table_name || 'MARA';
+    const maxRows = args.max_rows || '50';
 
-  return `# Database Table Analysis Workflow
+    return `# Database Table Analysis Workflow
 
 ## Target: ${tableName}
 
@@ -985,9 +985,9 @@ max_rows: 50
  * Export-Modify-Import Workflow (Lightweight)
  */
 function getExportModifyImportWorkflow(args: Record<string, string>): string {
-  const className = args.class_name || "CL_EXAMPLE";
+    const className = args.class_name || 'CL_EXAMPLE';
 
-  return `# Export-Modify-Import Class Workflow
+    return `# Export-Modify-Import Class Workflow
 
 ## Target: ${className}
 

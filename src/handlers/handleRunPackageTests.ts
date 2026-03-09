@@ -20,14 +20,16 @@ export async function handleRunPackageTests(args: any) {
             packageName,
             null // No activation for packages
         );
-        
+
         // Return formatted results directly
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: JSON.stringify(formattedResults, null, 2)
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(formattedResults, null, 2),
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);

@@ -31,7 +31,7 @@ export function createAuthProvider(
         // Alternative location in user home directory
         path.join(process.env.HOME || process.env.USERPROFILE || '', '.sap', 'cookies', 'sap_cookies.json'),
         // Custom location from environment variable
-        process.env.AUTH_COOKIE_PATH ? path.join(process.env.AUTH_COOKIE_PATH, 'sap_cookies.json') : ''
+        process.env.AUTH_COOKIE_PATH ? path.join(process.env.AUTH_COOKIE_PATH, 'sap_cookies.json') : '',
     ].filter(Boolean);
 
     for (const cookiePath of cookieLocations) {
@@ -47,18 +47,18 @@ export function createAuthProvider(
     // No authentication available
     throw new Error(
         '🔒 No Authentication Method Available\n\n' +
-        'Neither basic auth credentials nor SSO cookies are configured.\n' +
-        'Please authenticate using SSO:\n\n' +
-        'SSO Authentication (Recommended):\n' +
-        '  1. Use sap-auth-mcp-main MCP server\n' +
-        '  2. Call sap_authenticate tool with:\n' +
-        `     entry_url: ${systemUrl}/sap/bc/adt?sap-client=${client}\n` +
-        '     store_path: tmp\n' +
-        '  3. Restart MCP server: /mcp\n\n' +
-        'Alternative - Basic Authentication (for dev/test):\n' +
-        '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
-       // '  Then restart MCP server: /mcp\n\n' +
-        'Cookie locations checked:\n' +
-        cookieLocations.map(p => `  - ${p}`).join('\n')
+            'Neither basic auth credentials nor SSO cookies are configured.\n' +
+            'Please authenticate using SSO:\n\n' +
+            'SSO Authentication (Recommended):\n' +
+            '  1. Use sap-auth-mcp-main MCP server\n' +
+            '  2. Call sap_authenticate tool with:\n' +
+            `     entry_url: ${systemUrl}/sap/bc/adt?sap-client=${client}\n` +
+            '     store_path: tmp\n' +
+            '  3. Restart MCP server: /mcp\n\n' +
+            'Alternative - Basic Authentication (for dev/test):\n' +
+            '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
+            // '  Then restart MCP server: /mcp\n\n' +
+            'Cookie locations checked:\n' +
+            cookieLocations.map((p) => `  - ${p}`).join('\n')
     );
 }

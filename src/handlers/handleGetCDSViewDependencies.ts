@@ -8,18 +8,18 @@ export async function handleGetCDSViewDependencies(args: any) {
         }
 
         const encodedViewName = encodeURIComponent(args.view_name);
-        
+
         // Try different ADT endpoints for CDS view dependencies
         const baseUrl = await getBaseUrl();
         const endpoints = [
             `/sap/bc/adt/repository/informationsystem/dependencies?uri=/sap/bc/adt/ddic/ddls/sources/${encodedViewName}`, // Dependencies endpoint
             `/sap/bc/adt/ddic/ddls/sources/${encodedViewName}/dependencies`, // Alternative dependencies
-            `/sap/bc/adt/repository/informationsystem/usages?uri=/sap/bc/adt/ddic/ddls/sources/${encodedViewName}` // Usage information
+            `/sap/bc/adt/repository/informationsystem/usages?uri=/sap/bc/adt/ddic/ddls/sources/${encodedViewName}`, // Usage information
         ];
 
         let lastError: any;
         let dependencyData: any = null;
-        
+
         // First, try to get the CDS view source to analyze dependencies
         try {
             const sourceUrl = `${baseUrl}/sap/bc/adt/ddic/ddls/sources/${encodedViewName}`;
@@ -30,17 +30,17 @@ export async function handleGetCDSViewDependencies(args: any) {
         } catch (error) {
             // Continue with other methods if source analysis fails
         }
-        
+
         // Try ADT dependency endpoints
         for (const endpoint of endpoints) {
             try {
                 const url = `${baseUrl}${endpoint}`;
                 const response = await makeAdtRequest(url, 'GET', 30000);
-                
+
                 if (response.data) {
                     // Merge with source analysis if available
                     const adtDependencies = parseAdtDependencies(response.data);
-                    
+
                     let result = {
                         view_name: args.view_name,
                         base_views: dependencyData?.base_views || adtDependencies.base_views || [],
@@ -49,15 +49,17 @@ export async function handleGetCDSViewDependencies(args: any) {
                         database_tables: dependencyData?.database_tables || adtDependencies.database_tables || [],
                         functions: dependencyData?.functions || adtDependencies.functions || [],
                         parameters: dependencyData?.parameters || [],
-                        dependency_tree: buildDependencyTree(dependencyData, adtDependencies)
+                        dependency_tree: buildDependencyTree(dependencyData, adtDependencies),
                     };
-                    
+
                     return {
                         isError: false,
-                        content: [{
-                            type: 'text',
-                            text: JSON.stringify(result, null, 2)
-                        }]
+                        content: [
+                            {
+                                type: 'text',
+                                text: JSON.stringify(result, null, 2),
+                            },
+                        ],
                     };
                 }
             } catch (error) {
@@ -65,7 +67,7 @@ export async function handleGetCDSViewDependencies(args: any) {
                 continue;
             }
         }
-        
+
         // If ADT endpoints failed but we have source analysis, return that
         if (dependencyData) {
             let result = {
@@ -76,21 +78,22 @@ export async function handleGetCDSViewDependencies(args: any) {
                 database_tables: dependencyData.database_tables || [],
                 functions: dependencyData.functions || [],
                 parameters: dependencyData.parameters || [],
-                dependency_tree: dependencyData
+                dependency_tree: dependencyData,
             };
-            
+
             return {
                 isError: false,
-                content: [{
-                    type: 'text',
-                    text: JSON.stringify(result, null, 2)
-                }]
+                content: [
+                    {
+                        type: 'text',
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
             };
         }
-        
+
         // If all methods failed, throw the last error
         throw lastError || new Error('Failed to retrieve CDS view dependencies from any source');
-        
     } catch (error) {
         return return_error(error);
     }
@@ -103,21 +106,21 @@ function analyzeSourceDependencies(sourceCode: string, viewName: string): any {
         associations: [] as any[],
         database_tables: [] as string[],
         functions: [] as string[],
-        parameters: [] as any[]
+        parameters: [] as any[],
     };
-    
+
     const lines = sourceCode.split('\n');
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
-        
+
         // Extract base views from SELECT FROM clauses
         const selectFromMatch = trimmed.match(/as\s+select\s+from\s+(\w+)/i);
         if (selectFromMatch) {
             const baseName = selectFromMatch[1].trim();
             if (!dependencies.base_views.includes(baseName)) {
                 dependencies.base_views.push(baseName);
-                
+
                 // Classify as CDS view or database table
                 if (baseName.startsWith('I_') || baseName.startsWith('R_') || baseName.startsWith('C_')) {
                     // Likely a CDS view
@@ -126,7 +129,7 @@ function analyzeSourceDependencies(sourceCode: string, viewName: string): any {
                 }
             }
         }
-        
+
         // Extract projection base
         const projectionMatch = trimmed.match(/as\s+projection\s+on\s+(\w+)/i);
         if (projectionMatch) {
@@ -135,17 +138,17 @@ function analyzeSourceDependencies(sourceCode: string, viewName: string): any {
                 dependencies.base_views.push(baseName);
             }
         }
-        
+
         // Extract associations
         const associationMatch = trimmed.match(/association\s*\[([^\]]+)\]\s*to\s+(\w+)\s+as\s+(\w+)/i);
         if (associationMatch) {
             dependencies.associations.push({
                 cardinality: associationMatch[1].trim(),
                 target_entity: associationMatch[2].trim(),
-                alias: associationMatch[3].trim()
+                alias: associationMatch[3].trim(),
             });
         }
-        
+
         // Extract JOIN references
         const joinMatch = trimmed.match(/(?:left\s+outer\s+join|inner\s+join|join)\s+(\w+)/i);
         if (joinMatch) {
@@ -158,7 +161,7 @@ function analyzeSourceDependencies(sourceCode: string, viewName: string): any {
                 }
             }
         }
-        
+
         // Extract function calls
         const functionMatch = trimmed.match(/(\w+)\s*\(/);
         if (functionMatch && !trimmed.toLowerCase().includes('select') && !trimmed.toLowerCase().includes('from')) {
@@ -167,17 +170,17 @@ function analyzeSourceDependencies(sourceCode: string, viewName: string): any {
                 dependencies.functions.push(funcName);
             }
         }
-        
+
         // Extract parameters
         const paramMatch = trimmed.match(/with\s+parameters?\s+parameter\s+(\w+)\s*:\s*(\w+)/i);
         if (paramMatch) {
             dependencies.parameters.push({
                 name: paramMatch[1].trim(),
-                type: paramMatch[2].trim()
+                type: paramMatch[2].trim(),
             });
         }
     }
-    
+
     return dependencies;
 }
 
@@ -187,22 +190,22 @@ function parseAdtDependencies(adtResponse: string): any {
         associations: [] as any[],
         used_by_views: [] as string[],
         database_tables: [] as string[],
-        functions: [] as string[]
+        functions: [] as string[],
     };
-    
+
     try {
         // Try to parse as XML (common ADT response format)
         if (adtResponse.includes('<')) {
             const entityMatches = adtResponse.match(/<[^>]*name="([^"]+)"[^>]*type="([^"]+)"/g);
             if (entityMatches) {
-                entityMatches.forEach(match => {
+                entityMatches.forEach((match) => {
                     const nameMatch = match.match(/name="([^"]+)"/);
                     const typeMatch = match.match(/type="([^"]+)"/);
-                    
+
                     if (nameMatch && typeMatch) {
                         const name = nameMatch[1];
                         const type = typeMatch[1];
-                        
+
                         switch (type.toLowerCase()) {
                             case 'ddls':
                             case 'view':
@@ -221,7 +224,7 @@ function parseAdtDependencies(adtResponse: string): any {
                 });
             }
         }
-        
+
         // Try to parse as JSON
         if (adtResponse.startsWith('{') || adtResponse.startsWith('[')) {
             const jsonData = JSON.parse(adtResponse);
@@ -232,7 +235,7 @@ function parseAdtDependencies(adtResponse: string): any {
     } catch (error) {
         // If parsing fails, return empty dependencies
     }
-    
+
     return dependencies;
 }
 
@@ -240,56 +243,56 @@ function buildDependencyTree(sourceDeps: any, adtDeps: any): any {
     const tree = {
         direct_dependencies: [] as any[],
         indirect_dependencies: [] as any[],
-        dependency_levels: {} as any
+        dependency_levels: {} as any,
     };
-    
+
     if (sourceDeps) {
         // Level 1: Direct dependencies from source analysis
         sourceDeps.base_views?.forEach((view: string) => {
             tree.direct_dependencies.push({
                 name: view,
                 type: 'CDS_VIEW',
-                level: 1
+                level: 1,
             });
         });
-        
+
         sourceDeps.database_tables?.forEach((table: string) => {
             tree.direct_dependencies.push({
                 name: table,
                 type: 'DATABASE_TABLE',
-                level: 1
+                level: 1,
             });
         });
-        
+
         sourceDeps.associations?.forEach((assoc: any) => {
             tree.direct_dependencies.push({
                 name: assoc.target_entity,
                 type: 'ASSOCIATION',
                 level: 1,
                 cardinality: assoc.cardinality,
-                alias: assoc.alias
+                alias: assoc.alias,
             });
         });
     }
-    
+
     if (adtDeps) {
         // Add ADT-discovered dependencies as indirect
         adtDeps.base_views?.forEach((view: string) => {
-            if (!tree.direct_dependencies.find(d => d.name === view)) {
+            if (!tree.direct_dependencies.find((d) => d.name === view)) {
                 tree.indirect_dependencies.push({
                     name: view,
                     type: 'CDS_VIEW',
-                    level: 2
+                    level: 2,
                 });
             }
         });
     }
-    
+
     // Group by levels
     tree.dependency_levels = {
         level_1: tree.direct_dependencies,
-        level_2: tree.indirect_dependencies
+        level_2: tree.indirect_dependencies,
     };
-    
+
     return tree;
 }

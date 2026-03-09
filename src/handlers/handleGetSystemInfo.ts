@@ -18,7 +18,7 @@ export async function handleGetSystemInfo(_args: Record<string, unknown>) {
             client: provider.getClient(),
             authenticationMethod: provider.getName(),
             isAuthenticated: provider.isAvailable(),
-            fullUrl: config.url
+            fullUrl: config.url,
         };
 
         // Format output as readable text
@@ -43,7 +43,7 @@ ${getAuthMethodDetails(systemInfo.authenticationMethod)}
             status: 200,
             statusText: 'OK',
             headers: {},
-            config: {} as any
+            config: {} as any,
         });
     } catch (error) {
         return return_error(error);

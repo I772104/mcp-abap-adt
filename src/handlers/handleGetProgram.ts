@@ -11,8 +11,7 @@ export async function handleGetProgram(args: any) {
 
         const response = await makeAdtRequest(url, 'GET', 30000);
         return return_response(response);
-    }
-    catch (error) {
+    } catch (error) {
         return return_error(error);
     }
 }

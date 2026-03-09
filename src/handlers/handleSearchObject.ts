@@ -11,18 +11,18 @@ export async function handleSearchObject(args: any) {
         const encodedQuery = encodeURIComponent(args.query);
         const url = `${await getBaseUrl()}/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedQuery}&maxResults=${maxResults}`;
         const response = await makeAdtRequest(url, 'GET', 30000);
-        
+
         // Parse XML response to JSON
         const xmlData = response.data;
         const parsedData = await parseStringPromise(xmlData, { explicitArray: false });
-        
+
         // Extract search results from XML structure
         const searchResult = parsedData?.['adtcore:objectReferences'] || {};
         const objects = searchResult?.['adtcore:objectReference'] || [];
-        
+
         // Normalize to array if single result
         const objectArray = Array.isArray(objects) ? objects : [objects];
-        
+
         // Transform to simplified JSON structure
         const result = {
             query: args.query,
@@ -33,16 +33,18 @@ export async function handleSearchObject(args: any) {
                 type: obj.$?.['adtcore:type'] || '',
                 uri: obj.$?.['adtcore:uri'] || '',
                 package: obj.$?.['adtcore:packageName'] || '',
-                description: obj.$?.['adtcore:description'] || ''
-            }))
+                description: obj.$?.['adtcore:description'] || '',
+            })),
         };
-        
+
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: JSON.stringify(result, null, 2)
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(result, null, 2),
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);

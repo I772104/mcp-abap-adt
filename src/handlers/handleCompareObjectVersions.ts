@@ -88,8 +88,8 @@ export async function handleCompareObjectVersions(args: any) {
 
         // Fetch both versions in parallel
         const [responseOld, responseNew] = await Promise.all([
-            makeAdtRequest(urlOld, 'GET', 30000, undefined, undefined, { 'Accept': 'text/plain' }),
-            makeAdtRequest(urlNew, 'GET', 30000, undefined, undefined, { 'Accept': 'text/plain' })
+            makeAdtRequest(urlOld, 'GET', 30000, undefined, undefined, { Accept: 'text/plain' }),
+            makeAdtRequest(urlNew, 'GET', 30000, undefined, undefined, { Accept: 'text/plain' }),
         ]);
 
         const sourceOld = responseOld.data;
@@ -110,22 +110,10 @@ export async function handleCompareObjectVersions(args: any) {
                 );
                 break;
             case 'side-by-side':
-                diffResult = generateSideBySideDiff(
-                    sourceOld,
-                    sourceNew,
-                    args.object_name,
-                    versionOld,
-                    versionNew
-                );
+                diffResult = generateSideBySideDiff(sourceOld, sourceNew, args.object_name, versionOld, versionNew);
                 break;
             case 'summary':
-                diffResult = generateDiffSummary(
-                    sourceOld,
-                    sourceNew,
-                    args.object_name,
-                    versionOld,
-                    versionNew
-                );
+                diffResult = generateDiffSummary(sourceOld, sourceNew, args.object_name, versionOld, versionNew);
                 break;
             default:
                 throw new McpError(ErrorCode.InvalidParams, `Invalid format: ${format}`);
@@ -133,10 +121,12 @@ export async function handleCompareObjectVersions(args: any) {
 
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: diffResult
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: diffResult,
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);
@@ -183,14 +173,9 @@ function generateUnifiedDiff(
     versionOld: string,
     versionNew: string
 ): string {
-    const patch = Diff.createPatch(
-        objectName,
-        oldText,
-        newText,
-        `version ${versionOld}`,
-        `version ${versionNew}`,
-        { context: contextLines }
-    );
+    const patch = Diff.createPatch(objectName, oldText, newText, `version ${versionOld}`, `version ${versionNew}`, {
+        context: contextLines,
+    });
 
     // Add header with object information
     let output = `${'='.repeat(80)}\n`;

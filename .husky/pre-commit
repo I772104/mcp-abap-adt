@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Check for .env files being committed
+if git diff --cached --name-only | grep -E '\.env$|\.env\..*$'; then
+  echo "Error: Attempting to commit .env file(s). This is not allowed."
+  echo "Please remove .env files from your commit."
+  exit 1
+fi
+
+# Run format check, lint, and typecheck
+npm run check
+

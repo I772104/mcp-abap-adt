@@ -14,8 +14,8 @@ export class BasicAuthProvider implements AuthProvider {
     async getAuthHeaders(): Promise<Record<string, string>> {
         const auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
         return {
-            'Authorization': `Basic ${auth}`,
-            'X-SAP-Client': this.client
+            Authorization: `Basic ${auth}`,
+            'X-SAP-Client': this.client,
         };
     }
 

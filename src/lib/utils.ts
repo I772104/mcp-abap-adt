@@ -11,10 +11,12 @@ export { McpError, ErrorCode, AxiosResponse };
 export function return_response(response: AxiosResponse) {
     return {
         isError: false,
-        content: [{
-            type: 'text',
-            text: response.data
-        }]
+        content: [
+            {
+                type: 'text',
+                text: response.data,
+            },
+        ],
     };
 }
 export function return_error(error: any) {
@@ -78,7 +80,10 @@ export function return_error(error: any) {
             '   - Re-authenticate using sap_authenticate MCP tool\n' +
             '   - Restart MCP server: /mcp\n' +
             '3. Restart MCP server after any changes: /mcp';
-    } else if (statusCode === 403 && (responseData.includes('CSRF') || responseData.includes('token validation failed'))) {
+    } else if (
+        statusCode === 403 &&
+        (responseData.includes('CSRF') || responseData.includes('token validation failed'))
+    ) {
         // Get auth provider info if available
         let authMethod = 'Unknown';
         let systemUrl = '';
@@ -112,10 +117,12 @@ export function return_error(error: any) {
 
     return {
         isError: true,
-        content: [{
-            type: 'text',
-            text: `Error: ${errorMessage}`
-        }]
+        content: [
+            {
+                type: 'text',
+                text: `Error: ${errorMessage}`,
+            },
+        ],
     };
 }
 
@@ -124,8 +131,8 @@ export function createAxiosInstance() {
     if (!axiosInstance) {
         axiosInstance = axios.create({
             httpsAgent: new Agent({
-                rejectUnauthorized: false // Allow self-signed certificates
-            })
+                rejectUnauthorized: false, // Allow self-signed certificates
+            }),
         });
     }
     return axiosInstance;
@@ -158,12 +165,7 @@ export function getAuthProviderInstance(): AuthProvider {
             config = getConfig();
         }
         const baseUrl = new URL(config.url).origin;
-        authProvider = createAuthProvider(
-            baseUrl,
-            config.client,
-            config.username,
-            config.password
-        );
+        authProvider = createAuthProvider(baseUrl, config.client, config.username, config.password);
     }
     return authProvider;
 }
@@ -190,14 +192,14 @@ export async function getAuthHeaders() {
         if (error instanceof Error && error.message === 'SSO_COOKIE_NOT_FOUND') {
             throw new Error(
                 '🔒 Authentication Required\n\n' +
-                'No authentication method available. Please authenticate using SSO:\n\n' +
-                'SSO Authentication (Recommended):\n' +
-                '  1. Use sap-auth-mcp-main MCP server\n' +
-                '  2. Call sap_authenticate tool with your SAP system URL\n' +
-                '  3. Restart MCP server: /mcp\n\n' +
-                'Alternative - Basic Authentication (for dev/test):\n' +
-                '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
-                '  Then restart MCP server: /mcp'
+                    'No authentication method available. Please authenticate using SSO:\n\n' +
+                    'SSO Authentication (Recommended):\n' +
+                    '  1. Use sap-auth-mcp-main MCP server\n' +
+                    '  2. Call sap_authenticate tool with your SAP system URL\n' +
+                    '  3. Restart MCP server: /mcp\n\n' +
+                    'Alternative - Basic Authentication (for dev/test):\n' +
+                    '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
+                    '  Then restart MCP server: /mcp'
             );
         }
         throw error;
@@ -218,11 +220,11 @@ async function fetchCsrfToken(url: string): Promise<string> {
 
     // Try multiple endpoints to fetch CSRF token
     const csrfEndpoints = [
-        `${baseUrl}/sap/bc/adt/core/discovery`,  // ADT discovery endpoint (most reliable)
-        `${baseUrl}/sap/bc/adt`,                 // ADT base endpoint
-        url                                      // Original URL as fallback
+        `${baseUrl}/sap/bc/adt/core/discovery`, // ADT discovery endpoint (most reliable)
+        `${baseUrl}/sap/bc/adt`, // ADT base endpoint
+        url, // Original URL as fallback
     ];
-    
+
     for (const endpoint of csrfEndpoints) {
         try {
             const response = await createAxiosInstance()({
@@ -230,11 +232,11 @@ async function fetchCsrfToken(url: string): Promise<string> {
                 url: endpoint,
                 headers: {
                     ...(await getAuthHeaders()),
-                    'x-csrf-token': 'fetch'
+                    'x-csrf-token': 'fetch',
                 },
                 params: {
-                    'sap-client': config.client
-                }
+                    'sap-client': config.client,
+                },
             });
 
             const token = response.headers['x-csrf-token'];
@@ -258,14 +260,24 @@ async function fetchCsrfToken(url: string): Promise<string> {
                 }
             }
             // Continue to next endpoint if this one failed
-            console.error(`Failed to fetch CSRF token from ${endpoint}:`, error instanceof Error ? error.message : String(error));
+            console.error(
+                `Failed to fetch CSRF token from ${endpoint}:`,
+                error instanceof Error ? error.message : String(error)
+            );
         }
     }
-    
+
     throw new Error('Failed to fetch CSRF token from any available endpoint');
 }
 
-export async function makeAdtRequest(url: string, method: string, timeout: number, data?: any, params?: any, customHeaders?: any) {
+export async function makeAdtRequest(
+    url: string,
+    method: string,
+    timeout: number,
+    data?: any,
+    params?: any,
+    customHeaders?: any
+) {
     // For POST/PUT requests, ensure we have a CSRF token
     if ((method === 'POST' || method === 'PUT') && !csrfToken) {
         try {
@@ -276,7 +288,7 @@ export async function makeAdtRequest(url: string, method: string, timeout: numbe
     }
 
     const requestHeaders = {
-        ...(await getAuthHeaders())
+        ...(await getAuthHeaders()),
     };
 
     // Add CSRF token for POST/PUT requests
@@ -306,7 +318,7 @@ export async function makeAdtRequest(url: string, method: string, timeout: numbe
         url,
         headers: requestHeaders,
         timeout,
-        params: requestParams
+        params: requestParams,
     };
 
     // Include data in the request configuration if provided
@@ -321,11 +333,15 @@ export async function makeAdtRequest(url: string, method: string, timeout: numbe
         return response;
     } catch (error) {
         // DEBUG: Log the error details
-        console.error(`[DEBUG] Request failed: ${method} ${url}`, error instanceof AxiosError ? { status: error.response?.status, statusText: error.response?.statusText } : error);
+        console.error(
+            `[DEBUG] Request failed: ${method} ${url}`,
+            error instanceof AxiosError
+                ? { status: error.response?.status, statusText: error.response?.statusText }
+                : error
+        );
 
         // If we get a 403 with "CSRF token validation failed", try to fetch a new token and retry
-        if (error instanceof AxiosError && error.response?.status === 403 &&
-            error.response.data?.includes('CSRF')) {
+        if (error instanceof AxiosError && error.response?.status === 403 && error.response.data?.includes('CSRF')) {
             csrfToken = await fetchCsrfToken(url);
             requestConfig.headers['x-csrf-token'] = csrfToken;
             return await createAxiosInstance()(requestConfig);

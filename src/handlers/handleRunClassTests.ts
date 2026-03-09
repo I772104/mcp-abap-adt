@@ -18,7 +18,7 @@ export async function handleRunClassTests(args: any) {
         if (autoActivate) {
             console.log(`Auto-activation requested before running tests for class ${className}`);
             activationResult = await attemptClassActivation(className, preauditRequested);
-            
+
             // If activation failed critically, we might still want to try running tests
             if (activationResult.status === 'error') {
                 console.warn(`Auto-activation failed for class ${className}, but proceeding with test execution`);
@@ -29,20 +29,17 @@ export async function handleRunClassTests(args: any) {
         const objectSetXml = createClassObjectSet(className);
 
         // Run the tests using shared utility
-        const formattedResults = await runAbapUnitTests(
-            objectSetXml,
-            className,
-            className,
-            activationResult
-        );
-        
+        const formattedResults = await runAbapUnitTests(objectSetXml, className, className, activationResult);
+
         // Return formatted results directly
         return {
             isError: false,
-            content: [{
-                type: 'text',
-                text: JSON.stringify(formattedResults, null, 2)
-            }]
+            content: [
+                {
+                    type: 'text',
+                    text: JSON.stringify(formattedResults, null, 2),
+                },
+            ],
         };
     } catch (error) {
         return return_error(error);
