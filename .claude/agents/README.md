@@ -68,6 +68,45 @@ claude "Analyze GitHub issue #42 using the issue-analyzer agent"
 
 ---
 
+### 📊 maintainer-status (v1.0.0)
+
+**Status**: ✅ Implemented
+**Purpose**: Check repository health and provide status report with actionable recommendations
+
+**Capabilities**:
+- **Quick Overview (Default)** - Shows top 3 priorities in just a few lines
+- List all open pull requests by status (ready to merge, needs review, etc.)
+- Categorize and analyze open issues (bugs, features, priority)
+- Check repository health indicators (CI/CD, recent activity)
+- Identify stale PRs and issues
+- Provide prioritized recommendations on what to work on next
+- Suggest quick wins and high-impact tasks
+- Monitor community engagement and response times
+
+**Usage**:
+```bash
+# Quick overview - what to do next (default, recommended)
+npm run status
+
+# Brief summary with categories
+npm run status:quick
+
+# Full detailed report
+npm run status:detailed
+
+# Focus on specific area
+node .claude/agents/run-maintainer-status.js --focus prs
+node .claude/agents/run-maintainer-status.js --focus issues
+
+# With Claude Code for analysis
+claude "Check the repository status using the maintainer-status agent"
+claude "Check PRs and give recommendations on what to review first"
+```
+
+**Documentation**: [Quick Reference](MAINTAINER_STATUS_QUICK.md)
+
+---
+
 ### 🧪 test-generator (Planned)
 
 **Status**: 📋 Planned
@@ -302,7 +341,10 @@ Add to **package.json**:
     "review": "node .claude/agents/run-pr-review.js",
     "review:full": "node .claude/agents/run-pr-review.js --full",
     "review:quick": "node .claude/agents/run-pr-review.js --quick",
-    "analyze-issue": "node .claude/agents/run-issue-analyzer.js"
+    "analyze-issue": "node .claude/agents/run-issue-analyzer.js",
+    "status": "node .claude/agents/run-maintainer-status.js",
+    "status:detailed": "node .claude/agents/run-maintainer-status.js --detailed",
+    "status:quick": "node .claude/agents/run-maintainer-status.js --quick"
   }
 }
 ```
@@ -347,6 +389,21 @@ npm run review:quick
 # Fix issues
 # Full review before commit
 npm run review:full
+```
+
+### Maintainer Workflow
+```bash
+# Daily check
+npm run status:quick
+
+# Review what needs attention
+npm run status
+
+# Get AI recommendations on priorities
+claude "Check repository status and tell me what I should work on today"
+
+# Review specific PR identified by status check
+npm run review -- --branch feature-branch
 ```
 
 ## Troubleshooting
@@ -419,6 +476,13 @@ npm run review:full
   - Automated issue clarity assessment
   - Feasibility analysis and implementation planning
   - Helper script and comprehensive documentation
+
+- **v1.2.0** (2024-03-10): Maintainer status agent
+  - maintainer-status agent (v1.0.0)
+  - Repository health monitoring
+  - PR and issue status tracking
+  - Automated prioritization and recommendations
+  - Quick, standard, and detailed reporting modes
 
 ## Related Issues
 
