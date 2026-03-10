@@ -27,6 +27,8 @@ module.exports = {
       lines: 50
     }
   },
+  // Setup file runs before test suites to set test mode flag
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
   // Separate test configurations
   projects: [
     {

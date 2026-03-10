@@ -697,6 +697,27 @@ We welcome contributions from SAP internal teams and external developers:
 3. **Submit Code**: See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines (coming soon)
 4. **Share Feedback**: Help us improve MCP capabilities for ABAP development
 
+**Development Setup:**
+```bash
+# Install dependencies and setup hooks
+npm install
+
+# Run tests
+npm test
+
+# Run all checks (format, lint, typecheck, tests)
+npm run validate
+```
+
+**CI/CD Configuration:**
+
+The project uses GitHub Actions for continuous integration. Required GitHub secrets:
+
+- `CODECOV_TOKEN` (optional): Token for uploading test coverage to Codecov
+  - Get from: https://codecov.io/
+  - If not configured, coverage upload will be skipped but builds will still succeed
+  - Set in repository Settings → Secrets and variables → Actions
+
 **For External Contributors:**
 - This fork focuses on SAP-internal evaluation scenarios
 - For the upstream project, see [mario-andreschak/mcp-abap-adt](https://github.com/mario-andreschak/mcp-abap-adt)
