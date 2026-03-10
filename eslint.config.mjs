@@ -19,7 +19,7 @@ export default [
         rules: {
             ...tseslint.configs.recommended.rules,
             ...prettierConfig.rules,
-            indent: ['error', 4, { SwitchCase: 1 }],
+            // indent rule disabled - Prettier handles all formatting
             quotes: ['error', 'single', { avoidEscape: true }],
             semi: ['error', 'always'],
             'no-console': ['warn', { allow: ['warn', 'error'] }],
