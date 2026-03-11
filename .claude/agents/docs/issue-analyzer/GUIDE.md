@@ -940,7 +940,7 @@ What are the risks to existing functionality?"
 
 ## See Also
 
-- [Issue Analyzer Agent Definition](issue-analyzer.md)
-- [PR Reviewer Agent Guide](PR_REVIEWER_GUIDE.md)
-- [Agent Architecture](ARCHITECTURE.md)
-- [Quick Reference](ISSUE_ANALYZER_QUICK.md)
+- [Issue Analyzer Agent Definition](../../issue-analyzer.md)
+- [PR Reviewer Agent Guide](../pr-reviewer/GUIDE.md)
+- [Agent Architecture](../../ARCHITECTURE.md)
+- [Quick Reference](QUICK.md)

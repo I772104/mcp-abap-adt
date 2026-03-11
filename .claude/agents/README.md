@@ -30,7 +30,7 @@ npm run review:full
 claude "Review PR focusing on TypeScript types and security"
 ```
 
-**Documentation**: [PR_REVIEWER_GUIDE.md](PR_REVIEWER_GUIDE.md)
+**Documentation**: [Guide](docs/pr-reviewer/GUIDE.md) | [Examples](docs/pr-reviewer/EXAMPLES.md)
 
 ---
 
@@ -64,7 +64,7 @@ npm run analyze-issue -- --file issue.txt
 claude "Analyze GitHub issue #42 using the issue-analyzer agent"
 ```
 
-**Documentation**: [ISSUE_ANALYZER_GUIDE.md](ISSUE_ANALYZER_GUIDE.md) | [Quick Reference](ISSUE_ANALYZER_QUICK.md)
+**Documentation**: [Guide](docs/issue-analyzer/GUIDE.md) | [Quick Reference](docs/issue-analyzer/QUICK.md) | [Summary](docs/issue-analyzer/SUMMARY.md)
 
 ---
 
@@ -103,7 +103,7 @@ claude "Check the repository status using the maintainer-status agent"
 claude "Check PRs and give recommendations on what to review first"
 ```
 
-**Documentation**: [Quick Reference](MAINTAINER_STATUS_QUICK.md)
+**Documentation**: [Quick Reference](docs/maintainer-status/QUICK.md) | [Update Guide](docs/maintainer-status/UPDATE.md) | [Complete Guide](docs/maintainer-status/COMPLETE.md)
 
 ---
 

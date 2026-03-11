@@ -303,14 +303,14 @@ git commit -m "Added stuff"
 Now that you know the basics:
 
 1. **Try it out** - Run a review on your current work
-2. **Read the full guide** - See [PR_REVIEWER_GUIDE.md](PR_REVIEWER_GUIDE.md)
-3. **Customize configuration** - Edit `pr-reviewer-config.json`
+2. **Read the full guide** - See [docs/pr-reviewer/GUIDE.md](docs/pr-reviewer/GUIDE.md)
+3. **Customize configuration** - Edit `config/pr-reviewer-config.json`
 4. **Integrate with workflow** - Add to git hooks or VS Code tasks
 
 ## Need Help?
 
 - **Quick Reference**: [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
-- **Complete Guide**: [PR_REVIEWER_GUIDE.md](PR_REVIEWER_GUIDE.md)
+- **Complete Guide**: [docs/pr-reviewer/GUIDE.md](docs/pr-reviewer/GUIDE.md)
 - **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **GitHub Issues**: Report problems or ask questions
 

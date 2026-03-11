@@ -294,6 +294,6 @@ Verify you have read access to the repository and the data exists on GitHub.
 
 ## See Also
 
-- [PR Reviewer Guide](.claude/agents/PR_REVIEWER_GUIDE.md)
-- [Issue Analyzer Guide](.claude/agents/ISSUE_ANALYZER_GUIDE.md)
-- [Agents README](.claude/agents/README.md)
+- [PR Reviewer Guide](../pr-reviewer/GUIDE.md)
+- [Issue Analyzer Guide](../issue-analyzer/GUIDE.md)
+- [Agents README](../../README.md)
