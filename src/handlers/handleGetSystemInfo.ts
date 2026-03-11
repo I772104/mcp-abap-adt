@@ -1,28 +1,98 @@
 import { return_response, return_error } from '../lib/utils';
 import { getConfig } from '../index';
 import { getAuthProviderInstance } from '../lib/utils';
+import { SystemRegistry } from '../infrastructure/system';
+import { AuthProviderRegistry } from '../infrastructure/auth/AuthProviderRegistry';
 
 /**
  * Get current SAP system connection information
  * Returns system URL, client, authentication method, and connection status
+ * Supports both single-system and multi-system modes
  */
 export async function handleGetSystemInfo(_args: Record<string, unknown>) {
     try {
-        // Get configuration
-        const config = getConfig();
-        const provider = getAuthProviderInstance();
+        // Check if multi-system mode is enabled
+        const registry = SystemRegistry.getInstance();
+        const isMultiSystem = registry.listSystems().length > 0;
 
-        // Build system information response
-        const systemInfo = {
-            systemUrl: provider.getSystemUrl(),
-            client: provider.getClient(),
-            authenticationMethod: provider.getName(),
-            isAuthenticated: provider.isAvailable(),
-            fullUrl: config.url,
-        };
+        if (isMultiSystem) {
+            return handleMultiSystemInfo(registry);
+        } else {
+            return handleSingleSystemInfo();
+        }
+    } catch (error) {
+        return return_error(error);
+    }
+}
 
-        // Format output as readable text
-        const output = `
+/**
+ * Handle system info for multi-system mode
+ */
+function handleMultiSystemInfo(registry: SystemRegistry) {
+    const authRegistry = AuthProviderRegistry.getInstance();
+    const activeSystem = registry.getActiveSystem();
+    const defaultSystemId = registry.getDefaultSystemId();
+    const totalSystems = registry.listSystems().length;
+    const provider = authRegistry.getProvider(activeSystem);
+
+    const output = `
+╔══════════════════════════════════════════════════════════════╗
+║         SAP System Connection Information                    ║
+║              (Multi-System Mode)                             ║
+╚══════════════════════════════════════════════════════════════╝
+
+📊 Multi-System Configuration:
+   Total Systems:     ${totalSystems}
+   Default System:    ${defaultSystemId}
+   Active System:     ${activeSystem.id}${activeSystem.id !== defaultSystemId ? ' (runtime override)' : ''}
+
+🎯 Current Active System: ${activeSystem.id}
+   Name:              ${activeSystem.name}
+   URL:               ${activeSystem.url}
+   Client:            ${activeSystem.client}
+   Auth Method:       ${provider.getName()}
+   Authenticated:     ${provider.isAvailable() ? 'Yes ✓' : 'No ✗'}
+
+═══════════════════════════════════════════════════════════════
+
+${getAuthMethodDetails(provider.getName())}
+
+💡 Multi-System Commands:
+   • ListSystems - View all configured systems
+   • SetDefaultSystem - Change the active system
+   • Use "system" parameter on any tool to target a specific system
+
+📄 Configuration: .sap-systems.json
+`.trim();
+
+    return return_response({
+        data: output,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+    });
+}
+
+/**
+ * Handle system info for single-system mode (legacy)
+ */
+function handleSingleSystemInfo() {
+    // Get configuration
+    const config = getConfig();
+    const provider = getAuthProviderInstance();
+
+    // Build system information response
+    const systemInfo = {
+        systemUrl: provider.getSystemUrl(),
+        client: provider.getClient(),
+        authenticationMethod: provider.getName(),
+        isAuthenticated: provider.isAvailable(),
+        fullUrl: config.url,
+    };
+
+    // Format output as readable text
+    const output = `
 ╔══════════════════════════════════════════════════════════════╗
 ║         SAP System Connection Information                    ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -36,18 +106,19 @@ export async function handleGetSystemInfo(_args: Record<string, unknown>) {
 ═══════════════════════════════════════════════════════════════
 
 ${getAuthMethodDetails(systemInfo.authenticationMethod)}
+
+💡 Multi-System Support:
+   To work with multiple SAP systems, create a .sap-systems.json file
+   and restart the MCP server. See documentation for configuration format.
 `.trim();
 
-        return return_response({
-            data: output,
-            status: 200,
-            statusText: 'OK',
-            headers: {},
-            config: {} as any,
-        });
-    } catch (error) {
-        return return_error(error);
-    }
+    return return_response({
+        data: output,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+    });
 }
 
 function getAuthMethodDetails(authMethod: string): string {

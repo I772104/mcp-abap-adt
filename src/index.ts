@@ -59,12 +59,17 @@ import { handleCompareObjectVersions } from './handlers/handleCompareObjectVersi
 import { handleExportClassToFile } from './handlers/handleExportClassToFile';
 import { handleImportClassFromFile } from './handlers/handleImportClassFromFile';
 import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
+import { handleListSystems } from './handlers/handleListSystems';
+import { handleSetDefaultSystem } from './handlers/handleSetDefaultSystem';
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
 
 // Import prompt handlers
 import { listWorkflowPrompts, getWorkflowPrompt } from './prompts/workflows';
+
+// Import SystemRegistry for multi-system support
+import { SystemRegistry } from './infrastructure/system';
 
 // Import shared utility functions and types
 import {
@@ -157,6 +162,16 @@ export class mcp_abap_adt_server {
                 },
             }
         );
+
+        // Initialize SystemRegistry for multi-system support
+        // This loads .sap-systems.json if available, otherwise falls back to .env
+        try {
+            SystemRegistry.getInstance();
+        } catch (error) {
+            // If SystemRegistry initialization fails, log the error but continue
+            // Server will fall back to single-system mode using .env
+            console.error('Failed to initialize SystemRegistry:', error);
+        }
 
         this.setupHandlers(); // Setup request handlers
     }
@@ -285,6 +300,32 @@ export class mcp_abap_adt_server {
                             type: 'object',
                             properties: {},
                             required: [],
+                        },
+                    },
+                    {
+                        name: 'ListSystems',
+                        description:
+                            'List all configured SAP systems from .sap-systems.json. Shows system IDs, names, URLs, clients, authentication methods, and indicates which is the default/active system.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {},
+                            required: [],
+                        },
+                    },
+                    {
+                        name: 'SetDefaultSystem',
+                        description:
+                            'Change the active SAP system at runtime. All subsequent operations will use this system unless explicitly overridden with the "system" parameter. Note: This change is temporary and only applies to the current session.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                system_id: {
+                                    type: 'string',
+                                    description:
+                                        'The system ID to set as active (e.g., "DEV", "QAS", "PRD"). Must be configured in .sap-systems.json.',
+                                },
+                            },
+                            required: ['system_id'],
                         },
                     },
                     {
@@ -1272,6 +1313,10 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleImportClassFromFile(request.params.arguments as any);
                 case 'GetSystemInfo':
                     return await handleGetSystemInfo(request.params.arguments || {});
+                case 'ListSystems':
+                    return await handleListSystems();
+                case 'SetDefaultSystem':
+                    return await handleSetDefaultSystem(request.params.arguments as any);
                 case 'GetProgram':
                     return await handleGetProgram(request.params.arguments);
                 case 'GetClass':

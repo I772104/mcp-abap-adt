@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SAP Systems Configuration",
+  "description": "Configuration file for multiple SAP system connections",
+  "type": "object",
+  "required": ["version", "default", "systems"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Configuration file format version"
+    },
+    "default": {
+      "type": "string",
+      "description": "Default system ID to use when no system is specified"
+    },
+    "systems": {
+      "type": "object",
+      "description": "Map of system IDs to system configurations",
+      "minProperties": 1,
+      "maxProperties": 50,
+      "patternProperties": {
+        "^[A-Z0-9_]{1,32}$": {
+          "type": "object",
+          "required": ["name", "url", "client", "auth"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Human-readable name for the system",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https?://",
+              "description": "SAP system URL (e.g., https://sap.example.com:443)"
+            },
+            "client": {
+              "type": "string",
+              "pattern": "^\\d{3}$",
+              "description": "SAP client number (e.g., '100')"
+            },
+            "auth": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["basic", "sso"],
+                  "description": "Authentication type: 'basic' for username/password, 'sso' for cookie-based SSO"
+                }
+              },
+              "oneOf": [
+                {
+                  "properties": {
+                    "type": {
+                      "const": "basic"
+                    },
+                    "username": {
+                      "type": "string",
+                      "description": "Username for basic authentication. Supports ${ENV_VAR} syntax for environment variable interpolation."
+                    },
+                    "password": {
+                      "type": "string",
+                      "description": "Password for basic authentication. Supports ${ENV_VAR} syntax for environment variable interpolation."
+                    }
+                  },
+                  "required": ["username", "password"]
+                },
+                {
+                  "properties": {
+                    "type": {
+                      "const": "sso"
+                    },
+                    "cookiePath": {
+                      "type": "string",
+                      "description": "Path to SSO cookies JSON file (optional, defaults to ./tmp/sap_cookies.json)"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

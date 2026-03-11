@@ -11,6 +11,9 @@ package-lock.json
 .env.local
 .env.*.local
 
+# SAP system configuration (contains sensitive URLs and credentials)
+.sap-systems.json
+
 # Authentication cookies and temporary files
 tmp/
 *.backup

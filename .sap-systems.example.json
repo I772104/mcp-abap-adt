@@ -1,0 +1,35 @@
+{
+  "$schema": "./schemas/sap-systems.schema.json",
+  "version": "1.0",
+  "default": "DEV",
+  "systems": {
+    "DEV": {
+      "name": "Development System",
+      "url": "https://dev-sap.example.com:443",
+      "client": "100",
+      "auth": {
+        "type": "basic",
+        "username": "${SAP_DEV_USERNAME}",
+        "password": "${SAP_DEV_PASSWORD}"
+      }
+    },
+    "QAS": {
+      "name": "Quality Assurance System",
+      "url": "https://qas-sap.example.com:443",
+      "client": "200",
+      "auth": {
+        "type": "sso",
+        "cookiePath": "./tmp/qas_cookies.json"
+      }
+    },
+    "PRD": {
+      "name": "Production System",
+      "url": "https://prd-sap.example.com:443",
+      "client": "300",
+      "auth": {
+        "type": "sso",
+        "cookiePath": "./tmp/prd_cookies.json"
+      }
+    }
+  }
+}

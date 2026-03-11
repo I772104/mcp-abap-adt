@@ -4,6 +4,8 @@ import { Agent } from 'https';
 import { AxiosResponse } from 'axios';
 import { getConfig, SapConfig } from '../index'; // getConfig needs to be exported from index.ts
 import { AuthProvider, createAuthProvider, CookieAuthProvider } from '../infrastructure/auth';
+import { SystemRegistry } from '../infrastructure/system';
+import { AuthProviderRegistry } from '../infrastructure/auth/AuthProviderRegistry';
 import * as path from 'path';
 
 export { McpError, ErrorCode, AxiosResponse };
@@ -170,7 +172,235 @@ export function getAuthProviderInstance(): AuthProvider {
     return authProvider;
 }
 
+// ============================================================================
+// Multi-System Support Functions
+// ============================================================================
+
+/**
+ * Get base URL for a specific system or the active system
+ */
+export async function getBaseUrlForSystem(systemId?: string): Promise<string> {
+    const registry = SystemRegistry.getInstance();
+    const system = registry.resolveSystem(systemId);
+
+    try {
+        const urlObj = new URL(system.url);
+        return urlObj.origin;
+    } catch (error) {
+        const errorMessage = `Invalid URL for system "${system.id}": ${error instanceof Error ? error.message : error}`;
+        throw new Error(errorMessage);
+    }
+}
+
+/**
+ * Get auth headers for a specific system or the active system
+ */
+export async function getAuthHeadersForSystem(systemId?: string): Promise<Record<string, string>> {
+    const registry = SystemRegistry.getInstance();
+    const authRegistry = AuthProviderRegistry.getInstance();
+
+    const system = registry.resolveSystem(systemId);
+    const provider = authRegistry.getProvider(system);
+
+    try {
+        return await provider.getAuthHeaders();
+    } catch (error) {
+        if (error instanceof Error && error.message === 'SSO_COOKIE_NOT_FOUND') {
+            throw new Error(
+                `🔒 Authentication Required for System "${system.id}"\n\n` +
+                    `System: ${system.name}\n` +
+                    `URL: ${system.url}\n` +
+                    `Client: ${system.client}\n\n` +
+                    'SSO Authentication (Recommended):\n' +
+                    '  1. Use sap-auth-mcp-main MCP server\n' +
+                    '  2. Call sap_authenticate tool with:\n' +
+                    `     entry_url: ${system.url}/sap/bc/adt?sap-client=${system.client}\n` +
+                    `     store_path: ${system.auth.cookiePath || 'tmp'}\n` +
+                    '  3. Restart MCP server: /mcp\n\n' +
+                    'Alternative - Basic Authentication (for dev/test):\n' +
+                    `  Update .sap-systems.json with credentials for "${system.id}"\n` +
+                    '  Then restart MCP server: /mcp'
+            );
+        }
+        throw error;
+    }
+}
+
+/**
+ * Fetch CSRF token for a specific system
+ */
+async function fetchCsrfTokenForSystem(url: string, systemId?: string): Promise<string> {
+    const registry = SystemRegistry.getInstance();
+    const authRegistry = AuthProviderRegistry.getInstance();
+
+    const system = registry.resolveSystem(systemId);
+    const provider = authRegistry.getProvider(system);
+    const baseUrl = await getBaseUrlForSystem(systemId);
+
+    console.error(`[CSRF] System "${system.id}": Fetching token using ${provider.getName()}`);
+
+    // Try multiple endpoints to fetch CSRF token
+    const csrfEndpoints = [
+        `${baseUrl}/sap/bc/adt/core/discovery`, // ADT discovery endpoint (most reliable)
+        `${baseUrl}/sap/bc/adt`, // ADT base endpoint
+        url, // Original URL as fallback
+    ];
+
+    for (const endpoint of csrfEndpoints) {
+        try {
+            const response = await createAxiosInstance()({
+                method: 'GET',
+                url: endpoint,
+                headers: {
+                    ...(await getAuthHeadersForSystem(systemId)),
+                    'x-csrf-token': 'fetch',
+                },
+                params: {
+                    'sap-client': system.client,
+                },
+            });
+
+            const token = response.headers['x-csrf-token'];
+            if (token) {
+                // Extract and store cookies per system
+                if (response.headers['set-cookie']) {
+                    const cookieStr = response.headers['set-cookie'].join('; ');
+                    authRegistry.setCookies(system.id, cookieStr);
+                }
+                return token;
+            }
+        } catch (error) {
+            // Even if the request fails, try to get token from error response
+            if (error instanceof AxiosError && error.response?.headers['x-csrf-token']) {
+                const token = error.response.headers['x-csrf-token'];
+                if (token) {
+                    // Extract and store cookies from the error response as well
+                    if (error.response.headers['set-cookie']) {
+                        const cookieStr = error.response.headers['set-cookie'].join('; ');
+                        authRegistry.setCookies(system.id, cookieStr);
+                    }
+                    return token;
+                }
+            }
+            // Continue to next endpoint if this one failed
+            console.error(
+                `[CSRF] System "${system.id}": Failed to fetch from ${endpoint}:`,
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+    }
+
+    throw new Error(`System "${system.id}": Failed to fetch CSRF token from any available endpoint`);
+}
+
+/**
+ * Make an ADT request to a specific system or the active system
+ */
+export async function makeAdtRequestForSystem(
+    url: string,
+    method: string,
+    timeout: number,
+    data?: any,
+    params?: any,
+    customHeaders?: any,
+    systemId?: string
+): Promise<AxiosResponse> {
+    const registry = SystemRegistry.getInstance();
+    const authRegistry = AuthProviderRegistry.getInstance();
+
+    const system = registry.resolveSystem(systemId);
+
+    // For POST/PUT requests, ensure we have a CSRF token
+    let token = authRegistry.getCsrfToken(system.id);
+    if ((method === 'POST' || method === 'PUT') && !token) {
+        try {
+            token = await fetchCsrfTokenForSystem(url, systemId);
+            authRegistry.setCsrfToken(system.id, token);
+        } catch (error) {
+            throw new Error(
+                `System "${system.id}": CSRF token is required for POST/PUT requests but could not be fetched`
+            );
+        }
+    }
+
+    const requestHeaders = {
+        ...(await getAuthHeadersForSystem(systemId)),
+    };
+
+    // Add CSRF token for POST/PUT requests
+    if ((method === 'POST' || method === 'PUT') && token) {
+        requestHeaders['x-csrf-token'] = token;
+    }
+
+    // Add custom headers if provided
+    if (customHeaders) {
+        Object.assign(requestHeaders, customHeaders);
+    }
+
+    // Add cookies if available
+    const systemCookies = authRegistry.getCookies(system.id);
+    if (systemCookies) {
+        requestHeaders['Cookie'] = systemCookies;
+    }
+
+    // Add SAP client as URL parameter (required for some SAP systems)
+    const requestParams = params || {};
+    requestParams['sap-client'] = system.client;
+
+    const requestConfig: any = {
+        method,
+        url,
+        headers: requestHeaders,
+        timeout,
+        params: requestParams,
+    };
+
+    // Include data in the request configuration if provided
+    if (data) {
+        requestConfig.data = data;
+    }
+
+    try {
+        // DEBUG: Log the URL being requested
+        console.error(`[DEBUG] System "${system.id}": Requesting ${method} ${url}`);
+        const response = await createAxiosInstance()(requestConfig);
+        return response;
+    } catch (error) {
+        // DEBUG: Log the error details
+        console.error(
+            `[DEBUG] System "${system.id}": Request failed: ${method} ${url}`,
+            error instanceof AxiosError
+                ? { status: error.response?.status, statusText: error.response?.statusText }
+                : error
+        );
+
+        // If we get a 403 with "CSRF token validation failed", try to fetch a new token and retry
+        if (error instanceof AxiosError && error.response?.status === 403 && error.response.data?.includes('CSRF')) {
+            token = await fetchCsrfTokenForSystem(url, systemId);
+            authRegistry.setCsrfToken(system.id, token);
+            requestConfig.headers['x-csrf-token'] = token;
+            return await createAxiosInstance()(requestConfig);
+        }
+        throw error;
+    }
+}
+
+// ============================================================================
+// Backward Compatible Wrappers (use default/active system)
+// ============================================================================
+
 export async function getBaseUrl() {
+    // Try new multi-system mode first
+    try {
+        const registry = SystemRegistry.getInstance();
+        if (registry.listSystems().length > 0) {
+            return getBaseUrlForSystem();
+        }
+    } catch {
+        // Registry not initialized, fall through to legacy mode
+    }
+
+    // Legacy single-system mode
     if (!config) {
         config = getConfig();
     }
@@ -185,6 +415,17 @@ export async function getBaseUrl() {
 }
 
 export async function getAuthHeaders() {
+    // Try new multi-system mode first
+    try {
+        const registry = SystemRegistry.getInstance();
+        if (registry.listSystems().length > 0) {
+            return getAuthHeadersForSystem();
+        }
+    } catch {
+        // Registry not initialized, fall through to legacy mode
+    }
+
+    // Legacy single-system mode
     try {
         const provider = getAuthProviderInstance();
         return await provider.getAuthHeaders();
@@ -207,6 +448,17 @@ export async function getAuthHeaders() {
 }
 
 async function fetchCsrfToken(url: string): Promise<string> {
+    // Try new multi-system mode first
+    try {
+        const registry = SystemRegistry.getInstance();
+        if (registry.listSystems().length > 0) {
+            return fetchCsrfTokenForSystem(url);
+        }
+    } catch {
+        // Registry not initialized, fall through to legacy mode
+    }
+
+    // Legacy single-system mode
     const baseUrl = await getBaseUrl();
 
     // Get SAP client for URL parameter
@@ -278,6 +530,17 @@ export async function makeAdtRequest(
     params?: any,
     customHeaders?: any
 ) {
+    // Try new multi-system mode first
+    try {
+        const registry = SystemRegistry.getInstance();
+        if (registry.listSystems().length > 0) {
+            return makeAdtRequestForSystem(url, method, timeout, data, params, customHeaders);
+        }
+    } catch {
+        // Registry not initialized, fall through to legacy mode
+    }
+
+    // Legacy single-system mode
     // For POST/PUT requests, ensure we have a CSRF token
     if ((method === 'POST' || method === 'PUT') && !csrfToken) {
         try {

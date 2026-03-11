@@ -52,13 +52,14 @@ A Model Context Protocol (MCP) server that provides AI coding assistants with di
 3. [Prerequisites](#prerequisites)
 4. [Installation and Setup](#installation-and-setup)
 5. [Authentication Guide](#authentication-guide)
-6. [LLM Access Setup (SAP Internal)](#llm-access-setup-sap-internal)
-7. [AI Agent Integration](#ai-agent-integration)
-8. [Available Tools & Resources](#available-tools--resources)
-9. [Running the Server Manually](#running-the-server-manually)
-10. [Docker Deployment](#docker-deployment)
-11. [Troubleshooting](#troubleshooting)
-12. [Contributing & Support](#contributing--support)
+6. [Multi-System Configuration](#multi-system-configuration)
+7. [LLM Access Setup (SAP Internal)](#llm-access-setup-sap-internal)
+8. [AI Agent Integration](#ai-agent-integration)
+9. [Available Tools & Resources](#available-tools--resources)
+10. [Running the Server Manually](#running-the-server-manually)
+11. [Docker Deployment](#docker-deployment)
+12. [Troubleshooting](#troubleshooting)
+13. [Contributing & Support](#contributing--support)
 
 ## Project Philosophy
 
@@ -85,6 +86,7 @@ This approach allows rapid iteration on MCP capabilities while delivering real v
 - 🧪 **Testing & Quality Assurance**: Execute unit tests, analyze coverage, validate syntax, and find object usages
 - 🏗️ **Class Management**: Create, modify, activate, and delete ABAP classes directly from your AI assistant
 - 📊 **RAP BO Analysis**: Comprehensive analysis of RAP Business Objects via cacheable MCP resources
+- 🌐 **Multi-System Support**: Configure and work with multiple SAP systems (DEV, QAS, PRD) simultaneously with easy system switching
 - 🤖 **AI Agent Ready**: Optimized for Cline, Claude Code CLI, Cursor, OpenCode, and other MCP-compatible clients
 - ☁️ **ABAP Cloud Compliant**: Built-in guidance for ABAP Cloud (Tier 1) development standards
 
@@ -113,10 +115,15 @@ cd mcp-abap-adt
 npm install && npm run build
 
 # 3. Configure SAP connection
+# Single system (simple):
 cat > .env << EOF
 SAP_URL=https://your-sap-system.com:8000
 SAP_CLIENT=100
 EOF
+
+# Multiple systems (advanced):
+# Copy .sap-systems.example.json to .sap-systems.json and configure
+# See docs/multi-system-configuration.md for details
 
 # 4. Authenticate with SAP
 #    See docs/Authentication.md for detailed guide
@@ -262,6 +269,51 @@ The guide covers:
 - Security best practices
 - Troubleshooting authentication issues
 - CSRF token handling
+
+## Multi-System Configuration
+
+Want to work with multiple SAP systems (DEV, QAS, PRD) simultaneously? The server supports configuring multiple systems in a single configuration file with easy system switching.
+
+📚 **[Multi-System Configuration Guide](docs/multi-system-configuration.md)**
+
+**Quick example:**
+
+Create `.sap-systems.json` in the project root:
+
+```json
+{
+  "version": "1.0",
+  "default": "DEV",
+  "systems": {
+    "DEV": {
+      "name": "Development",
+      "url": "https://dev-sap.example.com:443",
+      "client": "100",
+      "auth": { "type": "basic", "username": "${SAP_DEV_USER}", "password": "${SAP_DEV_PASS}" }
+    },
+    "QAS": {
+      "name": "Quality",
+      "url": "https://qas-sap.example.com:443",
+      "client": "200",
+      "auth": { "type": "sso", "cookiePath": "./tmp/qas_cookies.json" }
+    }
+  }
+}
+```
+
+**Key features:**
+- Configure multiple systems with different authentication methods
+- Set a default system and switch between them at runtime
+- Use `system` parameter on any tool to target a specific system
+- Supports both Basic Auth and SSO per system
+- Environment variable interpolation with `${ENV_VAR}` syntax
+
+**New tools:**
+- `ListSystems` - View all configured systems
+- `SetDefaultSystem` - Change the active system
+- `GetSystemInfo` - Shows multi-system configuration and status
+
+See the [complete guide](docs/multi-system-configuration.md) for configuration details, examples, and troubleshooting.
 
 ## LLM Access Setup (SAP Internal)
 
