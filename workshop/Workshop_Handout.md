@@ -118,15 +118,17 @@ Choose one or more MCP servers to extend Claude's capabilities. You can add more
    {
      "mcpServers": {
        "mcp-abap-adt": {
-         "command": "node",
-         "args": ["C:/Users/<username>/SAPDevelop/mcp-abap-adt/dist/index.js"],
-         "disabled": false
+         "command": "cmd",
+         "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+         "type": "stdio"
        }
      }
    }
    ```
 
-   **Replace** `<username>` with your actual Windows username!
+   **Important Notes:**
+   - Use double backslashes (`\\`) in the path or forward slashes (`/`)
+   - Replace `<username>` with your actual Windows username
 
 4. **Restart Claude Code** to load the MCP server
 
@@ -225,9 +227,9 @@ You can use all three MCP servers together! Here's the complete config:
 {
   "mcpServers": {
     "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/Users/<username>/SAPDevelop/mcp-abap-adt/dist/index.js"],
-      "disabled": false
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+      "type": "stdio"
     },
     "sap-auth-mcp": {
       "command": "cmd",
@@ -248,6 +250,8 @@ You can use all three MCP servers together! Here's the complete config:
   }
 }
 ```
+
+**Note:** Replace `<username>` with your actual Windows username in all paths.
 
 ---
 

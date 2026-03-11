@@ -90,13 +90,15 @@ SAP_PASSWORD=your_password
 {
   "mcpServers": {
     "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/full/path/to/mcp-abap-adt/dist/index.js"],
-      "disabled": false
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+      "type": "stdio"
     }
   }
 }
 ```
+
+**Note:** Use double backslashes (`\\`) in the path or forward slashes (`/`). Replace `<username>` with your Windows username.
 
 **Example prompts:**
 - "Show me class ZCL_MY_CLASS"
@@ -162,9 +164,9 @@ SAP_PASSWORD=your_password
 {
   "mcpServers": {
     "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-abap-adt/dist/index.js"],
-      "disabled": false
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+      "type": "stdio"
     },
     "sap-auth-mcp": {
       "command": "cmd",
@@ -178,13 +180,15 @@ SAP_PASSWORD=your_password
       "command": "cmd",
       "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
       "env": {
-        "AUTH_COOKIE_DIR": "C:/Users/YourUsername/tmp"
+        "AUTH_COOKIE_DIR": "C:/Users/<username>/tmp"
       },
       "type": "stdio"
     }
   }
 }
 ```
+
+**Note:** Replace `<username>` with your actual Windows username in all paths.
 
 ---
 

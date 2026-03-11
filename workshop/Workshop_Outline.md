@@ -65,12 +65,14 @@ SAP_PASSWORD=your_password
 # Add to ~/.claude.json mcpServers section
 {
   "mcp-abap-adt": {
-    "command": "node",
-    "args": ["C:/path/to/mcp-abap-adt/dist/index.js"],
-    "disabled": false
+    "command": "cmd",
+    "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+    "type": "stdio"
   }
 }
 ```
+
+**Note:** Use double backslashes (`\\`) or forward slashes (`/`) in paths. Replace `<username>` with actual Windows username.
 
 **Demo:** "Show me class ZCL_EXAMPLE_CLASS"
 

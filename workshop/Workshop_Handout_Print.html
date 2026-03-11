@@ -307,15 +307,19 @@ SAP_PASSWORD=your_password</code></pre>
 <pre><code>{
   "mcpServers": {
     "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/Users/&lt;username&gt;/SAPDevelop/mcp-abap-adt/dist/index.js"],
-      "disabled": false
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\&lt;username&gt;\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+      "type": "stdio"
     }
   }
 }</code></pre>
 
 <div class="warning">
-<strong>Replace</strong> <code>&lt;username&gt;</code> with your actual Windows username!
+<strong>Important Notes:</strong>
+<ul>
+<li>Use double backslashes (<code>\\</code>) in the path or forward slashes (<code>/</code>)</li>
+<li>Replace <code>&lt;username&gt;</code> with your actual Windows username</li>
+</ul>
 </div>
 
 <p><strong>4. Restart Claude Code</strong> to load the MCP server</p>
@@ -412,9 +416,9 @@ Find wiki pages about RAP development</code></pre>
 <pre><code>{
   "mcpServers": {
     "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/Users/&lt;username&gt;/SAPDevelop/mcp-abap-adt/dist/index.js"],
-      "disabled": false
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\&lt;username&gt;\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
+      "type": "stdio"
     },
     "sap-auth-mcp": {
       "command": "cmd",
@@ -434,6 +438,8 @@ Find wiki pages about RAP development</code></pre>
     }
   }
 }</code></pre>
+
+<p><strong>Note:</strong> Replace <code>&lt;username&gt;</code> with your actual Windows username in all paths.</p>
 
 <hr class="page-break">
 
