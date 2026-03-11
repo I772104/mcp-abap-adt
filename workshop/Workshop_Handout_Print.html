@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Claude Code & MCP Workshop - Participant Handout</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm 2cm;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-size: 10pt;
+        }
+
+        h1 {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            font-size: 24pt;
+            page-break-after: avoid;
+        }
+
+        h2 {
+            color: #0066cc;
+            margin-top: 20px;
+            font-size: 16pt;
+            page-break-after: avoid;
+        }
+
+        h3 {
+            color: #333;
+            margin-top: 15px;
+            font-size: 13pt;
+            page-break-after: avoid;
+        }
+
+        h4 {
+            color: #555;
+            margin-top: 10px;
+            font-size: 11pt;
+            page-break-after: avoid;
+        }
+
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 9pt;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 12px;
+            overflow-x: auto;
+            page-break-inside: avoid;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 8.5pt;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        blockquote {
+            border-left: 4px solid #0066cc;
+            margin-left: 0;
+            padding-left: 15px;
+            color: #666;
+            font-style: italic;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+            page-break-inside: avoid;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        table th {
+            background-color: #0066cc;
+            color: white;
+            font-weight: bold;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            page-break-inside: avoid;
+        }
+
+        .checkpoint {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+            page-break-inside: avoid;
+        }
+
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 10px;
+            margin: 10px 0;
+            page-break-inside: avoid;
+        }
+
+        hr {
+            border: none;
+            border-top: 2px solid #ddd;
+            margin: 20px 0;
+        }
+
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+
+        .header-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .header-info strong {
+            display: inline-block;
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Claude Code & MCP Workshop - Participant Handout</h1>
+<h2>AI-Assisted ABAP Development at SAP</h2>
+
+<div class="header-info">
+    <p><strong>Workshop Date:</strong> _____________</p>
+    <p><strong>Instructor:</strong> _____________</p>
+    <p><strong>Duration:</strong> 30 minutes</p>
+</div>
+
+<hr>
+
+<h2>What You'll Learn Today</h2>
+
+<p>This workshop introduces you to Claude Code CLI, Anthropic's official AI coding assistant approved for productive use at SAP. You'll learn how to set up the core tools and optionally extend them with MCP (Model Context Protocol) servers for SAP-specific integrations.</p>
+
+<h3>Key Concepts</h3>
+
+<div class="info-box">
+<p><strong>Claude Code CLI</strong>: A command-line AI assistant for conversational software development</p>
+<ul>
+<li>Approved for productive use at SAP with Hyperspace LLM Proxy</li>
+<li>Works with your files and folders</li>
+<li>Understands context and can make code changes</li>
+</ul>
+</div>
+
+<div class="info-box">
+<p><strong>MCP (Model Context Protocol)</strong>: Open standard for connecting AI assistants to data sources</p>
+<ul>
+<li>Think of it as "plugins" for AI coding assistants</li>
+<li>Extends Claude's capabilities with SAP system access</li>
+<li>Optional but powerful additions</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Part 1: Core Setup (Required for Everyone)</h2>
+
+<h3>Step 1: Install Hyperspace LLM Proxy</h3>
+
+<p>The Hyperspace LLM Proxy provides LLM access for Claude Code at SAP.</p>
+
+<h4>Installation</h4>
+<ol>
+<li>Visit: <a href="https://pages.github.tools.sap/hAIperspace/hai-docs/">https://pages.github.tools.sap/hAIperspace/hai-docs/</a></li>
+<li>Follow installation instructions for <code>hai CLI</code></li>
+<li>Verify installation:</li>
+</ol>
+
+<pre><code>hai --version</code></pre>
+
+<h4>Configure Claude Code</h4>
+<ol>
+<li>Find the specific guide: <a href="https://pages.github.tools.sap/hAIperspace/hai-docs/llm-proxy/recipes/claude/">Claude Code Configuration</a></li>
+<li>Follow configuration steps to edit <code>~/.claude.json</code></li>
+<li>Test the proxy:</li>
+</ol>
+
+<pre><code># Terminal 1: Start proxy
+hai proxy start
+
+# Terminal 2: Launch Claude Code
+claude</code></pre>
+
+<div class="checkpoint">
+<strong>✅ Checkpoint:</strong> You should see Claude Code start successfully and respond to basic questions.
+</div>
+
+<hr>
+
+<h3>Step 2: Your First Claude Code Interaction</h3>
+
+<h4>Starting Claude Code</h4>
+<pre><code># Navigate to your project folder
+cd C:\path\to\your\project
+
+# Start Claude Code
+claude</code></pre>
+
+<h4>Try These Commands</h4>
+<pre><code># In Claude Code session:
+What version of Node.js am I running?
+List the files in the current directory
+Show me the README file</code></pre>
+
+<h4>Exiting Claude Code</h4>
+<ul>
+<li>Type: <code>exit</code></li>
+<li>Or press: <code>Ctrl+C</code></li>
+</ul>
+
+<div class="checkpoint">
+<strong>✅ Checkpoint:</strong> Claude Code responds to your queries and can read files.
+</div>
+
+<hr class="page-break">
+
+<h2>Part 2: Optional MCP Server Setup</h2>
+
+<p>Choose one or more MCP servers to extend Claude's capabilities. You can add more later!</p>
+
+<h3>Option A: mcp-abap-adt (ABAP Development Tools)</h3>
+
+<div class="info-box">
+<strong>What it does:</strong> Allows Claude to read ABAP code, run tests, check transports, and more.
+</div>
+
+<h4>Setup Steps</h4>
+
+<p><strong>1. Clone and build</strong> (one-time setup):</p>
+<pre><code>cd C:\Users\&lt;username&gt;\SAPDevelop
+git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+cd mcp-abap-adt
+npm install
+npm run build</code></pre>
+
+<p><strong>2. Configure SAP connection:</strong></p>
+<p>Create <code>.env</code> file in <code>mcp-abap-adt</code> folder:</p>
+<pre><code>SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=100
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password</code></pre>
+
+<div class="warning">
+<strong>⚠️ Important:</strong> Keep this file secure, never commit to Git!
+</div>
+
+<p><strong>3. Add to Claude Code config:</strong></p>
+<p>Edit <code>~/.claude.json</code> (Windows: <code>C:\Users\&lt;username&gt;\.claude.json</code>):</p>
+<pre><code>{
+  "mcpServers": {
+    "mcp-abap-adt": {
+      "command": "node",
+      "args": ["C:/Users/&lt;username&gt;/SAPDevelop/mcp-abap-adt/dist/index.js"],
+      "disabled": false
+    }
+  }
+}</code></pre>
+
+<div class="warning">
+<strong>Replace</strong> <code>&lt;username&gt;</code> with your actual Windows username!
+</div>
+
+<p><strong>4. Restart Claude Code</strong> to load the MCP server</p>
+
+<h4>Testing</h4>
+<p>Try these prompts in Claude Code:</p>
+<pre><code>Search for ABAP objects starting with Z*
+Show me class ZCL_YOUR_CLASS
+Get the transport history for ZCL_YOUR_CLASS</code></pre>
+
+<div class="checkpoint">
+<strong>✅ Checkpoint:</strong> Claude can access your SAP system and retrieve ABAP code.
+</div>
+
+<hr>
+
+<h3>Option B: sap-auth-mcp (SAP Authentication Helper)</h3>
+
+<div class="info-box">
+<strong>What it does:</strong> Handles SSO authentication for SAP systems with complex login flows.
+</div>
+
+<h4>Setup Steps</h4>
+
+<p><strong>1. Add to Claude Code config:</strong></p>
+<p>Edit <code>~/.claude.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "sap-auth-mcp": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
+      "env": {
+        "SAP_AUTH_ACCOUNT": "your.email@sap.com"
+      },
+      "type": "stdio"
+    }
+  }
+}</code></pre>
+
+<p><strong>2. Restart Claude Code</strong></p>
+
+<h4>Testing</h4>
+<pre><code>Authenticate with SAP system at https://your-sap-system.com:8000/sap/bc/adt?sap-client=100</code></pre>
+
+<div class="checkpoint">
+<strong>✅ Checkpoint:</strong> Claude opens browser for authentication and saves cookies.
+</div>
+
+<hr class="page-break">
+
+<h3>Option C: sap-wiki (SAP Wiki Search)</h3>
+
+<div class="info-box">
+<strong>What it does:</strong> Searches and retrieves content from SAP's internal Wiki.
+</div>
+
+<h4>Setup Steps</h4>
+
+<p><strong>1. Create cookie storage folder:</strong></p>
+<pre><code>mkdir C:\Users\&lt;username&gt;\tmp</code></pre>
+
+<p><strong>2. Add to Claude Code config:</strong></p>
+<p>Edit <code>~/.claude.json</code>:</p>
+<pre><code>{
+  "mcpServers": {
+    "sap-wiki": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
+      "env": {
+        "AUTH_COOKIE_DIR": "C:/Users/&lt;username&gt;/tmp"
+      },
+      "type": "stdio"
+    }
+  }
+}</code></pre>
+
+<p><strong>3. Restart Claude Code</strong></p>
+
+<h4>Testing</h4>
+<pre><code>Search SAP Wiki for "ABAP Cloud best practices"
+Find wiki pages about RAP development</code></pre>
+
+<div class="checkpoint">
+<strong>✅ Checkpoint:</strong> Claude can search and retrieve Wiki content.
+</div>
+
+<hr>
+
+<h2>Combining Multiple MCP Servers</h2>
+
+<p>You can use all three MCP servers together! Here's the complete config:</p>
+
+<p><strong>~/.claude.json</strong>:</p>
+<pre><code>{
+  "mcpServers": {
+    "mcp-abap-adt": {
+      "command": "node",
+      "args": ["C:/Users/&lt;username&gt;/SAPDevelop/mcp-abap-adt/dist/index.js"],
+      "disabled": false
+    },
+    "sap-auth-mcp": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
+      "env": {
+        "SAP_AUTH_ACCOUNT": "your.email@sap.com"
+      },
+      "type": "stdio"
+    },
+    "sap-wiki": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
+      "env": {
+        "AUTH_COOKIE_DIR": "C:/Users/&lt;username&gt;/tmp"
+      },
+      "type": "stdio"
+    }
+  }
+}</code></pre>
+
+<hr class="page-break">
+
+<h2>Troubleshooting</h2>
+
+<h3>Common Issues</h3>
+
+<h4>1. "hai command not found"</h4>
+<p><strong>Solution:</strong> Reinstall hai CLI, check PATH environment variable</p>
+
+<h4>2. Claude Code doesn't start</h4>
+<ul>
+<li><strong>Check:</strong> <code>claude --version</code> works</li>
+<li><strong>Check:</strong> <code>~/.claude.json</code> has valid JSON syntax (use <a href="https://jsonlint.com/">jsonlint.com</a>)</li>
+<li><strong>Try:</strong> Comment out MCP servers temporarily to isolate issue</li>
+</ul>
+
+<h4>3. MCP server not loading</h4>
+<ul>
+<li><strong>Check:</strong> Absolute paths in config (not relative paths like <code>./</code> or <code>../</code>)</li>
+<li><strong>For mcp-abap-adt:</strong> Run <code>npm run build</code> again in project folder</li>
+<li><strong>Check:</strong> Windows username is correct in paths</li>
+</ul>
+
+<h4>4. SAP connection fails (mcp-abap-adt)</h4>
+<ul>
+<li><strong>Check:</strong> <code>.env</code> file exists in <code>mcp-abap-adt</code> folder</li>
+<li><strong>Check:</strong> SAP_URL, SAP_CLIENT, credentials are correct</li>
+<li><strong>Check:</strong> SAP system is accessible (try in browser)</li>
+<li><strong>Check:</strong> ADT services active (transaction <code>SICF</code>, path <code>/sap/bc/adt</code>)</li>
+</ul>
+
+<h4>5. "hai proxy not running"</h4>
+<p><strong>Solution:</strong></p>
+<pre><code>hai proxy start
+# Keep this terminal open
+# Open new terminal for Claude Code
+claude</code></pre>
+
+<hr>
+
+<h2>Best Practices</h2>
+
+<h3>Security</h3>
+<ul>
+<li>✅ Use <code>.env</code> files for credentials (never commit to Git)</li>
+<li>✅ Keep <code>~/.claude.json</code> secure</li>
+<li>✅ Use Basic Auth for dev/test, SSO for production systems</li>
+<li>❌ Don't share credentials in chat or commits</li>
+</ul>
+
+<h3>Workflow</h3>
+<ol>
+<li>Start <code>hai proxy start</code> (keep running)</li>
+<li>Open new terminal</li>
+<li>Navigate to project: <code>cd /path/to/project</code></li>
+<li>Start Claude: <code>claude</code></li>
+<li>Work with AI assistant</li>
+</ol>
+
+<h3>Effective Prompts</h3>
+<ul>
+<li><strong>Be specific:</strong> "Show me class ZCL_MY_CLASS" vs "Show me code"</li>
+<li><strong>Ask for context:</strong> "Explain what this class does"</li>
+<li><strong>Request actions:</strong> "Run unit tests for this class"</li>
+<li><strong>Iterate:</strong> Build on previous responses, ask follow-up questions</li>
+</ul>
+
+<hr class="page-break">
+
+<h2>Next Steps</h2>
+
+<h3>After the Workshop</h3>
+<ol>
+<li><strong>Practice</strong> with basic Claude Code commands</li>
+<li><strong>Install one MCP server</strong> that matches your workflow</li>
+<li><strong>Try real work tasks</strong> - start simple, build confidence</li>
+<li><strong>Share learnings</strong> with your team</li>
+</ol>
+
+<h3>Learning Resources</h3>
+<ul>
+<li><strong>Hyperspace Docs:</strong> <a href="https://pages.github.tools.sap/hAIperspace/hai-docs/">https://pages.github.tools.sap/hAIperspace/hai-docs/</a></li>
+<li><strong>mcp-abap-adt GitHub:</strong> <a href="https://github.tools.sap/D020426/mcp-abap-adt">https://github.tools.sap/D020426/mcp-abap-adt</a>
+  <ul>
+    <li>Full documentation in <code>docs/</code> folder</li>
+    <li>Examples and use cases</li>
+    <li>Report issues or suggest features</li>
+  </ul>
+</li>
+<li><strong>MCP Protocol:</strong> <a href="https://modelcontextprotocol.io/">https://modelcontextprotocol.io/</a></li>
+<li><strong>Claude API Docs:</strong> <a href="https://docs.anthropic.com/claude">https://docs.anthropic.com/claude</a></li>
+</ul>
+
+<h3>Get Help</h3>
+<ol>
+<li>Check documentation (links above)</li>
+<li>GitHub Issues for mcp-abap-adt: <a href="https://github.tools.sap/D020426/mcp-abap-adt/issues">github.tools.sap/D020426/mcp-abap-adt/issues</a></li>
+<li>Ask colleagues who use Claude Code</li>
+<li>Hyperspace support for LLM proxy issues</li>
+</ol>
+
+<hr>
+
+<h2>Workshop Checklist</h2>
+
+<h3>✅ I completed:</h3>
+<ul style="list-style-type: none;">
+<li>☐ Installed hai CLI</li>
+<li>☐ Configured Hyperspace LLM Proxy</li>
+<li>☐ Installed Claude Code CLI</li>
+<li>☐ Had first successful Claude Code interaction</li>
+<li>☐ (Optional) Installed mcp-abap-adt</li>
+<li>☐ (Optional) Installed sap-auth-mcp</li>
+<li>☐ (Optional) Installed sap-wiki</li>
+<li>☐ Tested at least one MCP server</li>
+<li>☐ Understand how to get help</li>
+</ul>
+
+<h3>📝 My Notes:</h3>
+<div style="border: 1px solid #ddd; padding: 15px; min-height: 150px; background-color: #fafafa;">
+<p>_________________________________________________________________</p>
+<p>_________________________________________________________________</p>
+<p>_________________________________________________________________</p>
+<p>_________________________________________________________________</p>
+<p>_________________________________________________________________</p>
+</div>
+
+<hr>
+
+<h2>Quick Command Reference</h2>
+
+<pre><code># Hyperspace proxy
+hai proxy start        # Start proxy (required)
+hai proxy status       # Check status
+hai proxy stop         # Stop proxy
+
+# Claude Code
+claude                 # Start Claude Code
+exit                   # Exit (or Ctrl+C)
+
+# Inside Claude Code
+/help                  # Show help
+/model                 # Switch AI model
+/clear                 # Clear history
+
+# MCP server rebuild (if needed)
+cd mcp-abap-adt
+npm run build</code></pre>
+
+<hr>
+
+<div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;">
+<p><strong>Questions?</strong> Ask the instructor or check the resources above!</p>
+<p style="font-size: 14pt; color: #0066cc;"><strong>Workshop complete! 🎉 Now go build something amazing with AI assistance!</strong></p>
+</div>
+
+<div class="no-print" style="text-align: center; margin-top: 30px; padding: 20px; background-color: #fff3cd; border-radius: 5px;">
+<p><strong>To print this handout:</strong> Use your browser's Print function (Ctrl+P) and select "Save as PDF" or print to paper.</p>
+</div>
+
+</body>
+</html>
