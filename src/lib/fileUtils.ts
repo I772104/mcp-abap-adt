@@ -2,10 +2,45 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { McpError, ErrorCode } from './utils';
 
-// Constants
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 export const TMP_DIR_NAME = 'tmp';
-export const ABAP_FILE_EXTENSION = '.abap';
+
+/**
+ * Standard ABAP object type file extensions
+ * Based on abapGit and Eclipse ADT conventions
+ */
+export const ABAP_FILE_EXTENSIONS = {
+    // Legacy/generic extension
+    ABAP: '.abap',
+
+    // ABAP OO Objects
+    CLASS: '.clas.abap',
+    INTERFACE: '.intf.abap',
+
+    // Programs and Includes
+    PROGRAM: '.prog.abap',
+    FUNCTION_GROUP: '.fugr.abap',
+
+    // CDS and RAP Objects
+    CDS_DDL: '.ddls.asddls',           // Data Definition Language Source
+    CDS_DCL: '.dcls.asdcls',           // Data Control Language Source (Access Control)
+    CDS_METADATA_EXT: '.ddlx.asddlxs', // Metadata Extension
+    BEHAVIOR_DEF: '.bdef.asbdef',       // Behavior Definition
+} as const;
+
+/**
+ * @deprecated Use ABAP_FILE_EXTENSIONS.ABAP or specific type extensions instead
+ */
+export const ABAP_FILE_EXTENSION = ABAP_FILE_EXTENSIONS.ABAP;
+
+/**
+ * ABAP object name constraints
+ */
 export const ABAP_CLASS_NAME_MAX_LENGTH = 30;
+export const ABAP_SQL_VIEW_NAME_MAX_LENGTH = 16;
 
 /**
  * File metadata interface
@@ -19,13 +54,34 @@ export interface FileMetadata {
 }
 
 /**
- * Class name conversion result
+ * Name conversion result for any ABAP object
  */
-export interface ClassNameConversionResult {
-    zClassName: string;
+export interface ObjectNameConversionResult {
+    zObjectName: string;
     wasConverted: boolean;
     wasTruncated: boolean;
 }
+
+/**
+ * @deprecated Use ObjectNameConversionResult instead
+ */
+export interface ClassNameConversionResult extends ObjectNameConversionResult {
+    /** @deprecated Use zObjectName instead */
+    zClassName: string;
+}
+
+/**
+ * Supported ABAP object types for file operations
+ */
+export type AbapObjectType =
+    | 'CLAS'  // Class
+    | 'INTF'  // Interface
+    | 'PROG'  // Program
+    | 'FUGR'  // Function Group
+    | 'DDLS'  // CDS DDL Source
+    | 'DCLS'  // CDS Access Control
+    | 'DDLX'  // CDS Metadata Extension
+    | 'BDEF'; // Behavior Definition
 
 /**
  * Get tmp directory path
@@ -48,9 +104,63 @@ export function ensureTmpDir(): void {
 
 /**
  * Build ABAP file name with extension
+ * @deprecated Use buildObjectFileName with object type instead
  */
 export function buildAbapFileName(className: string): string {
-    return `${className}${ABAP_FILE_EXTENSION}`;
+    return `${className}${ABAP_FILE_EXTENSIONS.ABAP}`;
+}
+
+/**
+ * Get file extension for a specific ABAP object type
+ */
+export function getFileExtensionForType(objectType: AbapObjectType): string {
+    switch (objectType) {
+        case 'CLAS':
+            return ABAP_FILE_EXTENSIONS.CLASS;
+        case 'INTF':
+            return ABAP_FILE_EXTENSIONS.INTERFACE;
+        case 'PROG':
+            return ABAP_FILE_EXTENSIONS.PROGRAM;
+        case 'FUGR':
+            return ABAP_FILE_EXTENSIONS.FUNCTION_GROUP;
+        case 'DDLS':
+            return ABAP_FILE_EXTENSIONS.CDS_DDL;
+        case 'DCLS':
+            return ABAP_FILE_EXTENSIONS.CDS_DCL;
+        case 'DDLX':
+            return ABAP_FILE_EXTENSIONS.CDS_METADATA_EXT;
+        case 'BDEF':
+            return ABAP_FILE_EXTENSIONS.BEHAVIOR_DEF;
+        default:
+            return ABAP_FILE_EXTENSIONS.ABAP;
+    }
+}
+
+/**
+ * Build object file name with correct extension based on object type
+ */
+export function buildObjectFileName(objectName: string, objectType: AbapObjectType): string {
+    const extension = getFileExtensionForType(objectType);
+    return `${objectName}${extension}`;
+}
+
+/**
+ * Extract object name from file name (strips any known ABAP extension)
+ */
+export function extractObjectNameFromFile(filePath: string): string {
+    const fileName = path.basename(filePath);
+
+    // Try to match against known extensions (longest first to handle double extensions)
+    const extensions = Object.values(ABAP_FILE_EXTENSIONS).sort((a, b) => b.length - a.length);
+
+    for (const ext of extensions) {
+        if (fileName.toLowerCase().endsWith(ext.toLowerCase())) {
+            return fileName.substring(0, fileName.length - ext.length).toUpperCase();
+        }
+    }
+
+    // Fallback: no extension found
+    return fileName.toUpperCase();
 }
 
 /**
@@ -65,6 +175,7 @@ export function convertToZClassName(className: string): ClassNameConversionResul
     if (upperClassName.startsWith('Z') || upperClassName.startsWith('Y')) {
         return {
             zClassName: upperClassName.substring(0, ABAP_CLASS_NAME_MAX_LENGTH),
+            zObjectName: upperClassName.substring(0, ABAP_CLASS_NAME_MAX_LENGTH),
             wasConverted: false,
             wasTruncated: upperClassName.length > ABAP_CLASS_NAME_MAX_LENGTH,
         };
@@ -92,9 +203,113 @@ export function convertToZClassName(className: string): ClassNameConversionResul
 
     return {
         zClassName,
+        zObjectName: zClassName,
         wasConverted: true,
         wasTruncated,
     };
+}
+
+/**
+ * Convert standard SAP CDS view names to Z-prefixed versions
+ * Examples: I_Material → ZI_Material, C_SalesOrder → ZC_SalesOrder
+ * Preserves suffixes like TP, VH, etc.
+ * Ensures name stays within ABAP's 30-character limit
+ */
+export function convertToZCDSViewName(viewName: string): ObjectNameConversionResult {
+    const upperViewName = viewName.toUpperCase();
+
+    // Check if already Z or Y prefixed
+    if (upperViewName.startsWith('Z') || upperViewName.startsWith('Y')) {
+        return {
+            zObjectName: upperViewName.substring(0, ABAP_CLASS_NAME_MAX_LENGTH),
+            wasConverted: false,
+            wasTruncated: upperViewName.length > ABAP_CLASS_NAME_MAX_LENGTH,
+        };
+    }
+
+    // Detect CDS view prefixes: I_, C_, A_, R_, P_, E_ (single letter + underscore)
+    const prefixMatch = upperViewName.match(/^([A-Z])_(.+)$/);
+
+    let zViewName: string;
+    if (prefixMatch) {
+        // Has CDS prefix like I_, C_, A_, R_, etc.
+        const prefix = prefixMatch[1];
+        const rest = prefixMatch[2];
+        zViewName = `Z${prefix}_${rest}`;
+    } else {
+        // No standard prefix, just add Z_
+        zViewName = `Z_${upperViewName}`;
+    }
+
+    // Truncate to 30 characters if needed
+    const wasTruncated = zViewName.length > ABAP_CLASS_NAME_MAX_LENGTH;
+    if (wasTruncated) {
+        zViewName = zViewName.substring(0, ABAP_CLASS_NAME_MAX_LENGTH);
+    }
+
+    return {
+        zObjectName: zViewName,
+        wasConverted: true,
+        wasTruncated,
+    };
+}
+
+/**
+ * Convert SQL view name (used in @AbapCatalog.sqlViewName annotation)
+ * SQL view names are limited to 16 characters
+ * Examples: IMATERIAL → ZIMATERIAL, ISALESORDER → ZISALORDER (truncated)
+ */
+export function convertToZSQLViewName(sqlViewName: string): ObjectNameConversionResult {
+    const upperSQLViewName = sqlViewName.toUpperCase();
+
+    // Check if already Z or Y prefixed
+    if (upperSQLViewName.startsWith('Z') || upperSQLViewName.startsWith('Y')) {
+        return {
+            zObjectName: upperSQLViewName.substring(0, ABAP_SQL_VIEW_NAME_MAX_LENGTH),
+            wasConverted: false,
+            wasTruncated: upperSQLViewName.length > ABAP_SQL_VIEW_NAME_MAX_LENGTH,
+        };
+    }
+
+    // Add Z prefix
+    let zSQLViewName = `Z${upperSQLViewName}`;
+
+    // Truncate to 16 characters if needed (aggressive for SQL views)
+    const wasTruncated = zSQLViewName.length > ABAP_SQL_VIEW_NAME_MAX_LENGTH;
+    if (wasTruncated) {
+        zSQLViewName = zSQLViewName.substring(0, ABAP_SQL_VIEW_NAME_MAX_LENGTH);
+    }
+
+    return {
+        zObjectName: zSQLViewName,
+        wasConverted: true,
+        wasTruncated,
+    };
+}
+
+/**
+ * Generic object name converter based on object type
+ */
+export function convertToZObjectName(
+    objectName: string,
+    objectType: AbapObjectType
+): ObjectNameConversionResult {
+    switch (objectType) {
+        case 'CLAS':
+        case 'INTF':
+        case 'PROG':
+        case 'FUGR':
+            return convertToZClassName(objectName);
+
+        case 'DDLS':
+        case 'DCLS':
+        case 'DDLX':
+        case 'BDEF':
+            return convertToZCDSViewName(objectName);
+
+        default:
+            return convertToZClassName(objectName);
+    }
 }
 
 /**
@@ -171,14 +386,15 @@ export function resolveAbapFilePath(filePathOrName: string): string {
 
 /**
  * Extract class name from file name
+ * @deprecated Use extractObjectNameFromFile instead
  */
 export function extractClassNameFromFile(filePath: string): string {
-    const fileName = path.basename(filePath, ABAP_FILE_EXTENSION);
-    return fileName.toUpperCase();
+    return extractObjectNameFromFile(filePath);
 }
 
 /**
  * Write ABAP source file to tmp folder
+ * @deprecated Use writeObjectSourceFile with object type for proper file extension
  */
 export function writeAbapSourceFile(
     className: string,
@@ -202,6 +418,36 @@ export function writeAbapSourceFile(
         throw new McpError(
             ErrorCode.InternalError,
             `Failed to write ABAP source file for class ${className}: ${error.message}`
+        );
+    }
+}
+
+/**
+ * Write ABAP object source file to tmp folder with proper extension
+ */
+export function writeObjectSourceFile(
+    objectName: string,
+    objectType: AbapObjectType,
+    sourceCode: string
+): { filePath: string; metadata: FileMetadata } {
+    try {
+        ensureTmpDir();
+
+        const fileName = buildObjectFileName(objectName, objectType);
+        const filePath = path.join(getTmpDir(), fileName);
+
+        fs.writeFileSync(filePath, sourceCode, 'utf-8');
+
+        const metadata = getFileMetadata(filePath, sourceCode);
+
+        return { filePath, metadata };
+    } catch (error: any) {
+        if (error instanceof McpError) {
+            throw error;
+        }
+        throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to write ${objectType} source file for ${objectName}: ${error.message}`
         );
     }
 }

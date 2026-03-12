@@ -58,6 +58,13 @@ import { handleGetTransportVersions } from './handlers/handleGetTransportVersion
 import { handleCompareObjectVersions } from './handlers/handleCompareObjectVersions';
 import { handleExportClassToFile } from './handlers/handleExportClassToFile';
 import { handleImportClassFromFile } from './handlers/handleImportClassFromFile';
+import { handleExportCDSViewToFile } from './handlers/handleExportCDSViewToFile';
+import { handleExportInterfaceToFile } from './handlers/handleExportInterfaceToFile';
+import { handleExportProgramToFile } from './handlers/handleExportProgramToFile';
+import { handleExportFunctionGroupToFile } from './handlers/handleExportFunctionGroupToFile';
+import { handleExportBehaviorDefinitionToFile } from './handlers/handleExportBehaviorDefinitionToFile';
+import { handleExportAccessControlToFile } from './handlers/handleExportAccessControlToFile';
+import { handleExportMetadataExtensionToFile } from './handlers/handleExportMetadataExtensionToFile';
 import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
 import { handleListSystems } from './handlers/handleListSystems';
 import { handleSetDefaultSystem } from './handlers/handleSetDefaultSystem';
@@ -290,6 +297,111 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['class_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportCDSViewToFile',
+                        description:
+                            'Export a CDS DDL view from the system directly to a file in the tmp folder with .ddls.asddls extension. Automatically converts view name and SQL view name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                view_name: {
+                                    type: 'string',
+                                    description: 'Name of the CDS view to export (e.g., I_Material, C_SalesOrder)',
+                                },
+                            },
+                            required: ['view_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportInterfaceToFile',
+                        description:
+                            'Export an ABAP interface from the system directly to a file in the tmp folder with .intf.abap extension. Automatically converts interface name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                interface_name: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP interface to export',
+                                },
+                            },
+                            required: ['interface_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportProgramToFile',
+                        description:
+                            'Export an ABAP program from the system directly to a file in the tmp folder with .prog.abap extension. Automatically converts program name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                program_name: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP program to export',
+                                },
+                            },
+                            required: ['program_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportFunctionGroupToFile',
+                        description:
+                            'Export an ABAP function group from the system directly to a file in the tmp folder with .fugr.abap extension. Automatically converts function group name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                function_group: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP function group to export',
+                                },
+                            },
+                            required: ['function_group'],
+                        },
+                    },
+                    {
+                        name: 'ExportBehaviorDefinitionToFile',
+                        description:
+                            'Export a RAP behavior definition from the system directly to a file in the tmp folder with .bdef.asbdef extension. Automatically converts behavior name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                behavior_name: {
+                                    type: 'string',
+                                    description: 'Name of the behavior definition to export',
+                                },
+                            },
+                            required: ['behavior_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportAccessControlToFile',
+                        description:
+                            'Export a CDS access control (DCL) from the system directly to a file in the tmp folder with .dcls.asdcls extension. Automatically converts DCL name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                dcl_name: {
+                                    type: 'string',
+                                    description: 'Name of the access control (DCL) to export',
+                                },
+                            },
+                            required: ['dcl_name'],
+                        },
+                    },
+                    {
+                        name: 'ExportMetadataExtensionToFile',
+                        description:
+                            'Export a CDS metadata extension from the system directly to a file in the tmp folder with .ddlx.asddlxs extension. Automatically converts extension name to Z-namespace.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                extension_name: {
+                                    type: 'string',
+                                    description: 'Name of the metadata extension to export',
+                                },
+                            },
+                            required: ['extension_name'],
                         },
                     },
                     {
@@ -1311,6 +1423,20 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleExportClassToFile(request.params.arguments as any);
                 case 'ImportClassFromFile':
                     return await handleImportClassFromFile(request.params.arguments as any);
+                case 'ExportCDSViewToFile':
+                    return await handleExportCDSViewToFile(request.params.arguments as any);
+                case 'ExportInterfaceToFile':
+                    return await handleExportInterfaceToFile(request.params.arguments as any);
+                case 'ExportProgramToFile':
+                    return await handleExportProgramToFile(request.params.arguments as any);
+                case 'ExportFunctionGroupToFile':
+                    return await handleExportFunctionGroupToFile(request.params.arguments as any);
+                case 'ExportBehaviorDefinitionToFile':
+                    return await handleExportBehaviorDefinitionToFile(request.params.arguments as any);
+                case 'ExportAccessControlToFile':
+                    return await handleExportAccessControlToFile(request.params.arguments as any);
+                case 'ExportMetadataExtensionToFile':
+                    return await handleExportMetadataExtensionToFile(request.params.arguments as any);
                 case 'GetSystemInfo':
                     return await handleGetSystemInfo(request.params.arguments || {});
                 case 'ListSystems':
