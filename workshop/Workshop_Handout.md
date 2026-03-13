@@ -27,6 +27,12 @@ This workshop introduces you to Claude Code CLI, Anthropic's official AI coding 
 
 ## Part 1: Core Setup (Required for Everyone)
 
+### Prerequisites for Core Setup
+- Windows laptop with admin rights
+- SAP network access
+- Node.js installed (v18+) - Check with: `node --version`
+- Text editor (VS Code, Notepad++, etc.)
+
 ### Step 1: Install Hyperspace LLM Proxy
 
 The Hyperspace LLM Proxy provides LLM access for Claude Code at SAP.
@@ -90,12 +96,18 @@ Choose one or more MCP servers to extend Claude's capabilities. You can add more
 
 **What it does**: Allows Claude to read ABAP code, run tests, check transports, and more.
 
+**Prerequisites for this MCP server**:
+- Git installed
+- Node.js (v18+) installed
+- SAP system access with ADT enabled
+- SAP system credentials (username/password for dev/test systems)
+
 #### Setup Steps
 
 1. **Clone and build** (one-time setup):
    ```bash
    cd C:\Users\<username>\SAPDevelop
-   git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+   git clone https://github.tools.sap/<username>/mcp-abap-adt.git
    cd mcp-abap-adt
    npm install
    npm run build
@@ -144,49 +156,22 @@ Get the transport history for ZCL_YOUR_CLASS
 
 ---
 
-### Option B: sap-auth-mcp (SAP Authentication Helper)
-
-**What it does**: Handles SSO authentication for SAP systems with complex login flows.
-
-#### Setup Steps
-
-1. **Add to Claude Code config**:
-   Edit `~/.claude.json`:
-   ```json
-   {
-     "mcpServers": {
-       "sap-auth-mcp": {
-         "command": "cmd",
-         "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
-         "env": {
-           "SAP_AUTH_ACCOUNT": "your.email@sap.com"
-         },
-         "type": "stdio"
-       }
-     }
-   }
-   ```
-
-2. **Restart Claude Code**
-
-#### Testing
-```
-Authenticate with SAP system at https://your-sap-system.com:8000/sap/bc/adt?sap-client=100
-```
-
-**✅ Checkpoint**: Claude opens browser for authentication and saves cookies.
-
----
-
-### Option C: sap-wiki (SAP Wiki Search)
+### Option B: mcp-wiki (SAP Wiki Search)
 
 **What it does**: Searches and retrieves content from SAP's internal Wiki.
 
+**Prerequisites for this MCP server**:
+- Git installed
+- Bun runtime installed (https://bun.sh/)
+- Access to SAP Wiki (wiki.one.int.sap)
+
 #### Setup Steps
 
-1. **Create cookie storage folder**:
+1. **Clone the repository**:
    ```bash
-   mkdir C:\Users\<username>\tmp
+   cd C:\Users\<username>\SAPDevelop
+   git clone https://github.tools.sap/claude/mcp-wiki.git
+   cd mcp-wiki
    ```
 
 2. **Add to Claude Code config**:
@@ -194,17 +179,22 @@ Authenticate with SAP system at https://your-sap-system.com:8000/sap/bc/adt?sap-
    ```json
    {
      "mcpServers": {
-       "sap-wiki": {
-         "command": "cmd",
-         "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
+       "mcp-wiki": {
+         "command": "bun",
+         "args": ["C:/Users/<username>/SAPDevelop/mcp-wiki/src/index.ts"],
          "env": {
-           "AUTH_COOKIE_DIR": "C:/Users/<username>/tmp"
+           "WIKI_DOMAIN": "wiki.one.int.sap"
          },
          "type": "stdio"
        }
      }
    }
    ```
+
+   **Important Notes:**
+   - Replace `<username>` with your actual Windows username
+   - Use forward slashes (`/`) in the path
+   - Make sure you have Bun installed: `bun --version`
 
 3. **Restart Claude Code**
 
@@ -220,7 +210,7 @@ Find wiki pages about RAP development
 
 ## Combining Multiple MCP Servers
 
-You can use all three MCP servers together! Here's the complete config:
+You can use both MCP servers together! Here's the complete config:
 
 **~/.claude.json**:
 ```json
@@ -231,19 +221,11 @@ You can use all three MCP servers together! Here's the complete config:
       "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
       "type": "stdio"
     },
-    "sap-auth-mcp": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
+    "mcp-wiki": {
+      "command": "bun",
+      "args": ["C:/Users/<username>/SAPDevelop/mcp-wiki/src/index.ts"],
       "env": {
-        "SAP_AUTH_ACCOUNT": "your.email@sap.com"
-      },
-      "type": "stdio"
-    },
-    "sap-wiki": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
-      "env": {
-        "AUTH_COOKIE_DIR": "C:/Users/<username>/tmp"
+        "WIKI_DOMAIN": "wiki.one.int.sap"
       },
       "type": "stdio"
     }
@@ -322,16 +304,17 @@ You can use all three MCP servers together! Here's the complete config:
 
 ### Learning Resources
 - **Hyperspace Docs**: https://pages.github.tools.sap/hAIperspace/hai-docs/
-- **mcp-abap-adt GitHub**: https://github.tools.sap/D020426/mcp-abap-adt
+- **mcp-abap-adt GitHub**: https://github.tools.sap/<username>/mcp-abap-adt
   - Full documentation in `docs/` folder
   - Examples and use cases
   - Report issues or suggest features
+- **mcp-wiki GitHub**: https://github.tools.sap/claude/mcp-wiki
 - **MCP Protocol**: https://modelcontextprotocol.io/
 - **Claude API Docs**: https://docs.anthropic.com/claude
 
 ### Get Help
 1. Check documentation (links above)
-2. GitHub Issues for mcp-abap-adt: https://github.tools.sap/D020426/mcp-abap-adt/issues
+2. GitHub Issues for mcp-abap-adt: https://github.tools.sap/<username>/mcp-abap-adt/issues
 3. Ask colleagues who use Claude Code
 4. Hyperspace support for LLM proxy issues
 
@@ -345,7 +328,6 @@ You can use all three MCP servers together! Here's the complete config:
 - [ ] Installed Claude Code CLI
 - [ ] Had first successful Claude Code interaction
 - [ ] (Optional) Installed mcp-abap-adt
-- [ ] (Optional) Installed sap-auth-mcp
 - [ ] (Optional) Installed sap-wiki
 - [ ] Tested at least one MCP server
 - [ ] Understand how to get help
@@ -362,6 +344,44 @@ _________________________________________________________________
 
 _________________________________________________________________
 ```
+
+---
+
+## Recommended Additional Software
+
+While not required for the workshop, these tools can enhance your development workflow with Claude Code:
+
+### Pandoc (Document Converter)
+**What it does**: Universal document converter supporting markdown, HTML, PDF, and many other formats.
+
+**Use cases**:
+- Convert markdown documentation to HTML or PDF
+- Generate formatted reports from markdown files
+- Create presentation slides from markdown
+- Convert between different markup formats
+
+**Installation**:
+- Download from: https://pandoc.org/installing.html
+- Windows: Use installer or `winget install pandoc`
+- Verify: `pandoc --version`
+
+**Example usage**:
+```bash
+# Convert markdown to HTML
+pandoc document.md -o document.html
+
+# Convert markdown to PDF (requires LaTeX)
+pandoc document.md -o document.pdf
+
+# Convert with styling
+pandoc document.md -s -o document.html --metadata title="My Document"
+```
+
+### Other Useful Tools
+- **Git GUI clients**: GitHub Desktop, GitKraken, or SourceTree for visual Git operations
+- **Markdown editors**: Typora, MarkText, or VS Code with markdown extensions
+- **Terminal multiplexers**: Windows Terminal with multiple tabs for managing hai proxy + Claude sessions
+- **JSON validators**: Online tools like jsonlint.com for validating `.claude.json` configuration
 
 ---
 

@@ -22,6 +22,11 @@ Enable SAP developers to set up and use Claude Code CLI with MCP servers for AI-
 ### Part 2: Core Setup (10 minutes)
 *Everyone should complete this section*
 
+**Prerequisites for Core Setup:**
+- Node.js installed (v18+) - Check: `node --version`
+- Windows laptop with admin rights
+- SAP network access
+
 #### Step 1: Hyperspace LLM Proxy Setup (5 min)
 - **Why needed?** LLM access gateway for SAP
 - **Install hai CLI**
@@ -49,10 +54,16 @@ Enable SAP developers to set up and use Claude Code CLI with MCP servers for AI-
 #### Option A: mcp-abap-adt (ABAP Development Tools)
 **Use case:** AI assistant can read/write ABAP code, run tests, check transports
 
+**Prerequisites:**
+- Git installed
+- Node.js (v18+) installed
+- SAP system access with ADT enabled
+- SAP credentials (username/password for dev/test)
+
 **Quick setup:**
 ```bash
 # Clone repository
-git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+git clone https://github.tools.sap/<username>/mcp-abap-adt.git
 cd mcp-abap-adt
 npm install && npm run build
 
@@ -76,38 +87,27 @@ SAP_PASSWORD=your_password
 
 **Demo:** "Show me class ZCL_EXAMPLE_CLASS"
 
-#### Option B: sap-auth-mcp (SAP Authentication Helper)
-**Use case:** SSO authentication for SAP systems with complex login flows
-
-**Quick setup:**
-```bash
-# Add to ~/.claude.json mcpServers section
-{
-  "sap-auth-mcp": {
-    "command": "cmd",
-    "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
-    "env": {
-      "SAP_AUTH_ACCOUNT": "your.email@sap.com"
-    },
-    "type": "stdio"
-  }
-}
-```
-
-**Demo:** "Authenticate with SAP system at https://..."
-
-#### Option C: sap-wiki (SAP Wiki Search)
+#### Option B: mcp-wiki (SAP Wiki Search)
 **Use case:** AI assistant can search and fetch SAP Wiki content
 
+**Prerequisites:**
+- Git installed
+- Bun runtime installed (https://bun.sh/)
+- Access to SAP Wiki
+
 **Quick setup:**
 ```bash
+# Clone repository
+git clone https://github.tools.sap/claude/mcp-wiki.git
+cd mcp-wiki
+
 # Add to ~/.claude.json mcpServers section
 {
-  "sap-wiki": {
-    "command": "cmd",
-    "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
+  "mcp-wiki": {
+    "command": "bun",
+    "args": ["C:/Users/<username>/SAPDevelop/mcp-wiki/src/index.ts"],
     "env": {
-      "AUTH_COOKIE_DIR": "/path/to/cookie/folder"
+      "WIKI_DOMAIN": "wiki.one.int.sap"
     },
     "type": "stdio"
   }
@@ -130,16 +130,23 @@ SAP_PASSWORD=your_password
 
 ## Prerequisites for Participants
 
-### Required (Everyone)
+### Core Setup (Required for Everyone)
 - Windows laptop with admin rights
 - SAP network access
 - Node.js installed (v18+)
-- Git installed
 - Text editor (VS Code, Notepad++, etc.)
 
-### Optional (For MCP servers)
-- SAP system credentials (for mcp-abap-adt)
+### Optional MCP Servers (Choose what you need)
+
+**For mcp-abap-adt:**
+- Git installed
+- SAP system credentials
 - Knowledge of your SAP system URL and client
+
+**For mcp-wiki:**
+- Git installed
+- Bun runtime (https://bun.sh/)
+- SAP Wiki access
 
 ---
 
@@ -157,7 +164,8 @@ SAP_PASSWORD=your_password
 1. **Practice** with basic Claude Code commands
 2. **Install one MCP server** that matches your workflow
 3. **Join community**:
-   - mcp-abap-adt: https://github.tools.sap/D020426/mcp-abap-adt/issues
+   - mcp-abap-adt: https://github.tools.sap/<username>/mcp-abap-adt/issues
+   - mcp-wiki: https://github.tools.sap/claude/mcp-wiki/issues
    - Hyperspace docs: https://pages.github.tools.sap/hAIperspace/hai-docs/
 4. **Share feedback** with your team
 
@@ -166,9 +174,26 @@ SAP_PASSWORD=your_password
 ## Support Resources
 
 - **Hyperspace LLM Proxy**: https://pages.github.tools.sap/hAIperspace/hai-docs/
-- **mcp-abap-adt Documentation**: https://github.tools.sap/D020426/mcp-abap-adt
+- **mcp-abap-adt Documentation**: https://github.tools.sap/<username>/mcp-abap-adt
+- **mcp-wiki Documentation**: https://github.tools.sap/claude/mcp-wiki
 - **Claude Code Official Docs**: https://docs.anthropic.com/claude/docs/claude-code
 - **MCP Protocol**: https://modelcontextprotocol.io/
+
+---
+
+## Recommended Additional Software
+
+### Pandoc (Document Converter)
+- **Purpose**: Convert markdown to HTML, PDF, and other formats
+- **Installation**: https://pandoc.org/installing.html
+- **Use case**: Create formatted documentation from markdown files
+- **Example**: `pandoc document.md -o document.html`
+
+### Other Useful Tools
+- Git GUI clients (GitHub Desktop, GitKraken)
+- Markdown editors (Typora, VS Code with extensions)
+- Windows Terminal (manage multiple sessions)
+- JSON validators (jsonlint.com for config validation)
 
 ---
 

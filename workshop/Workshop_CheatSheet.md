@@ -70,9 +70,15 @@ exit        - Exit Claude Code
 
 ### 1. mcp-abap-adt (ABAP Development)
 
+**Prerequisites:**
+- Git installed
+- Node.js (v18+) installed
+- SAP system access with ADT enabled
+- SAP credentials
+
 **Setup Steps:**
 ```bash
-git clone https://github.tools.sap/D020426/mcp-abap-adt.git
+git clone https://github.tools.sap/<username>/mcp-abap-adt.git
 cd mcp-abap-adt
 npm install && npm run build
 ```
@@ -108,17 +114,28 @@ SAP_PASSWORD=your_password
 
 ---
 
-### 2. sap-auth-mcp (SAP Authentication)
+### 2. mcp-wiki (SAP Wiki Search)
+
+**Prerequisites:**
+- Git installed
+- Bun runtime installed (https://bun.sh/)
+- Access to SAP Wiki
+
+**Setup Steps:**
+```bash
+git clone https://github.tools.sap/claude/mcp-wiki.git
+cd mcp-wiki
+```
 
 **Add to ~/.claude.json:**
 ```json
 {
   "mcpServers": {
-    "sap-auth-mcp": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
+    "mcp-wiki": {
+      "command": "bun",
+      "args": ["C:/Users/<username>/SAPDevelop/mcp-wiki/src/index.ts"],
       "env": {
-        "SAP_AUTH_ACCOUNT": "your.email@sap.com"
+        "WIKI_DOMAIN": "wiki.one.int.sap"
       },
       "type": "stdio"
     }
@@ -126,29 +143,7 @@ SAP_PASSWORD=your_password
 }
 ```
 
-**Example prompts:**
-- "Authenticate with SAP system at https://my-sap.com:443/sap/bc/adt"
-- "Check authentication cookie status"
-
----
-
-### 3. sap-wiki (SAP Wiki Search)
-
-**Add to ~/.claude.json:**
-```json
-{
-  "mcpServers": {
-    "sap-wiki": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
-      "env": {
-        "AUTH_COOKIE_DIR": "C:/Users/<username>/tmp"
-      },
-      "type": "stdio"
-    }
-  }
-}
-```
+**Note:** Use forward slashes (`/`) in the path. Replace `<username>` with your Windows username.
 
 **Example prompts:**
 - "Search SAP Wiki for 'ABAP Cloud best practices'"
@@ -159,7 +154,7 @@ SAP_PASSWORD=your_password
 
 ## Complete Configuration Example
 
-**Full ~/.claude.json with all MCP servers:**
+**Full ~/.claude.json with both MCP servers:**
 ```json
 {
   "mcpServers": {
@@ -168,19 +163,11 @@ SAP_PASSWORD=your_password
       "args": ["/c", "node", "C:\\Users\\<username>\\SAPDevelop\\mcp-abap-adt\\dist\\index.js"],
       "type": "stdio"
     },
-    "sap-auth-mcp": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-auth-mcp.git"],
+    "mcp-wiki": {
+      "command": "bun",
+      "args": ["C:/Users/<username>/SAPDevelop/mcp-wiki/src/index.ts"],
       "env": {
-        "SAP_AUTH_ACCOUNT": "your.email@sap.com"
-      },
-      "type": "stdio"
-    },
-    "sap-wiki": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "git+https://github.tools.sap/sfsfmcp/sap-wiki-mcp.git"],
-      "env": {
-        "AUTH_COOKIE_DIR": "C:/Users/<username>/tmp"
+        "WIKI_DOMAIN": "wiki.one.int.sap"
       },
       "type": "stdio"
     }
@@ -269,9 +256,35 @@ npm run build
 | Resource | URL |
 |----------|-----|
 | Hyperspace Docs | https://pages.github.tools.sap/hAIperspace/hai-docs/ |
-| mcp-abap-adt | https://github.tools.sap/D020426/mcp-abap-adt |
+| mcp-abap-adt | https://github.tools.sap/<username>/mcp-abap-adt |
+| mcp-wiki | https://github.tools.sap/claude/mcp-wiki |
 | Claude API Docs | https://docs.anthropic.com/claude |
 | MCP Protocol | https://modelcontextprotocol.io/ |
+
+---
+
+## Recommended Additional Software
+
+### Pandoc (Document Converter)
+**Install**: https://pandoc.org/installing.html or `winget install pandoc`
+
+**Common conversions**:
+```bash
+# Markdown to HTML
+pandoc document.md -o document.html
+
+# Markdown to PDF (requires LaTeX)
+pandoc document.md -o document.pdf
+
+# With custom styling
+pandoc document.md -s -o document.html --metadata title="Title"
+```
+
+### Other Tools
+- **Git GUI**: GitHub Desktop, GitKraken, SourceTree
+- **Markdown editors**: Typora, MarkText, VS Code + extensions
+- **Terminal**: Windows Terminal (multiple tabs for proxy + Claude)
+- **JSON validator**: jsonlint.com (validate .claude.json)
 
 ---
 
