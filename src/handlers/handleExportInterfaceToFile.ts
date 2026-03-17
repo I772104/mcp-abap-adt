@@ -42,7 +42,8 @@ export async function handleExportInterfaceToFile(args: ExportInterfaceParams) {
             `Exported Interface: ${zInterfaceName}\n`;
 
         if (wasConverted) {
-            message += '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalInterfaceName} → ${zInterfaceName}\n`;
+            message +=
+                '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalInterfaceName} → ${zInterfaceName}\n`;
             if (wasTruncated) {
                 message += '   ⚠️  Name truncated to 30 characters (ABAP limit)\n';
             }

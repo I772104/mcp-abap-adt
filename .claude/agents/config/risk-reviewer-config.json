@@ -1,0 +1,255 @@
+{
+  "name": "risk-reviewer",
+  "version": "1.0.0",
+  "description": "Risk assessment agent for operational and business impact analysis of SAP development tools and features",
+  "agent_file": "risk-reviewer.md",
+  "triggers": {
+    "manual": true,
+    "automatic": false,
+    "description": "Manually invoked for deep risk analysis of proposals, PRs, or configuration changes"
+  },
+  "risk_categories": {
+    "technical": {
+      "enabled": true,
+      "description": "Technical stability and compatibility risks",
+      "checks": [
+        "breaking_changes",
+        "api_compatibility",
+        "error_handling",
+        "backward_compatibility",
+        "deprecated_api_usage",
+        "performance_implications",
+        "state_management"
+      ]
+    },
+    "data": {
+      "enabled": true,
+      "description": "Data integrity and consistency risks",
+      "checks": [
+        "data_loss",
+        "transaction_consistency",
+        "validation_gaps",
+        "concurrent_access",
+        "irreversible_operations",
+        "data_exposure",
+        "cascading_data_impacts"
+      ]
+    },
+    "integration": {
+      "enabled": true,
+      "description": "System interaction and dependency risks",
+      "checks": [
+        "system_compatibility",
+        "external_dependencies",
+        "timeout_handling",
+        "retry_logic",
+        "error_propagation",
+        "network_failure_handling",
+        "cross_system_operations",
+        "authentication_failures"
+      ]
+    },
+    "operational": {
+      "enabled": true,
+      "description": "Production readiness and supportability risks",
+      "checks": [
+        "monitoring_gaps",
+        "deployment_safety",
+        "rollback_procedures",
+        "failure_recovery",
+        "performance_degradation",
+        "alert_fatigue",
+        "debugging_difficulty",
+        "scaling_limitations"
+      ]
+    },
+    "security": {
+      "enabled": true,
+      "description": "Security implications and attack vectors",
+      "checks": [
+        "authorization",
+        "credential_handling",
+        "attack_vectors",
+        "injection_risks",
+        "privilege_escalation",
+        "audit_bypass",
+        "input_validation",
+        "session_security"
+      ]
+    },
+    "compliance": {
+      "enabled": true,
+      "description": "Regulatory and governance compliance risks",
+      "checks": [
+        "audit_trails",
+        "change_management",
+        "authorization_concepts",
+        "sap_guidelines",
+        "regulatory_requirements",
+        "separation_of_duties",
+        "traceability",
+        "data_residency"
+      ]
+    },
+    "business_impact": {
+      "enabled": true,
+      "description": "Real-world consequences for users and business",
+      "checks": [
+        "user_disruption",
+        "data_integrity",
+        "service_availability",
+        "sla_impact",
+        "business_continuity",
+        "reputation_risk",
+        "financial_impact",
+        "user_experience_degradation"
+      ]
+    }
+  },
+  "severity_thresholds": {
+    "critical": {
+      "description": "Must block until mitigated - could cause catastrophic failure",
+      "conditions": {
+        "data_loss": true,
+        "production_outage": true,
+        "security_breach": true,
+        "irreversible_action": true,
+        "system_crash": true,
+        "credential_exposure": true,
+        "regulatory_violation_major": true,
+        "financial_loss_high": true
+      },
+      "action": "Block until comprehensive mitigation implemented",
+      "decision": "Cannot ship without architectural changes and extensive testing"
+    },
+    "high": {
+      "description": "Requires multiple safeguards before shipping",
+      "conditions": {
+        "operational_disruption": true,
+        "data_inconsistency": true,
+        "emergency_rollback_required": true,
+        "wrong_system_operation": true,
+        "authorization_bypass": true,
+        "audit_trail_bypass": true,
+        "compliance_violation_minor": true,
+        "sla_breach": true
+      },
+      "action": "Ship only with multiple safeguards and monitoring",
+      "decision": "Requires rollback plan and incident response procedures"
+    },
+    "medium": {
+      "description": "Should implement safeguards, acceptable technical debt if documented",
+      "conditions": {
+        "user_confusion": true,
+        "manual_intervention_needed": true,
+        "performance_degradation_noticeable": true,
+        "missing_validation_non_critical": true,
+        "timeout_without_retry": true,
+        "poor_error_messages": true,
+        "missing_rate_limiting": true
+      },
+      "action": "Implement basic safeguards before shipping",
+      "decision": "Can ship with documented limitations if business value is high"
+    },
+    "low": {
+      "description": "Optional improvements, can defer",
+      "conditions": {
+        "cosmetic_issues": true,
+        "missing_debug_logs": true,
+        "suboptimal_error_handling": true,
+        "code_style_inconsistencies": true,
+        "edge_cases_rare": true,
+        "documentation_gaps": true
+      },
+      "action": "Optional improvements, can defer to future",
+      "decision": "Ship as-is, address later if needed"
+    }
+  },
+  "output": {
+    "format": "markdown",
+    "include_examples": true,
+    "include_safeguards": true,
+    "include_attack_vectors": true,
+    "include_mitigation_checklist": true,
+    "include_implementation_recommendations": true,
+    "severity_emoji": {
+      "critical": "🔴",
+      "high": "🟡",
+      "medium": "🟠",
+      "low": "🟢"
+    },
+    "sections": [
+      "executive_summary",
+      "detailed_risk_analysis",
+      "attack_vectors_and_failure_scenarios",
+      "recommended_safeguards",
+      "risk_mitigation_summary",
+      "implementation_recommendations",
+      "conclusion"
+    ]
+  },
+  "analysis_guidelines": {
+    "focus": "consequences_not_just_issues",
+    "perspective": "operator_and_user",
+    "evidence_based": true,
+    "worst_case_scenarios": true,
+    "balance_productivity_vs_safety": true,
+    "principles": [
+      "Think like a site reliability engineer",
+      "Consider cascading failures",
+      "Address hidden dependencies",
+      "Be honest about limitations",
+      "Enable informed decision-making",
+      "Provide proportional safeguards"
+    ]
+  },
+  "reference_materials": {
+    "sap_wiki": {
+      "enabled": true,
+      "topics": [
+        "authorization",
+        "transport_management",
+        "adt_tool_guidelines",
+        "change_management",
+        "best_practices"
+      ]
+    },
+    "internal_docs": {
+      "enabled": true,
+      "paths": [
+        "docs/",
+        "README.md",
+        "CLAUDE.md",
+        ".claude/agents/"
+      ]
+    }
+  },
+  "example_scenarios": {
+    "high_risk_write_operations": {
+      "description": "Adding tools that create, modify, or delete SAP objects",
+      "examples": [
+        "CreateTransport",
+        "AddToTransport",
+        "ReleaseTransport",
+        "DeleteClass",
+        "ModifyTable"
+      ]
+    },
+    "medium_risk_multi_system": {
+      "description": "Features that interact with multiple SAP systems",
+      "examples": [
+        "SystemSwitching",
+        "CrossSystemCopy",
+        "MultiSystemQuery"
+      ]
+    },
+    "low_risk_configuration": {
+      "description": "Configuration changes with limited blast radius",
+      "examples": [
+        "SystemWhitelist",
+        "LogLevel",
+        "CacheSettings"
+      ]
+    }
+  }
+}

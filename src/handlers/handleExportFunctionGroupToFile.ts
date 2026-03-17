@@ -42,7 +42,8 @@ export async function handleExportFunctionGroupToFile(args: ExportFunctionGroupP
             `Exported Function Group: ${zFunctionGroup}\n`;
 
         if (wasConverted) {
-            message += '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalFunctionGroup} → ${zFunctionGroup}\n`;
+            message +=
+                '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalFunctionGroup} → ${zFunctionGroup}\n`;
             if (wasTruncated) {
                 message += '   ⚠️  Name truncated to 30 characters (ABAP limit)\n';
             }

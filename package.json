@@ -28,6 +28,8 @@
     "status": "node .claude/agents/scripts/run-maintainer-status.js",
     "status:detailed": "node .claude/agents/scripts/run-maintainer-status.js --detailed",
     "status:quick": "node .claude/agents/scripts/run-maintainer-status.js --quick",
+    "review:risks": "node .claude/agents/scripts/run-risk-review.js",
+    "review:risks-pr": "node .claude/agents/scripts/run-risk-review.js --pr",
     "prepare": "husky || true"
   },
   "keywords": [

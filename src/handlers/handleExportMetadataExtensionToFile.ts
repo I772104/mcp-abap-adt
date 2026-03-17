@@ -24,7 +24,11 @@ export async function handleExportMetadataExtensionToFile(args: ExportMetadataEx
         let sourceCode = response.data;
 
         // Convert metadata extension name to Z-prefixed version (uses CDS naming convention)
-        const { zObjectName: zExtensionName, wasConverted, wasTruncated } = convertToZCDSViewName(originalExtensionName);
+        const {
+            zObjectName: zExtensionName,
+            wasConverted,
+            wasTruncated,
+        } = convertToZCDSViewName(originalExtensionName);
 
         // Replace metadata extension name in source code
         if (wasConverted) {
@@ -44,7 +48,8 @@ export async function handleExportMetadataExtensionToFile(args: ExportMetadataEx
             `Exported Extension: ${zExtensionName}\n`;
 
         if (wasConverted) {
-            message += '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalExtensionName} → ${zExtensionName}\n`;
+            message +=
+                '\n📝 Name Conversion:\n' + `   🔄 Auto-converted: ${originalExtensionName} → ${zExtensionName}\n`;
             if (wasTruncated) {
                 message += '   ⚠️  Name truncated to 30 characters (ABAP limit)\n';
             }

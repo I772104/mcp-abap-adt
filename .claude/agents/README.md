@@ -107,6 +107,53 @@ claude "Check PRs and give recommendations on what to review first"
 
 ---
 
+### 🛡️ risk-reviewer (v1.0.0)
+
+**Status**: ✅ Implemented
+**Purpose**: Deep operational and business risk assessment for SAP development tools and features
+
+**Capabilities**:
+- **Technical Risk Assessment** - Breaking changes, API compatibility, error handling
+- **Data Risk Assessment** - Data loss scenarios, transaction consistency, validation gaps
+- **Integration Risk Assessment** - System compatibility, timeout handling, cross-system operations
+- **Operational Risk Assessment** - Monitoring gaps, rollback procedures, failure recovery
+- **Security Risk Assessment** - Authorization checks, attack vectors, credential handling
+- **Compliance Risk Assessment** - Audit trails, change management, SAP authorization concepts
+- **Business Impact Assessment** - User disruption, service availability, financial impact
+- **Mitigation Planning** - Preventive, detective, and corrective safeguards
+
+**Usage**:
+```bash
+# Review a PR
+npm run review:risks -- --pr 68
+
+# Review a proposal file
+npm run review:risks -- --file docs/proposals/transport-tools.md
+
+# Review current changes
+npm run review:risks -- --current
+
+# Review a branch
+npm run review:risks -- --branch feature/create-transport
+
+# With Claude Code
+claude "Use the risk-reviewer agent to analyze PR #68"
+claude "Use the risk-reviewer agent to assess risks in the transport tools proposal"
+```
+
+**Output**: Comprehensive risk assessment report with:
+- Executive summary with overall risk rating (🔴 Critical / 🟡 High / 🟠 Medium / 🟢 Low)
+- Detailed analysis across 7 risk categories
+- Attack vectors and failure scenarios
+- Recommended safeguards (preventive, detective, corrective)
+- Risk mitigation checklist
+- Implementation recommendations (phased approach)
+- Proceed/defer/block decision with conditions
+
+**Documentation**: [Example Report](docs/risk-reviewer/EXAMPLE.md)
+
+---
+
 ### 🧪 test-generator (Planned)
 
 **Status**: 📋 Planned
@@ -483,6 +530,14 @@ npm run review -- --branch feature-branch
   - PR and issue status tracking
   - Automated prioritization and recommendations
   - Quick, standard, and detailed reporting modes
+
+- **v1.3.0** (2026-03-13): Risk review agent
+  - risk-reviewer agent (v1.0.0)
+  - Comprehensive operational and business risk assessment
+  - 7 risk categories with severity ratings
+  - Attack vector analysis and failure scenarios
+  - Safeguard recommendations and mitigation planning
+  - Helper script for PR, file, and branch analysis
 
 ## Related Issues
 

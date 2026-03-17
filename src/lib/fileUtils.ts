@@ -25,10 +25,10 @@ export const ABAP_FILE_EXTENSIONS = {
     FUNCTION_GROUP: '.fugr.abap',
 
     // CDS and RAP Objects
-    CDS_DDL: '.ddls.asddls',           // Data Definition Language Source
-    CDS_DCL: '.dcls.asdcls',           // Data Control Language Source (Access Control)
+    CDS_DDL: '.ddls.asddls', // Data Definition Language Source
+    CDS_DCL: '.dcls.asdcls', // Data Control Language Source (Access Control)
     CDS_METADATA_EXT: '.ddlx.asddlxs', // Metadata Extension
-    BEHAVIOR_DEF: '.bdef.asbdef',       // Behavior Definition
+    BEHAVIOR_DEF: '.bdef.asbdef', // Behavior Definition
 } as const;
 
 /**
@@ -74,13 +74,13 @@ export interface ClassNameConversionResult extends ObjectNameConversionResult {
  * Supported ABAP object types for file operations
  */
 export type AbapObjectType =
-    | 'CLAS'  // Class
-    | 'INTF'  // Interface
-    | 'PROG'  // Program
-    | 'FUGR'  // Function Group
-    | 'DDLS'  // CDS DDL Source
-    | 'DCLS'  // CDS Access Control
-    | 'DDLX'  // CDS Metadata Extension
+    | 'CLAS' // Class
+    | 'INTF' // Interface
+    | 'PROG' // Program
+    | 'FUGR' // Function Group
+    | 'DDLS' // CDS DDL Source
+    | 'DCLS' // CDS Access Control
+    | 'DDLX' // CDS Metadata Extension
     | 'BDEF'; // Behavior Definition
 
 /**
@@ -290,10 +290,7 @@ export function convertToZSQLViewName(sqlViewName: string): ObjectNameConversion
 /**
  * Generic object name converter based on object type
  */
-export function convertToZObjectName(
-    objectName: string,
-    objectType: AbapObjectType
-): ObjectNameConversionResult {
+export function convertToZObjectName(objectName: string, objectType: AbapObjectType): ObjectNameConversionResult {
     switch (objectType) {
         case 'CLAS':
         case 'INTF':
