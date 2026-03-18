@@ -23,6 +23,7 @@ export class SystemRegistry {
     public static getInstance(): SystemRegistry {
         if (!SystemRegistry.instance) {
             SystemRegistry.instance = new SystemRegistry();
+            SystemRegistry.instance.initialize();
         }
         return SystemRegistry.instance;
     }
