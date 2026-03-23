@@ -16,11 +16,11 @@ This guide explains how to authenticate with your SAP system when using the mcp-
 
 The mcp-abap-adt server supports two authentication methods:
 
-1. **SSO Authentication** - Uses cookies from browser-based SAP login (recommended for production systems)
-2. **Basic Authentication** - Uses username and password (recommended for development/testing)
+1. **Basic Authentication** - Uses username and password (recommended and preferred)
+2. **SSO Authentication** - Uses cookies from browser-based SAP login (for systems requiring SSO)
 
-The server **automatically selects** the best authentication method:
-- If credentials (`SAP_USERNAME` and `SAP_PASSWORD`) are in `.env`, uses Basic Auth
+The server **automatically selects** the authentication method with this priority:
+- If credentials (`SAP_USERNAME` and `SAP_PASSWORD`) are in `.env`, uses Basic Auth (preferred)
 - Otherwise, looks for SSO cookies and uses them
 - If neither is available, shows a clear error message
 
@@ -28,53 +28,30 @@ The server **automatically selects** the best authentication method:
 
 ### Comparison
 
-| Feature | SSO Authentication | Basic Authentication |
-|---------|-------------------|---------------------|
-| **Security** | ✅ More secure (no stored passwords) | ⚠️ Password stored in .env |
-| **Setup Complexity** | Medium (requires sap-auth-mcp tool) | Easy (just add to .env) |
-| **Use Case** | Production, corporate SAP systems | Development, testing |
-| **SAP Usage** | 99% of SAP uses SSO | Fallback/legacy systems |
-| **Session Management** | Automatic cookie refresh | Basic auth on every request |
+| Feature | Basic Authentication | SSO Authentication |
+|---------|---------------------|-------------------|
+| **Security** | ⚠️ Password stored in .env | ✅ More secure (no stored passwords) |
+| **Setup Complexity** | ✅ Easy (just add to .env) | Medium (requires sap-auth-mcp tool) |
+| **Use Case** | Development, testing, production | Systems requiring SSO only |
+| **Preference** | ✅ Preferred method | Fallback for SSO-only systems |
+| **Session Management** | Basic auth on every request | Automatic cookie refresh |
 
 ### When to Use Each Method
 
-**Use SSO Authentication when:**
-- Working with production SAP systems
-- Your organization uses SSO for SAP access
-- You want to avoid storing passwords in files
-- You need to access systems where you don't have direct credentials
-
 **Use Basic Authentication when:**
-- Developing or testing locally
-- You have direct username/password credentials
-- You want simple, quick setup
-- Working with development/sandbox systems
+- You have username/password credentials for the SAP system
+- You want simple, quick setup (preferred method)
+- Working with development, testing, or production systems
+- The SAP system allows Basic Authentication
+
+**Use SSO Authentication when:**
+- The SAP system **only** supports SSO (no Basic Auth allowed)
+- Your organization mandates SSO for specific systems
+- You need to access systems where you don't have direct credentials
 
 ## Quick Start
 
-### Option 1: SSO Authentication (Recommended)
-
-```bash
-# 1. Configure SAP system (no credentials)
-cat > .env << EOF
-SAP_URL=https://your-sap-system.com:8000
-SAP_CLIENT=001
-EOF
-
-# 2. Install sap-auth-mcp server
-# See: https://github.tools.sap/your-sap-auth-mcp-repo
-
-# 3. Authenticate via MCP client
-# Use your MCP client to call: sap_authenticate
-# Parameters:
-#   - entry_url: https://your-sap-system.com:8000/sap/bc/adt?sap-client=001
-#   - store_path: tmp
-
-# 4. Restart MCP server
-# Cookies are automatically loaded from tmp/sap_cookies.json
-```
-
-### Option 2: Basic Authentication (Fallback)
+### Option 1: Basic Authentication (Recommended)
 
 ```bash
 # Configure SAP system with credentials
@@ -88,13 +65,99 @@ EOF
 # That's it! Server uses credentials automatically
 ```
 
-## SSO Authentication (Recommended)
+### Option 2: SSO Authentication (For SSO-only systems)
 
-SSO authentication uses browser-based login cookies, avoiding the need to store passwords.
+```bash
+# 1. Configure SAP system (no credentials)
+cat > .env << EOF
+SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=001
+EOF
+
+# 2. Install sap-auth-mcp server
+# See: https://github.tools.sap/claude/mcp-wiki
+
+# 3. Authenticate via MCP client
+# Use your MCP client to call: sap_authenticate
+# Parameters:
+#   - entry_url: https://your-sap-system.com:8000/sap/bc/adt?sap-client=001
+#   - store_path: tmp
+
+# 4. Restart MCP server
+# Cookies are automatically loaded from tmp/sap_cookies.json
+```
+
+## Basic Authentication (Recommended)
+
+Basic authentication uses username and password for every request. This is the preferred and simplest authentication method.
+
+### Setup
+
+Add credentials to `.env` file:
+
+```bash
+SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=001
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password
+```
+
+### Password Special Characters
+
+If your password contains special characters, enclose it in quotes:
+
+```bash
+# Password with #, $, or other special characters
+SAP_PASSWORD="my#pass$word"
+
+# Simple password (quotes optional)
+SAP_PASSWORD=mypassword
+```
+
+### Security Considerations
+
+⚠️ **Security Best Practices:**
+
+1. **Never commit .env to version control**
+   - `.env` is in `.gitignore` by default
+   - Verify: `git status` should not show `.env`
+
+2. **Use environment variables for sensitive data**
+   ```bash
+   # Instead of hardcoding in .env, use environment variables
+   export SAP_PASSWORD="mypassword"
+   ```
+
+3. **Rotate passwords regularly**
+   - Change passwords according to your organization's policy
+   - Update `.env` when password changes
+
+4. **Use SSO only when required**
+   - Only use SSO for systems that don't support Basic Auth
+   - Basic Auth is simpler and preferred when available
+
+### How Basic Auth Works
+
+1. **Server Startup**: Username and password are read from `.env` on server start
+2. **Encoding**: Credentials are encoded as Base64: `username:password`
+3. **Request Headers**: `Authorization: Basic <base64>` header is added to every request
+4. **SAP Validation**: SAP validates credentials for each API call
+
+**Technical Implementation:**
+
+- **Provider**: `BasicAuthProvider` class (src/infrastructure/auth/BasicAuthProvider.ts)
+- **Headers**: Adds `Authorization: Basic <base64>` and `X-SAP-Client: <client>` headers
+- **Priority**: Basic Auth is checked first in `AuthProviderFactory`
+- **Availability**: Validated by checking if username and password are non-empty
+
+## SSO Authentication (For SSO-only Systems)
+
+SSO authentication uses browser-based login cookies. Use this only when the SAP system requires SSO and doesn't support Basic Authentication.
 
 ### Prerequisites
 
 1. **sap-auth-mcp MCP Server** - Separate MCP server that handles SAP authentication
+   - Repository: https://github.tools.sap/claude/mcp-wiki
 2. **MCP Client** - Any MCP-compatible client (Claude Code CLI, Cline, etc.)
 3. **Browser Access** - Ability to log into SAP via web browser
 
@@ -102,7 +165,7 @@ SSO authentication uses browser-based login cookies, avoiding the need to store 
 
 #### 1. Install sap-auth-mcp Server
 
-Follow the installation instructions at: https://github.tools.sap/your-sap-auth-mcp-repo
+Follow the installation instructions at: https://github.tools.sap/claude/mcp-wiki
 
 Add it to your MCP client configuration:
 
@@ -245,6 +308,29 @@ The `sap_cookies.json` file contains:
 }
 ```
 
+### How SSO Auth Works
+
+1. **Cookie Loading**: On server startup, cookies are loaded from `sap_cookies.json`
+2. **Cookie Parsing**: Supports two formats:
+   - Direct array: `[{ name, value }, ...]`
+   - Wrapped format: `{ cookies: [{ name, value }, ...] }`
+3. **Header Conversion**: Cookies are converted to `Cookie` header format: `name1=value1; name2=value2`
+4. **Request Headers**: `Cookie` header and `X-SAP-Client` header are added to every request
+5. **Session Management**: SAP validates session cookies and maintains the session
+
+**Technical Implementation:**
+
+- **Provider**: `CookieAuthProvider` class (src/infrastructure/auth/CookieAuthProvider.ts)
+- **Cookie Locations**: Checks multiple locations in order:
+  1. `./tmp/sap_cookies.json` (default)
+  2. `~/.sap/cookies/sap_cookies.json` (alternative)
+  3. Custom path via `AUTH_COOKIE_PATH` env var
+- **Headers**: Adds `Cookie: <cookies>` and `X-SAP-Client: <client>` headers
+- **Priority**: SSO is used only if Basic Auth credentials are not available
+- **Availability**: Validated by checking if cookies were successfully loaded from file
+- **Session Cookies**: Cookies from SAP responses are automatically captured and stored per-system
+- **Reload Support**: `reloadCookies()` method allows re-loading cookies after re-authentication
+
 ### Re-authentication
 
 SSO cookies expire after some time. When they expire, you'll see:
@@ -338,7 +424,7 @@ Load config from .env
          ↓YES              ↓NO
          ↓                 ↓
 Use Basic Auth      Look for SSO cookies
-         ↓                 ↓
+(PREFERRED)              ↓
          ↓         ┌───────────────────┐
          ↓         │ Cookie file found │
          ↓         │ and valid?        │
@@ -353,45 +439,93 @@ Use Basic Auth      Look for SSO cookies
             API requests
 ```
 
+**Priority**: Basic Auth > SSO Cookies > Error
+
 ### Authentication Providers
 
-The server uses a provider-based architecture:
+The server uses a provider-based architecture with a factory pattern:
 
-**AuthProvider Interface:**
-- `getAuthHeaders()` - Returns auth headers for requests
+**AuthProvider Interface** (src/infrastructure/auth/AuthProvider.ts):
+- `getAuthHeaders()` - Returns auth headers for requests (async)
 - `getSystemUrl()` - Returns SAP system URL
 - `getClient()` - Returns SAP client number
 - `isAvailable()` - Checks if provider is configured
 - `getName()` - Returns descriptive name (for logging)
 
-**BasicAuthProvider:**
-- Reads username/password from config
-- Encodes as Base64
-- Adds `Authorization: Basic` header
-- Name: "Basic Auth (credentials)"
+**BasicAuthProvider** (src/infrastructure/auth/BasicAuthProvider.ts):
+- **Configuration**: Reads username/password from `.env` or system config
+- **Encoding**: Encodes credentials as Base64: `Buffer.from(\`${username}:${password}\`).toString('base64')`
+- **Headers**: Adds `Authorization: Basic <base64>` and `X-SAP-Client: <client>`
+- **Name**: "Basic Auth (credentials)"
+- **Availability**: Returns `true` if both username and password are non-empty
 
-**CookieAuthProvider:**
-- Reads cookies from `sap_cookies.json`
-- Converts to `Cookie` header format
-- Supports multiple cookie file formats
-- Name: "SSO (cookie file)"
+**CookieAuthProvider** (src/infrastructure/auth/CookieAuthProvider.ts):
+- **Configuration**: Reads cookies from `sap_cookies.json` file
+- **Cookie Parsing**: Supports both array and wrapped formats
+- **Conversion**: Converts cookies to header format: `cookie.map(c => \`${c.name}=${c.value}\`).join('; ')`
+- **Headers**: Adds `Cookie: <cookies>` and `X-SAP-Client: <client>`
+- **Name**: "SSO (cookie file)"
+- **Availability**: Returns `true` if cookies were successfully loaded from file
+- **Reload**: `reloadCookies()` method for re-authentication scenarios
+
+**AuthProviderFactory** (src/infrastructure/auth/AuthProviderFactory.ts):
+- **Priority**: Basic Auth (credentials) > SSO Cookies
+- **Cookie Locations**: Checks multiple paths in order:
+  1. `./tmp/sap_cookies.json` - Default location
+  2. `~/.sap/cookies/sap_cookies.json` - User home directory
+  3. `AUTH_COOKIE_PATH` environment variable - Custom location
+- **Error Handling**: Provides detailed error messages with troubleshooting steps
+
+**AuthProviderRegistry** (src/infrastructure/auth/AuthProviderRegistry.ts):
+- **Purpose**: Manages per-system authentication providers for multi-system support
+- **Singleton Pattern**: Uses `getInstance()` for global access
+- **Provider Cache**: `Map<string, AuthProvider>` - One provider per system ID
+- **CSRF Token Cache**: `Map<string, string>` - Cached CSRF tokens per system
+- **Session Cookies**: `Map<string, string>` - Session cookies from SAP responses per system
+- **Methods**:
+  - `getProvider(systemConfig)` - Get or create provider for a system
+  - `getCsrfToken(systemId)` / `setCsrfToken(systemId, token)` - CSRF token management
+  - `getCookies(systemId)` / `setCookies(systemId, cookies)` - Session cookie management
+  - `clearSystem(systemId)` - Clear cached data for specific system
+  - `clearAll()` - Clear all cached data
 
 ### CSRF Token Handling
 
-For POST/PUT operations (like `GetTableContents`), the server:
+For POST/PUT operations (like `GetTableContents`, `CreateClass`), the server automatically handles CSRF tokens:
 
-1. Fetches CSRF token from SAP using current auth method
-2. Adds `x-csrf-token` header to subsequent requests
-3. Retries with new token if 403 CSRF error occurs
-4. Caches token for reuse
+**Token Fetch Process:**
 
-**CSRF token fetch log:**
+1. **Detection**: Server detects when a CSRF token is needed (POST/PUT requests)
+2. **Fetch Request**: Makes a GET request with `x-csrf-token: fetch` header to:
+   - `{baseUrl}/sap/bc/adt/core/discovery` (most reliable, tried first)
+   - `{baseUrl}/sap/bc/adt` (fallback)
+   - Original URL (last resort)
+3. **Token Extraction**: Reads token from response headers: `x-csrf-token`
+4. **Cookie Capture**: If SAP returns `set-cookie` headers, cookies are captured and stored per-system
+5. **Caching**: Token is cached in `AuthProviderRegistry` per system ID
+6. **Token Usage**: Cached token is added to subsequent POST/PUT requests
+7. **Retry Logic**: If 403 CSRF error occurs, fetches new token and retries request
+
+**Multi-System Support:**
+
+- Each system has its own CSRF token cache
+- Tokens are stored in `AuthProviderRegistry.csrfTokens` (Map<systemId, token>)
+- Session cookies are stored in `AuthProviderRegistry.cookies` (Map<systemId, cookies>)
+- Cache is automatically cleared when switching systems or on authentication errors
+
+**Implementation Details:**
+
+- **Function**: `fetchCsrfTokenForSystem()` in src/lib/utils.ts
+- **Error Handling**: Tries multiple endpoints if first fails
+- **Token from Error**: Even error responses (403) can contain valid tokens
+- **Logging**: `[CSRF] System "{systemId}": Fetching token using {authMethod}` messages
+- **Headers**: Token is sent as `x-csrf-token: <token>` header
+
+**Example Log Output:**
+
 ```
-[CSRF] Fetching token using SSO (cookie file)
-```
-or
-```
-[CSRF] Fetching token using Basic Auth (credentials)
+[CSRF] System "ER1": Fetching token using Basic Auth (credentials)
+[CSRF] System "H6R": Fetching token using SSO (cookie file)
 ```
 
 ## Troubleshooting
@@ -545,15 +679,15 @@ ls -la tmp/sap_cookies.json
 
 ## Best Practices
 
-1. **Use SSO for production systems**
-   - More secure (no stored passwords)
-   - Follows SAP's 99% SSO usage pattern
-   - Centralized session management
+1. **Prefer Basic Auth when available**
+   - Simpler setup and maintenance
+   - Works for most SAP systems
+   - Easier to troubleshoot
 
-2. **Use Basic Auth for development**
-   - Quick setup for testing
-   - Good for local/sandbox systems
-   - No external dependencies
+2. **Use SSO only when required**
+   - Only for systems that don't support Basic Auth
+   - When organization mandates SSO for specific systems
+   - More complex setup with external dependencies
 
 3. **Never commit credentials**
    - Keep `.env` in `.gitignore`
