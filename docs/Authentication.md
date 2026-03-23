@@ -7,8 +7,8 @@ This guide explains how to authenticate with your SAP system when using the mcp-
 - [Overview](#overview)
 - [Authentication Methods](#authentication-methods)
 - [Quick Start](#quick-start)
-- [SSO Authentication (Recommended)](#sso-authentication-recommended)
-- [Basic Authentication (Fallback)](#basic-authentication-fallback)
+- [Basic Authentication (Default)](#basic-authentication-default)
+- [SSO Authentication (Alternative Option)](#sso-authentication-alternative-option)
 - [How It Works](#how-it-works)
 - [Troubleshooting](#troubleshooting)
 
@@ -16,10 +16,10 @@ This guide explains how to authenticate with your SAP system when using the mcp-
 
 The mcp-abap-adt server supports two authentication methods:
 
-1. **SSO Authentication** - Uses cookies from browser-based SAP login (recommended for production systems)
-2. **Basic Authentication** - Uses username and password (recommended for development/testing)
+1. **Basic Authentication** - Uses username and password (default method)
+2. **SSO Authentication** - Uses cookies from browser-based SAP login (alternative option for SSO-only systems)
 
-The server **automatically selects** the best authentication method:
+The server **automatically selects** the authentication method:
 - If credentials (`SAP_USERNAME` and `SAP_PASSWORD`) are in `.env`, uses Basic Auth
 - Otherwise, looks for SSO cookies and uses them
 - If neither is available, shows a clear error message
@@ -28,53 +28,30 @@ The server **automatically selects** the best authentication method:
 
 ### Comparison
 
-| Feature | SSO Authentication | Basic Authentication |
-|---------|-------------------|---------------------|
-| **Security** | ✅ More secure (no stored passwords) | ⚠️ Password stored in .env |
-| **Setup Complexity** | Medium (requires sap-auth-mcp tool) | Easy (just add to .env) |
-| **Use Case** | Production, corporate SAP systems | Development, testing |
-| **SAP Usage** | 99% of SAP uses SSO | Fallback/legacy systems |
-| **Session Management** | Automatic cookie refresh | Basic auth on every request |
+| Feature | Basic Authentication | SSO Authentication |
+|---------|---------------------|-------------------|
+| **Security** | ⚠️ Password stored in .env | ✅ More secure (no stored passwords) |
+| **Setup Complexity** | ✅ Easy (just add to .env) | Medium (requires sap-auth-mcp tool) |
+| **Use Case** | Development, testing, production | SSO-only systems |
+| **Default Method** | ✅ Default | Alternative option |
+| **Session Management** | Basic auth on every request | Automatic cookie refresh |
 
 ### When to Use Each Method
 
-**Use SSO Authentication when:**
-- Working with production SAP systems
-- Your organization uses SSO for SAP access
-- You want to avoid storing passwords in files
-- You need to access systems where you don't have direct credentials
-
 **Use Basic Authentication when:**
-- Developing or testing locally
-- You have direct username/password credentials
-- You want simple, quick setup
-- Working with development/sandbox systems
+- You have username/password credentials for the SAP system
+- You want simple, quick setup (default method)
+- Working with development, testing, or production systems
+- The SAP system allows Basic Authentication
+
+**Use SSO Authentication when:**
+- The SAP system **only** supports SSO (no Basic Auth allowed)
+- Your organization mandates SSO for specific systems
+- You need to access systems where you don't have direct credentials
 
 ## Quick Start
 
-### Option 1: SSO Authentication (Recommended)
-
-```bash
-# 1. Configure SAP system (no credentials)
-cat > .env << EOF
-SAP_URL=https://your-sap-system.com:8000
-SAP_CLIENT=001
-EOF
-
-# 2. Install sap-auth-mcp server
-# See: https://github.tools.sap/your-sap-auth-mcp-repo
-
-# 3. Authenticate via MCP client
-# Use your MCP client to call: sap_authenticate
-# Parameters:
-#   - entry_url: https://your-sap-system.com:8000/sap/bc/adt?sap-client=001
-#   - store_path: tmp
-
-# 4. Restart MCP server
-# Cookies are automatically loaded from tmp/sap_cookies.json
-```
-
-### Option 2: Basic Authentication (Fallback)
+### Option 1: Basic Authentication (Default)
 
 ```bash
 # Configure SAP system with credentials
@@ -88,13 +65,95 @@ EOF
 # That's it! Server uses credentials automatically
 ```
 
-## SSO Authentication (Recommended)
+### Option 2: SSO Authentication (Alternative Option)
 
-SSO authentication uses browser-based login cookies, avoiding the need to store passwords.
+```bash
+# 1. Configure SAP system (no credentials)
+cat > .env << EOF
+SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=001
+EOF
+
+# 2. Install sap-auth-mcp server
+# See: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
+
+# 3. Authenticate via MCP client
+# Use your MCP client to call: sap_authenticate
+# Parameters:
+#   - entry_url: https://your-sap-system.com:8000/sap/bc/adt?sap-client=001
+#   - store_path: tmp
+
+# 4. Restart MCP server
+# Cookies are automatically loaded from tmp/sap_cookies.json
+```
+
+## Basic Authentication (Default)
+
+Basic authentication uses username and password for every request. This is the default and simplest authentication method.
+
+### Setup
+
+Add credentials to `.env` file:
+
+```bash
+SAP_URL=https://your-sap-system.com:8000
+SAP_CLIENT=001
+SAP_USERNAME=your_username
+SAP_PASSWORD=your_password
+```
+
+### Password Special Characters
+
+If your password contains special characters, enclose it in quotes:
+
+```bash
+# Password with #, $, or other special characters
+SAP_PASSWORD="my#pass$word"
+
+# Simple password (quotes optional)
+SAP_PASSWORD=mypassword
+```
+
+### Security Considerations
+
+⚠️ **Security Best Practices:**
+
+1. **Never commit .env to version control**
+   - `.env` is in `.gitignore` by default
+   - Verify: `git status` should not show `.env`
+
+2. **Use environment variables for sensitive data**
+   ```bash
+   # Instead of hardcoding in .env, use environment variables
+   export SAP_PASSWORD="mypassword"
+   ```
+
+3. **Rotate passwords regularly**
+   - Change passwords according to your organization's policy
+   - Update `.env` when password changes
+
+### How Basic Auth Works
+
+1. **Server Startup**: Username and password are read from `.env` on server start
+2. **Encoding**: Credentials are encoded as Base64: `username:password`
+3. **Request Headers**: `Authorization: Basic <base64>` header is added to every request
+4. **SAP Validation**: SAP validates credentials for each API call
+
+**Technical Implementation:**
+
+- **Provider**: `BasicAuthProvider` class (src/infrastructure/auth/BasicAuthProvider.ts)
+- **Headers**: Adds `Authorization: Basic <base64>` and `X-SAP-Client: <client>` headers
+- **Priority**: Basic Auth is checked first in `AuthProviderFactory`
+- **Availability**: Validated by checking if username and password are non-empty
+
+## SSO Authentication (Alternative Option)
+
+SSO authentication uses browser-based login cookies. This is an alternative authentication option for SAP systems that require SSO.
 
 ### Prerequisites
 
 1. **sap-auth-mcp MCP Server** - Separate MCP server that handles SAP authentication
+   - Repository: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
 2. **MCP Client** - Any MCP-compatible client (Claude Code CLI, Cline, etc.)
 3. **Browser Access** - Ability to log into SAP via web browser
 
@@ -102,7 +161,7 @@ SSO authentication uses browser-based login cookies, avoiding the need to store 
 
 #### 1. Install sap-auth-mcp Server
 
-Follow the installation instructions at: https://github.tools.sap/your-sap-auth-mcp-repo
+Follow the installation instructions at: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
 
 Add it to your MCP client configuration:
 
@@ -265,62 +324,6 @@ To re-authenticate:
 1. Call `sap_authenticate` tool again
 2. Log in via browser
 3. Restart MCP server (`/mcp` in Claude Code CLI)
-
-## Basic Authentication (Fallback)
-
-Basic authentication uses username and password for every request.
-
-### Setup
-
-Add credentials to `.env` file:
-
-```bash
-SAP_URL=https://your-sap-system.com:8000
-SAP_CLIENT=001
-SAP_USERNAME=your_username
-SAP_PASSWORD=your_password
-```
-
-### Password Special Characters
-
-If your password contains special characters, enclose it in quotes:
-
-```bash
-# Password with #, $, or other special characters
-SAP_PASSWORD="my#pass$word"
-
-# Simple password (quotes optional)
-SAP_PASSWORD=mypassword
-```
-
-### Security Considerations
-
-⚠️ **Security Best Practices:**
-
-1. **Never commit .env to version control**
-   - `.env` is in `.gitignore` by default
-   - Verify: `git status` should not show `.env`
-
-2. **Use environment variables for sensitive data**
-   ```bash
-   # Instead of hardcoding in .env, use environment variables
-   export SAP_PASSWORD="mypassword"
-   ```
-
-3. **Rotate passwords regularly**
-   - Change passwords according to your organization's policy
-   - Update `.env` when password changes
-
-4. **Prefer SSO for production**
-   - SSO doesn't store passwords on disk
-   - SSO sessions can be revoked centrally
-
-### How Basic Auth Works
-
-1. Username and password are read from `.env` on server start
-2. Credentials are encoded as Base64: `username:password`
-3. `Authorization: Basic <base64>` header is added to every request
-4. SAP validates credentials for each API call
 
 ## How It Works
 
@@ -545,15 +548,15 @@ ls -la tmp/sap_cookies.json
 
 ## Best Practices
 
-1. **Use SSO for production systems**
-   - More secure (no stored passwords)
-   - Follows SAP's 99% SSO usage pattern
-   - Centralized session management
+1. **Use Basic Auth for simplicity**
+   - Simpler setup and maintenance
+   - Works for most SAP systems
+   - Easier to troubleshoot
 
-2. **Use Basic Auth for development**
-   - Quick setup for testing
-   - Good for local/sandbox systems
-   - No external dependencies
+2. **Use SSO when required**
+   - For systems that only support SSO
+   - When organization mandates SSO for specific systems
+   - More complex setup with external dependencies
 
 3. **Never commit credentials**
    - Keep `.env` in `.gitignore`
