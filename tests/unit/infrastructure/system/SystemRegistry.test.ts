@@ -24,13 +24,21 @@ describe('SystemRegistry', () => {
         originalNodeEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'unit-test'; // Use different value to avoid test mode
 
+        mockFs = fs as jest.Mocked<typeof fs>;
+
+        // Set up default mocks before resetting registry
+        // Mock existsSync to return false by default (no config file)
+        mockFs.existsSync.mockReturnValue(false);
+
+        // Set default environment variables to avoid initialization errors
+        process.env.SAP_URL = 'https://default-test.example.com:443';
+        process.env.SAP_CLIENT = '000';
+
         // Reset singleton instance before each test
         SystemRegistry.getInstance().reset();
         jest.clearAllMocks();
 
-        mockFs = fs as jest.Mocked<typeof fs>;
-
-        // Reset environment variables
+        // Clear environment variables after initialization (tests can set them as needed)
         delete process.env.SAP_URL;
         delete process.env.SAP_CLIENT;
         delete process.env.SAP_USERNAME;

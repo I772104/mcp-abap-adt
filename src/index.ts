@@ -68,6 +68,10 @@ import { handleExportMetadataExtensionToFile } from './handlers/handleExportMeta
 import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
 import { handleListSystems } from './handlers/handleListSystems';
 import { handleSetDefaultSystem } from './handlers/handleSetDefaultSystem';
+import { handleListRuntimeErrors } from './handlers/handleListRuntimeErrors';
+import { handleGetRuntimeError } from './handlers/handleGetRuntimeError';
+import { handleRunATC } from './handlers/handleRunATC';
+import { handleListATCCheckVariants } from './handlers/handleListATCCheckVariants';
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
@@ -438,6 +442,100 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['system_id'],
+                        },
+                    },
+                    {
+                        name: 'ListRuntimeErrors',
+                        description:
+                            'List recent ABAP runtime errors (ST22 dumps) from the system. Returns error type, program, user, timestamp, and dump ID for each entry. Use GetRuntimeError to retrieve detailed analysis of a specific dump.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                user: {
+                                    type: 'string',
+                                    description:
+                                        'SAP username to filter dumps by (uppercased automatically). If not provided, returns all accessible dumps.',
+                                },
+                                from: {
+                                    type: 'string',
+                                    description: 'Start timestamp filter (ISO format, e.g., "2024-01-15T00:00:00")',
+                                },
+                                to: {
+                                    type: 'string',
+                                    description: 'End timestamp filter (ISO format, e.g., "2024-01-16T23:59:59")',
+                                },
+                                max_results: {
+                                    type: 'number',
+                                    description: 'Maximum number of entries to return (default: 50, max: 100)',
+                                },
+                            },
+                            required: [],
+                        },
+                    },
+                    {
+                        name: 'GetRuntimeError',
+                        description:
+                            'Retrieve detailed information about a specific runtime error dump (ST22). Returns formatted text with error analysis, call stack, variables, and source code extract.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                dump_id: {
+                                    type: 'string',
+                                    description:
+                                        'The dump identifier from ListRuntimeErrors (URL-encoded, e.g., with %20 for spaces)',
+                                },
+                                content: {
+                                    type: 'string',
+                                    enum: ['formatted', 'metadata', 'summary'],
+                                    description:
+                                        'What to retrieve: "formatted" (default, full text dump), "metadata" (XML reference), "summary" (HTML summary)',
+                                },
+                            },
+                            required: ['dump_id'],
+                        },
+                    },
+                    {
+                        name: 'RunATC',
+                        description:
+                            'Run ATC (ABAP Test Cockpit) static code analysis on an ABAP object. Returns findings including errors, warnings, and informational messages with locations and check IDs.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                object_name: {
+                                    type: 'string',
+                                    description:
+                                        'Name of the ABAP object to check (e.g., "ZCL_MY_CLASS", "ZTEST_PROGRAM")',
+                                },
+                                object_type: {
+                                    type: 'string',
+                                    enum: ['class', 'interface', 'program', 'function_group', 'include', 'package'],
+                                    description: 'Type of object to check',
+                                },
+                                check_variant: {
+                                    type: 'string',
+                                    description:
+                                        'ATC check variant name (optional, defaults to system default). Use ListATCCheckVariants to discover available variants.',
+                                },
+                                max_findings: {
+                                    type: 'number',
+                                    description: 'Maximum number of findings to return (default: 100)',
+                                },
+                                with_exemptions: {
+                                    type: 'boolean',
+                                    description: 'Include exempted findings in results (default: false)',
+                                },
+                            },
+                            required: ['object_name', 'object_type'],
+                        },
+                    },
+                    {
+                        name: 'ListATCCheckVariants',
+                        description:
+                            'List available ATC check variants on the SAP system. Returns variant names and descriptions. Use this to discover which check variants are available before running ATC checks.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {},
+                            required: [],
                         },
                     },
                     {
@@ -1443,6 +1541,14 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleListSystems();
                 case 'SetDefaultSystem':
                     return await handleSetDefaultSystem(request.params.arguments as any);
+                case 'ListRuntimeErrors':
+                    return await handleListRuntimeErrors(request.params.arguments || {});
+                case 'GetRuntimeError':
+                    return await handleGetRuntimeError(request.params.arguments as any);
+                case 'RunATC':
+                    return await handleRunATC(request.params.arguments as any);
+                case 'ListATCCheckVariants':
+                    return await handleListATCCheckVariants({});
                 case 'GetProgram':
                     return await handleGetProgram(request.params.arguments);
                 case 'GetClass':

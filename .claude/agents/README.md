@@ -198,6 +198,49 @@ claude "Use the risk-reviewer agent to assess risks in the transport tools propo
 
 ---
 
+### 🔬 analyzer (v1.0.0)
+
+**Status**: ✅ Implemented
+**Purpose**: Proactive ABAP bug analysis and investigation assistance
+
+**Capabilities**:
+- Analyze production ABAP issues systematically
+- Run ATC (ABAP Test Cockpit) checks for code quality issues
+- Check recent transports and version history
+- Compare code across systems (working vs broken)
+- Investigate runtime errors (ST22 dumps)
+- Provide confidence assessments (High/Medium/Low)
+- Suggest specific, actionable next steps
+
+**Usage**:
+```bash
+# Natural language invocation
+claude "Use the analyzer agent to investigate the SADL executor issue in QN8"
+
+# With /analyze skill (when registered)
+/analyze "CL_SADL_SQL_EXECUTOR not retrieving data in QN8/708"
+
+# Direct description
+claude "Analyze why Master Inspection Characteristic returns 'data not found' error"
+```
+
+**Key Features**:
+- **Proactive**: Automatically runs checks without asking permission
+- **Realistic Confidence**: Provides High/Medium/Low ratings based on evidence
+- **Technical Focus**: Constructive feedback, not dramatic language
+- **Systematic**: Follows investigation workflow (dumps → code → regressions → ATC → tests)
+
+**Available Tools**:
+- `RunATC` - Static code analysis
+- `GetRuntimeError` / `ListRuntimeErrors` - ST22 dump analysis
+- `GetVersionHistory` / `GetTransportVersions` - Change tracking
+- `CompareObjectVersions` - Code comparison
+- All standard ABAP object retrieval tools
+
+**Documentation**: [Agent Definition](analyzer.md) | [Skill](../skills/analyze.md) | [Implementation](docs/ANALYZER_AGENT_PLAN.md)
+
+---
+
 ### 🎯 abap-standards-enforcer (Planned)
 
 **Status**: 📋 Planned
