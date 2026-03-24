@@ -3,10 +3,9 @@ import axios, { AxiosError, AxiosInstance } from 'axios';
 import { Agent } from 'https';
 import { AxiosResponse } from 'axios';
 import { getConfig, SapConfig } from '../index'; // getConfig needs to be exported from index.ts
-import { AuthProvider, createAuthProvider, CookieAuthProvider } from '../infrastructure/auth';
+import { AuthProvider, createAuthProvider, BrowserSsoAuthProvider } from '../infrastructure/auth';
 import { SystemRegistry } from '../infrastructure/system';
 import { AuthProviderRegistry } from '../infrastructure/auth/AuthProviderRegistry';
-import * as path from 'path';
 
 export { McpError, ErrorCode, AxiosResponse };
 
@@ -303,7 +302,8 @@ export async function makeAdtRequestForSystem(
     data?: any,
     params?: any,
     customHeaders?: any,
-    systemId?: string
+    systemId?: string,
+    isRetry: boolean = false
 ): Promise<AxiosResponse> {
     const registry = SystemRegistry.getInstance();
     const authRegistry = AuthProviderRegistry.getInstance();
@@ -380,6 +380,22 @@ export async function makeAdtRequestForSystem(
             authRegistry.setCsrfToken(system.id, token);
             requestConfig.headers['x-csrf-token'] = token;
             return await createAxiosInstance()(requestConfig);
+        }
+        // Retry on 401 or 403 (without CSRF) when using BrowserSsoAuthProvider
+        else if (
+            error instanceof AxiosError &&
+            (error.response?.status === 401 || error.response?.status === 403) &&
+            !isRetry
+        ) {
+            const provider = authRegistry.getProvider(system);
+            if (provider instanceof BrowserSsoAuthProvider) {
+                console.error(
+                    `[DEBUG] System "${system.id}": Auth failed (${error.response?.status}), refreshing SSO...`
+                );
+                await provider.refreshAuth();
+                // refreshAuth() already clears CSRF/cookies in the registry via the handler
+                return makeAdtRequestForSystem(url, method, timeout, data, params, customHeaders, systemId, true);
+            }
         }
         throw error;
     }
@@ -528,7 +544,8 @@ export async function makeAdtRequest(
     timeout: number,
     data?: any,
     params?: any,
-    customHeaders?: any
+    customHeaders?: any,
+    isRetry: boolean = false
 ) {
     // Try new multi-system mode first
     try {
@@ -608,6 +625,21 @@ export async function makeAdtRequest(
             csrfToken = await fetchCsrfToken(url);
             requestConfig.headers['x-csrf-token'] = csrfToken;
             return await createAxiosInstance()(requestConfig);
+        }
+        // Retry on 401 or 403 (without CSRF) when using BrowserSsoAuthProvider
+        else if (
+            error instanceof AxiosError &&
+            (error.response?.status === 401 || error.response?.status === 403) &&
+            !isRetry
+        ) {
+            if (authProvider instanceof BrowserSsoAuthProvider) {
+                console.error(`[DEBUG] Auth failed (${error.response?.status}), refreshing SSO...`);
+                await authProvider.refreshAuth();
+                // Clear module-level CSRF and cookie state
+                csrfToken = null;
+                cookies = null;
+                return makeAdtRequest(url, method, timeout, data, params, customHeaders, true);
+            }
         }
         throw error;
     }

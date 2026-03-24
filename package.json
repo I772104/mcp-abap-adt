@@ -59,6 +59,7 @@
     "@types/diff": "^7.0.2",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.10",
+    "@types/ws": "^8.5.13",
     "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
@@ -74,8 +75,10 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.4.1",
     "axios": "^1.7.9",
+    "chrome-launcher": "^1.2.1",
     "diff": "^8.0.3",
     "dotenv": "^16.4.7",
+    "ws": "^8.18.0",
     "xml-js": "^1.6.11",
     "xml2js": "^0.6.2"
   }

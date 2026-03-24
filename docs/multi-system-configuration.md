@@ -94,8 +94,9 @@ Each system in the `systems` object has the following properties:
 ```
 
 - Recommended for production and corporate systems
-- `cookiePath` is optional, defaults to `./tmp/sap_cookies.json`
-- Requires authentication via `sap_authenticate` tool from the `sap-auth-mcp-main` MCP server
+- `cookiePath` is optional - if omitted, uses built-in Browser SSO (requires Chrome/Chromium)
+- If `cookiePath` is specified, checks for legacy cookie files from `sap-auth-mcp` tool first
+- Falls back to Browser SSO if no legacy cookies found
 
 ### Environment Variable Interpolation
 
@@ -192,6 +193,25 @@ In multi-system mode, this shows:
 3. Restart the MCP server
 
 ### SSO Authentication
+
+**Option 1: Built-in Browser SSO (Recommended)**
+
+1. Configure the system in `.sap-systems.json`:
+   ```json
+   {
+     "auth": {
+       "type": "sso"
+     }
+   }
+   ```
+
+2. Restart the MCP server
+
+3. On first use, Chrome will launch automatically for login
+
+4. Cookies are cached for 12 hours with automatic refresh
+
+**Option 2: Legacy SSO (sap-auth-mcp)**
 
 1. Install and configure the `sap-auth-mcp-main` MCP server
 

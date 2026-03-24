@@ -51,17 +51,17 @@ export async function handleSetDefaultSystem(args: { system_id: string }) {
                 {
                     type: 'text',
                     text:
-                        `Active system changed successfully!\n\n` +
+                        'Active system changed successfully!\n\n' +
                         `Previous: ${previousSystem}\n` +
                         `Current: ${system_id}\n\n` +
-                        `System Details:\n` +
+                        'System Details:\n' +
                         `  Name: ${system.name}\n` +
                         `  URL: ${system.url}\n` +
                         `  Client: ${system.client}\n` +
                         `  Auth: ${system.auth.type === 'basic' ? 'Basic Authentication' : 'SSO (Cookie-based)'}\n\n` +
-                        `All subsequent operations will use this system unless explicitly overridden with the "system" parameter.\n\n` +
-                        `Note: This change is temporary and only applies to the current session. ` +
-                        `To permanently change the default system, edit the "default" field in .sap-systems.json.`,
+                        'All subsequent operations will use this system unless explicitly overridden with the "system" parameter.\n\n' +
+                        'Note: This change is temporary and only applies to the current session. ' +
+                        'To permanently change the default system, edit the "default" field in .sap-systems.json.',
                 },
             ],
         };

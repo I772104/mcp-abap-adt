@@ -90,7 +90,7 @@ export class SystemRegistry {
                 throw new Error(
                     `Too many systems configured: ${systemCount}. ` +
                         `Maximum allowed: ${MAX_SYSTEMS}. ` +
-                        `Please reduce the number of systems in .sap-systems.json`
+                        'Please reduce the number of systems in .sap-systems.json'
                 );
             }
 
@@ -152,7 +152,7 @@ export class SystemRegistry {
             if (!/^[A-Z0-9_]+$/i.test(envVar)) {
                 throw new Error(
                     `Invalid environment variable name: ${envVar}. ` +
-                        `Must contain only alphanumeric characters and underscores.`
+                        'Must contain only alphanumeric characters and underscores.'
                 );
             }
 

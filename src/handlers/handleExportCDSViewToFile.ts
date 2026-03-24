@@ -99,7 +99,7 @@ export async function handleExportCDSViewToFile(args: ExportCDSViewParams) {
             `   Size: ${metadata.size} bytes\n` +
             `   Lines: ${metadata.lines}\n` +
             `   Modified: ${metadata.modified}\n\n` +
-            `💡 The view and SQL view names have been automatically updated.\n` +
+            '💡 The view and SQL view names have been automatically updated.\n' +
             '   Ready for import with ImportCDSViewFromFile tool (when available).\n\n' +
             '⚠️  Note: Associations and compositions still reference original views.\n' +
             '   Review and update references as needed after import.';

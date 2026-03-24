@@ -68,6 +68,7 @@ import { handleExportMetadataExtensionToFile } from './handlers/handleExportMeta
 import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
 import { handleListSystems } from './handlers/handleListSystems';
 import { handleSetDefaultSystem } from './handlers/handleSetDefaultSystem';
+import { handleSapBrowserLogin } from './handlers/handleSapBrowserLogin';
 import { handleListRuntimeErrors } from './handlers/handleListRuntimeErrors';
 import { handleGetRuntimeError } from './handlers/handleGetRuntimeError';
 import { handleRunATC } from './handlers/handleRunATC';
@@ -442,6 +443,21 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['system_id'],
+                        },
+                    },
+                    {
+                        name: 'SapBrowserLogin',
+                        description:
+                            'Perform browser-based SSO authentication for a SAP system. Launches Chrome/Chromium, waits for user to complete SSO flow, and caches authentication cookies. Use this when SSO cookies have expired or initial authentication is needed.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                systemId: {
+                                    type: 'string',
+                                    description: 'Optional system ID to authenticate (defaults to active system)',
+                                },
+                            },
+                            required: [],
                         },
                     },
                     {
@@ -1541,6 +1557,8 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleListSystems();
                 case 'SetDefaultSystem':
                     return await handleSetDefaultSystem(request.params.arguments as any);
+                case 'SapBrowserLogin':
+                    return await handleSapBrowserLogin(request.params.arguments || {});
                 case 'ListRuntimeErrors':
                     return await handleListRuntimeErrors(request.params.arguments || {});
                 case 'GetRuntimeError':

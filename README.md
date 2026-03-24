@@ -211,21 +211,19 @@ SAP_CLIENT=100
 
 ### 5. Authenticate with SAP System
 
-The server supports two authentication methods that are automatically selected based on your configuration.
+The server supports three authentication methods that are automatically selected based on your configuration.
 
 📚 **Complete authentication guide**: [docs/Authentication.md](docs/Authentication.md)
 
 #### Quick Setup Options
 
-**Option 1 - SSO Authentication (Recommended for Production)**:
+**Option 1 - Browser SSO (Recommended for SSO-Only Systems)**:
 
-Best for corporate SAP systems with SSO. Requires the `sap-auth-mcp` MCP server.
+Zero configuration needed - just have Chrome/Chromium installed!
 
-1. Install and configure `sap-auth-mcp` server (see [Authentication Guide](docs/Authentication.md#sso-authentication-recommended))
-2. Use your MCP client to call `sap_authenticate` tool:
-   - `entry_url`: `{SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}`
-   - `store_path`: `tmp`
-3. Cookies are saved to `tmp/sap_cookies.json` and used automatically
+1. Leave `.env` without credentials (just URL and CLIENT)
+2. On first use, Chrome launches automatically for SSO login
+3. Cookies are cached for 12 hours with automatic refresh
 
 **Option 2 - Basic Authentication (Recommended for Dev/Test)**:
 
@@ -238,21 +236,34 @@ SAP_USERNAME=your_username
 SAP_PASSWORD=your_password
 ```
 
+**Option 3 - Legacy SSO (sap-auth-mcp)**:
+
+For backward compatibility with existing setups. Requires the `sap-auth-mcp` MCP server.
+
+1. Install and configure `sap-auth-mcp` server (see [Authentication Guide](docs/Authentication.md#legacy-sso-authentication-backward-compatibility))
+2. Use your MCP client to call `sap_authenticate` tool
+3. Cookies are saved to `tmp/sap_cookies.json` and used automatically
+
 #### How Authentication Works
 
 The server automatically detects and uses the best authentication method:
 
 1. **If credentials exist** (`SAP_USERNAME` and `SAP_PASSWORD` in `.env`) → Uses Basic Auth
-2. **If SSO cookies exist** (`tmp/sap_cookies.json`) → Uses SSO
-3. **If neither exists** → Shows clear error with setup instructions
+2. **If legacy SSO cookies exist** (`tmp/sap_cookies.json`) → Uses legacy cookie file
+3. **If Chrome/Chromium installed** → Uses built-in Browser SSO
+4. **If none available** → Shows clear error with setup instructions
 
 You'll see which method is active in the console logs:
 ```
-[Auth] Using SSO Authentication (cookies from tmp/sap_cookies.json)
+[Auth] Using Browser SSO Authentication
 ```
 or
 ```
 [Auth] Using Basic Authentication (credentials)
+```
+or
+```
+[Auth] Using SSO Authentication (cookies from tmp/sap_cookies.json)
 ```
 
 ## Authentication Guide
@@ -262,10 +273,11 @@ For complete authentication setup, troubleshooting, and best practices, see the 
 📚 **[Authentication Guide](docs/Authentication.md)**
 
 The guide covers:
-- Detailed SSO setup with sap-auth-mcp server
+- **New!** Built-in Browser SSO (zero configuration, just Chrome)
 - Basic authentication configuration
+- Legacy SSO setup with sap-auth-mcp server
 - Cookie file locations and formats
-- Re-authentication procedures
+- Automatic session refresh and re-authentication
 - Security best practices
 - Troubleshooting authentication issues
 - CSRF token handling

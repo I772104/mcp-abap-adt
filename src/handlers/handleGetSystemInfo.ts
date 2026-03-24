@@ -127,6 +127,13 @@ function getAuthMethodDetails(authMethod: string): string {
    Using Basic Authentication with credentials from .env file
    - Username and password are being used for authentication
    - This is suitable for development and testing environments`;
+    } else if (authMethod.includes('Browser SSO')) {
+        return `📋 Authentication Details:
+   Using Built-in Browser SSO with automatic Chrome/Chromium launch
+   - Session cookies are cached in $TMPDIR with 12-hour TTL
+   - Chrome launches automatically when cookies expire or are missing
+   - Automatic re-authentication on 401/403 errors
+   - No external dependencies required (just Chrome/Chromium)`;
     } else if (authMethod.includes('SSO') || authMethod.includes('Cookie')) {
         return `📋 Authentication Details:
    Using Single Sign-On (SSO) with session cookies
