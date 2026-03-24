@@ -22,21 +22,27 @@ access_mcp_resource: uri=agent-guide://claude
 
 ## Authentication (First Time)
 
-**SSO Setup**:
-1. Read `.env` to get `SAP_URL` and `SAP_CLIENT`
-2. Authenticate to shared location:
+**SSO Setup (Built-in Browser SSO)**:
+1. Ensure `SAP_URL` and `SAP_CLIENT` are set in `.env` (no username/password needed)
+2. On first request, Chrome launches automatically for SSO login
+3. Or proactively authenticate:
+   ```
+   Tool: SapBrowserLogin
+   (no parameters required)
+   ```
+4. Cookies cached to `$TMPDIR/mcp-abap-adt/<domain>.json` with 12h TTL
+
+**Legacy SSO** (external `sap-auth-mcp-main`):
    ```
    Tool: sap_authenticate
    entry_url: {SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}
    store_path: C:\Users\{username}\.sap\cookies
    ```
-3. Update `.env`: `AUTH_COOKIE_DIR=C:\Users\{username}\.sap\cookies`
-4. Restart MCP server
 
 **When Cookies Expire**:
-- CSRF 403 error → Re-authenticate to shared location
-- Check status: `sap_get_cookie_info`
-- Restart server after re-authentication
+- 401/403 errors are auto-retried with re-authentication (no manual action needed)
+- To force a fresh login: call `SapBrowserLogin`
+- Legacy cookie status: `sap_get_cookie_info`
 
 ---
 

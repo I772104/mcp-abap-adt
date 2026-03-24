@@ -73,8 +73,8 @@ The tool automatically detects and reports which authentication method is active
    - Suitable for development and testing environments
 
 2. **SSO (Single Sign-On)**
-   - Uses session cookies from `sap_cookies.json`
-   - Loaded via `sap_authenticate` MCP tool
+   - **Built-in browser SSO**: Chrome launches automatically when no credentials are configured; call `SapBrowserLogin` to proactively authenticate. Cookies cached to `$TMPDIR/mcp-abap-adt/<domain>.json`
+   - **Legacy**: Session cookies from `sap_cookies.json` loaded via `sap_authenticate` MCP tool (external `sap-auth-mcp-main`)
    - Recommended for production systems
 
 ## Benefits
@@ -167,8 +167,8 @@ interface AuthProvider {
 ### Factory Pattern
 Uses `AuthProviderFactory` to determine which auth method is active:
 1. Checks for Basic Auth credentials first
-2. Falls back to SSO cookies if credentials not available
-3. Throws error if no authentication method is configured
+2. Falls back to legacy SSO cookies if credentials not available
+3. Falls back to built-in browser SSO (`SapBrowserLogin` / `BrowserSsoAuthProvider`) if no cookie file exists
 
 ## Future Enhancements
 

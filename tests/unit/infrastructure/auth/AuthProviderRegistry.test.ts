@@ -13,6 +13,11 @@ import { SystemConfig } from '../../../../src/infrastructure/system/types';
 import * as AuthProviderFactory from '../../../../src/infrastructure/auth/AuthProviderFactory';
 import { AuthProvider } from '../../../../src/infrastructure/auth/AuthProvider';
 
+// Mock chrome-launcher (ESM module that Jest can't parse)
+jest.mock('chrome-launcher', () => ({
+    launch: jest.fn(),
+}));
+
 // Mock the AuthProviderFactory
 jest.mock('../../../../src/infrastructure/auth/AuthProviderFactory');
 

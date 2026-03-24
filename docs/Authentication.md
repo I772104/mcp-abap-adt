@@ -7,47 +7,50 @@ This guide explains how to authenticate with your SAP system when using the mcp-
 - [Overview](#overview)
 - [Authentication Methods](#authentication-methods)
 - [Quick Start](#quick-start)
-- [Basic Authentication (Default)](#basic-authentication-default)
-- [SSO Authentication (Alternative Option)](#sso-authentication-alternative-option)
+- [Basic Authentication (Recommended)](#basic-authentication-recommended)
+- [SSO Authentication (For SSO-only Systems)](#sso-authentication-for-sso-only-systems)
 - [How It Works](#how-it-works)
 - [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-The mcp-abap-adt server supports two authentication methods:
+The mcp-abap-adt server supports three authentication methods:
 
-1. **Basic Authentication** - Uses username and password (default method)
-2. **SSO Authentication** - Uses cookies from browser-based SAP login (alternative option for SSO-only systems)
+1. **Basic Authentication** - Uses username and password (simplest setup)
+2. **Browser SSO** (built-in) - Launches Chrome for interactive SSO login, caches cookies automatically
+3. **Legacy Cookie File** - Reads cookies from `sap_cookies.json` created by an external tool
 
-The server **automatically selects** the authentication method:
-- If credentials (`SAP_USERNAME` and `SAP_PASSWORD`) are in `.env`, uses Basic Auth
-- Otherwise, looks for SSO cookies and uses them
-- If neither is available, shows a clear error message
+The server **automatically selects** the authentication method with this priority:
+1. **Basic Auth** — if `SAP_USERNAME` and `SAP_PASSWORD` are configured
+2. **Legacy cookie file** — if `sap_cookies.json` exists in a known location
+3. **Browser SSO** — launches Chrome on first request (or uses cached cookies from `$TMPDIR/mcp-abap-adt/<domain>.json`)
 
 ## Authentication Methods
 
 ### Comparison
 
-| Feature | Basic Authentication | SSO Authentication |
-|---------|---------------------|-------------------|
-| **Security** | ⚠️ Password stored in .env | ✅ More secure (no stored passwords) |
-| **Setup Complexity** | ✅ Easy (just add to .env) | Medium (requires sap-auth-mcp tool) |
-| **Use Case** | Development, testing, production | SSO-only systems |
-| **Default Method** | ✅ Default | Alternative option |
-| **Session Management** | Basic auth on every request | Automatic cookie refresh |
+| Feature | Basic Auth | Browser SSO (built-in) | Legacy Cookie File |
+|---------|-----------|----------------------|-------------------|
+| **Security** | Password in .env | No stored passwords | Cookies on disk |
+| **Setup** | Easy (add to .env) | Zero config | Requires external tool |
+| **Re-auth** | N/A | Automatic on 401/403 | Manual |
+| **Use Case** | Dev/test systems | SSO-only systems | Deprecated fallback |
 
 ### When to Use Each Method
 
 **Use Basic Authentication when:**
 - You have username/password credentials for the SAP system
-- You want simple, quick setup (default method)
-- Working with development, testing, or production systems
+- You want the simplest setup
 - The SAP system allows Basic Authentication
 
-**Use SSO Authentication when:**
-- The SAP system **only** supports SSO (no Basic Auth allowed)
-- Your organization mandates SSO for specific systems
-- You need to access systems where you don't have direct credentials
+**Use Browser SSO (built-in) when:**
+- The SAP system requires SSO (no Basic Auth allowed)
+- Your organization mandates SSO or certificate-based login
+- You need to authenticate via any IDP (SAP IAS, ADFS, 2FA, etc.)
+
+**Use Legacy Cookie File when:**
+- You have an existing workflow using the external `sap-auth-mcp` server
+- Browser SSO does not work in your environment (e.g., no Chrome available)
 
 ## Quick Start
 
@@ -65,26 +68,21 @@ EOF
 # That's it! Server uses credentials automatically
 ```
 
-### Option 2: SSO Authentication (Alternative Option)
+### Option 2: Browser SSO (For SSO-only systems)
 
 ```bash
-# 1. Configure SAP system (no credentials)
+# 1. Configure SAP system (no credentials needed)
 cat > .env << EOF
 SAP_URL=https://your-sap-system.com:8000
 SAP_CLIENT=001
 EOF
 
-# 2. Install sap-auth-mcp server
-# See: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
+# 2. That's it! On first request, Chrome launches automatically for SSO login.
+#    Cookies are cached to $TMPDIR/mcp-abap-adt/<domain>.json (12h TTL).
+#    On 401/403, Chrome re-launches automatically for re-authentication.
 
-# 3. Authenticate via MCP client
-# Use your MCP client to call: sap_authenticate
-# Parameters:
-#   - entry_url: https://your-sap-system.com:8000/sap/bc/adt?sap-client=001
-#   - store_path: tmp
-
-# 4. Restart MCP server
-# Cookies are automatically loaded from tmp/sap_cookies.json
+# Optional: proactively authenticate before making requests
+# Use your MCP client to call: SapBrowserLogin
 ```
 
 ## Basic Authentication (Default)
@@ -132,6 +130,11 @@ SAP_PASSWORD=mypassword
    - Change passwords according to your organization's policy
    - Update `.env` when password changes
 
+4. **Prefer Browser SSO for production systems**
+   - No passwords stored on disk
+   - SSO sessions can be revoked centrally
+   - Auto-refresh on expiry
+
 ### How Basic Auth Works
 
 1. **Server Startup**: Username and password are read from `.env` on server start
@@ -148,213 +151,135 @@ SAP_PASSWORD=mypassword
 
 ## SSO Authentication (Alternative Option)
 
-SSO authentication uses browser-based login cookies. This is an alternative authentication option for SAP systems that require SSO.
+SSO authentication uses browser-based login cookies. The server has **built-in browser SSO** that launches Chrome directly -- no external tools required.
 
-### Prerequisites
+### Built-in Browser SSO
 
-1. **sap-auth-mcp MCP Server** - Separate MCP server that handles SAP authentication
-   - Repository: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
-2. **MCP Client** - Any MCP-compatible client (Claude Code CLI, Cline, etc.)
-3. **Browser Access** - Ability to log into SAP via web browser
+This is the primary SSO method. No extra MCP servers or manual cookie management needed.
 
-### Setup Steps
+#### Prerequisites
 
-#### 1. Install sap-auth-mcp Server
+- **Chrome or Chromium** installed on your machine
+- An MCP client (Claude Code CLI, Cline, etc.)
 
-Follow the installation instructions at: https://github.tools.sap/sfsfmcp/sap-auth-mcp/
+#### Setup
 
-Add it to your MCP client configuration:
-
-**Claude Code CLI** (`~/.claude.json`):
-```json
-{
-  "mcpServers": {
-    "sap-auth-mcp-main": {
-      "command": "node",
-      "args": ["/path/to/sap-auth-mcp-main/dist/index.js"]
-    },
-    "mcp-abap-adt": {
-      "command": "node",
-      "args": ["/path/to/mcp-abap-adt/dist/index.js"]
-    }
-  }
-}
-```
-
-**Cline** (VS Code Settings):
-```json
-{
-  "mcpServers": {
-    "sap-auth-mcp-main": {
-      "command": "node",
-      "args": ["C:/path/to/sap-auth-mcp-main/dist/index.js"]
-    },
-    "mcp-abap-adt": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-abap-adt/dist/index.js"]
-    }
-  }
-}
-```
-
-#### 2. Configure mcp-abap-adt (No Credentials)
-
-In your mcp-abap-adt project, create `.env`:
+Just configure your SAP system without credentials:
 
 ```bash
+# .env
 SAP_URL=https://your-sap-system.com:8000
 SAP_CLIENT=001
-
 # Do NOT add SAP_USERNAME or SAP_PASSWORD
-# Leave them out to use SSO authentication
 ```
 
-#### 3. Authenticate Using sap_authenticate Tool
+That's it. The server handles everything else automatically.
 
-Use your MCP client to call the `sap_authenticate` tool:
+#### How It Works
 
-**Using Claude Code CLI:**
+1. **First request** -- server detects no credentials, no cached cookies. Chrome launches with your SAP login page.
+2. **You log in** -- via any IDP (SAP IAS, ADFS, certificate, 2FA, etc.)
+3. **Cookies captured** -- session cookies are extracted via CDP and cached to disk
+4. **Chrome closes** -- browser window closes automatically after login
+5. **Subsequent requests** -- use cached cookies (no browser needed)
+6. **On 401/403** -- server automatically re-launches Chrome for re-authentication (once per request, no infinite loops)
+
+**No server restart needed** after authentication or re-authentication.
+
+#### Cookie Cache
+
+- **Location**: `$TMPDIR/mcp-abap-adt/<domain>.json` (e.g., `/tmp/mcp-abap-adt/my-system.sap.com.json`)
+- **TTL**: 12 hours -- expired cookies trigger automatic re-authentication
+- **Format**: Pre-joined cookie string with timestamp and domain metadata
+
+#### `SapBrowserLogin` Tool
+
+You can proactively trigger browser SSO before making requests:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `systemId` | string | No | System ID to authenticate (e.g., `"DEV"`, `"PRD"`). Defaults to the active system. |
+
+**When to use:**
+- To pre-authenticate before a batch of requests
+- To force re-authentication if you suspect stale cookies
+- To switch SSO sessions between systems
+
+**Example (Claude Code CLI):**
 ```
-You: I need to authenticate with SAP system
+You: Please authenticate with the DEV system
 
-Claude: I'll help you authenticate using the sap_authenticate tool.
-[Calls sap_authenticate with your parameters]
-
-✅ Successfully authenticated
-📁 Cookie saved to: tmp/sap_cookies.json
-```
-
-**Tool Parameters:**
-- `entry_url`: Your SAP system ADT URL
-  - Format: `{SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}`
-  - Example: `https://mysystem.sap.com:8000/sap/bc/adt?sap-client=001`
-- `store_path`: Where to save cookies (use `tmp` for mcp-abap-adt project)
-
-**What happens:**
-1. Browser window opens with SAP login page
-2. You log in using your SSO credentials
-3. Tool captures session cookies
-4. Cookies are saved to `tmp/sap_cookies.json`
-5. Browser closes automatically
-
-#### 4. Restart MCP Server
-
-Restart your MCP client to reload the server with new cookies:
-
-**Claude Code CLI:**
-```bash
-# Type in chat:
-/mcp
-```
-
-**Cline:**
-```
-Reload window or restart VS Code
+Claude: [Calls SapBrowserLogin with systemId: "DEV"]
+→ Chrome opens, you log in
+→ "Successfully authenticated with system DEV. Cookies cached and ready for use."
 ```
 
-#### 5. Verify Authentication
+**Note:** `SapBrowserLogin` only works for systems using Browser SSO. Systems configured with Basic Auth will return an error message.
 
-Test that authentication works:
+**Technical Implementation:**
 
-```
-You: Get the source code for class CL_ABAP_CHAR_UTILITIES
+- **Provider**: `BrowserSsoAuthProvider` class (src/infrastructure/auth/BrowserSsoAuthProvider.ts)
+- **Cookie Storage**: `CookieStore` class (src/infrastructure/auth/CookieStore.ts)
+- **Handler**: `handleSapBrowserLogin` (src/handlers/handleSapBrowserLogin.ts)
+- **Headers**: Adds `Cookie: <cookies>` and `X-SAP-Client: <client>` headers
+- **Concurrency**: Only one Chrome instance per system at a time (queued via promise guard)
+- **Login Timeout**: 5 minutes to complete interactive login before timeout error
+- **Auto-retry**: On 401/403, `refreshAuth()` is called automatically before retrying the failed request
 
-Claude: [Uses GetClass tool successfully]
-```
+### Legacy Alternative: External sap-auth-mcp
 
-You should see in the console logs:
-```
-[Auth] Loaded 2 SSO cookies from tmp/sap_cookies.json
-[Auth] Using SSO Authentication (cookies from tmp/sap_cookies.json)
-```
+> **Deprecated.** The built-in Browser SSO above replaces this workflow. Only use this if Chrome is unavailable or your environment requires the external tool.
 
-### Cookie File Locations
+The `sap-auth-mcp` is a separate MCP server (bundled with the mcp-wiki project) that performs browser-based SAP authentication and saves cookies to a JSON file.
 
-The server automatically checks these locations for cookies:
+#### Setup
 
-1. `./tmp/sap_cookies.json` - Primary location (default for sap_authenticate tool)
-2. `~/.sap/cookies/sap_cookies.json` - Alternative user home directory
-3. Custom location via `AUTH_COOKIE_PATH` environment variable
+1. Install `sap-auth-mcp` and add it to your MCP client configuration alongside mcp-abap-adt
+2. Call the `sap_authenticate` tool with:
+   - `entry_url`: `https://your-system.com:8000/sap/bc/adt?sap-client=001`
+   - `store_path`: `tmp`
+3. Cookies are saved to `tmp/sap_cookies.json`
+4. **Restart the MCP server** (`/mcp` in Claude Code CLI) -- required for legacy cookie files
 
-**Custom location example:**
-```bash
-# In .env file
-AUTH_COOKIE_PATH=/custom/path/to/cookies
-```
+#### Cookie File Locations
 
-### Cookie Format
+The server checks these locations for legacy cookie files:
 
-The `sap_cookies.json` file contains:
+1. `./tmp/sap_cookies.json` -- default for `sap_authenticate` tool
+2. `~/.sap/cookies/sap_cookies.json` -- user home directory
+3. Custom path via `AUTH_COOKIE_PATH` environment variable
 
-```json
-{
-  "cookies": [
-    {
-      "name": "SAP_SESSIONID_XXX_001",
-      "value": "...",
-      "domain": "your-system.sap.com",
-      "path": "/",
-      "expires": -1,
-      "httpOnly": true,
-      "secure": true
-    }
-  ],
-  "timestamp": 1234567890,
-  "domain": "your-system.sap.com"
-}
-```
+**Technical Implementation:**
 
-### Re-authentication
-
-SSO cookies expire after some time. When they expire, you'll see:
-
-```
-🔒 Authentication Failed (401)
-
-Current authentication method: SSO (cookie file)
-Credentials are invalid or expired.
-
-Troubleshooting steps:
-2. If using SSO:
-   - Re-authenticate using sap_authenticate MCP tool
-   - Restart MCP server: /mcp
-```
-
-To re-authenticate:
-1. Call `sap_authenticate` tool again
-2. Log in via browser
-3. Restart MCP server (`/mcp` in Claude Code CLI)
+- **Provider**: `CookieAuthProvider` class (src/infrastructure/auth/CookieAuthProvider.ts)
+- **Priority**: Legacy cookies are checked before Browser SSO in the provider chain
+- **Re-authentication**: Manual -- call `sap_authenticate` again, then restart the server
 
 ## How It Works
 
 ### Authentication Selection Flow
 
 ```
-Server starts
+Server starts → Load config
     ↓
-Load config from .env
+┌─ SAP_USERNAME + SAP_PASSWORD set? ─┐
+│ YES → Use Basic Auth               │
+│ NO  ↓                              │
+│ ┌─ Legacy cookie file found? ──┐   │
+│ │ YES → Use CookieAuthProvider │   │
+│ │ NO  ↓                        │   │
+│ │ Use BrowserSsoAuthProvider   │   │
+│ │  (launches Chrome on demand) │   │
+│ └──────────────────────────────┘   │
+└────────────────────────────────────┘
     ↓
-┌─────────────────────────────────────┐
-│ Are SAP_USERNAME and SAP_PASSWORD  │
-│ present and not empty?             │
-└─────────────────────────────────────┘
-         ↓YES              ↓NO
-         ↓                 ↓
-Use Basic Auth      Look for SSO cookies
-         ↓                 ↓
-         ↓         ┌───────────────────┐
-         ↓         │ Cookie file found │
-         ↓         │ and valid?        │
-         ↓         └───────────────────┘
-         ↓              ↓YES        ↓NO
-         ↓              ↓           ↓
-         ↓         Use SSO Auth   ERROR
-         ↓              ↓           ↓
-         └──────────────┴───────────┘
-                    ↓
-            Ready to handle
-            API requests
+Ready to handle API requests
+    ↓
+On 401/403 with BrowserSsoAuthProvider:
+  → Auto re-launch Chrome → retry request
 ```
+
+**Priority**: Basic Auth > Legacy Cookie File > Browser SSO (auto-launch Chrome)
 
 ### Authentication Providers
 
@@ -373,11 +298,47 @@ The server uses a provider-based architecture:
 - Adds `Authorization: Basic` header
 - Name: "Basic Auth (credentials)"
 
-**CookieAuthProvider:**
-- Reads cookies from `sap_cookies.json`
-- Converts to `Cookie` header format
-- Supports multiple cookie file formats
-- Name: "SSO (cookie file)"
+**CookieAuthProvider** (src/infrastructure/auth/CookieAuthProvider.ts):
+- **Configuration**: Reads cookies from `sap_cookies.json` file (legacy)
+- **Cookie Parsing**: Supports both array and wrapped formats
+- **Conversion**: Converts cookies to header format: `cookie.map(c => \`${c.name}=${c.value}\`).join('; ')`
+- **Headers**: Adds `Cookie: <cookies>` and `X-SAP-Client: <client>`
+- **Name**: "SSO (cookie file)"
+- **Availability**: Returns `true` if cookies were successfully loaded from file
+- **Reload**: `reloadCookies()` method for re-authentication scenarios
+
+**BrowserSsoAuthProvider** (src/infrastructure/auth/BrowserSsoAuthProvider.ts):
+- **Configuration**: Zero-config -- only needs system URL, client, and domain
+- **Chrome Launch**: Uses `chrome-launcher` + CDP (Chrome DevTools Protocol)
+- **Cookie Capture**: Extracts all cookies matching the domain via `Network.getAllCookies`
+- **Persistence**: Saves to `$TMPDIR/mcp-abap-adt/<domain>.json` via `CookieStore`
+- **TTL**: 12 hours -- expired cookies trigger automatic re-authentication
+- **Headers**: Adds `Cookie: <cookies>` and `X-SAP-Client: <client>`
+- **Name**: "Browser SSO"
+- **Availability**: Always returns `true` (Chrome is launched on demand)
+- **Auto-refresh**: `refreshAuth()` clears cache and re-launches Chrome on 401/403
+- **Concurrency**: Only one Chrome instance at a time (promise-based guard)
+
+**AuthProviderFactory** (src/infrastructure/auth/AuthProviderFactory.ts):
+- **Priority**: Basic Auth > Legacy Cookie File > Browser SSO
+- **Cookie Locations**: Checks multiple paths for legacy cookies:
+  1. `./tmp/sap_cookies.json` - Default location
+  2. `~/.sap/cookies/sap_cookies.json` - User home directory
+  3. `AUTH_COOKIE_PATH` environment variable - Custom location
+- **Fallback**: If no credentials and no cookie file, creates `BrowserSsoAuthProvider` (instead of throwing an error)
+
+**AuthProviderRegistry** (src/infrastructure/auth/AuthProviderRegistry.ts):
+- **Purpose**: Manages per-system authentication providers for multi-system support
+- **Singleton Pattern**: Uses `getInstance()` for global access
+- **Provider Cache**: `Map<string, AuthProvider>` - One provider per system ID
+- **CSRF Token Cache**: `Map<string, string>` - Cached CSRF tokens per system
+- **Session Cookies**: `Map<string, string>` - Session cookies from SAP responses per system
+- **Methods**:
+  - `getProvider(systemConfig)` - Get or create provider for a system
+  - `getCsrfToken(systemId)` / `setCsrfToken(systemId, token)` - CSRF token management
+  - `getCookies(systemId)` / `setCookies(systemId, cookies)` - Session cookie management
+  - `clearSystem(systemId)` - Clear cached data for specific system
+  - `clearAll()` - Clear all cached data
 
 ### CSRF Token Handling
 
@@ -399,36 +360,7 @@ or
 
 ## Troubleshooting
 
-### No Authentication Method Available
-
-**Error:**
-```
-🔒 No Authentication Method Available
-
-Neither basic auth credentials nor SSO cookies are configured.
-```
-
-**Solution 1 - Add Basic Auth:**
-```bash
-# Add to .env
-SAP_USERNAME=your_username
-SAP_PASSWORD=your_password
-```
-
-**Solution 2 - Use SSO:**
-1. Install sap-auth-mcp server
-2. Call `sap_authenticate` tool
-3. Restart MCP server
-
-### Authentication Failed (401)
-
-**Error:**
-```
-🔒 Authentication Failed (401)
-
-Current authentication method: Basic Auth (credentials)
-Credentials are invalid or expired.
-```
+### Authentication Failed (401/403)
 
 **For Basic Auth:**
 1. Check username/password in `.env`
@@ -436,142 +368,61 @@ Credentials are invalid or expired.
 3. Check if password expired
 4. Restart MCP server: `/mcp`
 
-**For SSO:**
-1. Re-authenticate using `sap_authenticate` tool
+**For Browser SSO:**
+The server **automatically re-launches Chrome** on 401/403 errors. If auto-retry also fails:
+1. Call `SapBrowserLogin` tool to manually re-authenticate
+2. Check that Chrome/Chromium is installed and accessible
+3. Verify you can log into the SAP system in a normal browser
+
+**For Legacy Cookie File:**
+1. Re-authenticate using `sap_authenticate` tool from `sap-auth-mcp`
 2. Restart MCP server: `/mcp`
 
-### CSRF Token Validation Failed (403)
+### Chrome Not Found (Browser SSO)
 
 **Error:**
 ```
-🔒 CSRF Token Validation Failed (403)
-
-Current authentication method: SSO (cookie file)
-CSRF token fetch or validation failed.
+Chrome/Chromium is required for browser-based SSO but was not found.
 ```
 
-**For Basic Auth:**
-1. Check if credentials expired mid-session
-2. Verify credentials in `.env`
-3. Restart MCP server: `/mcp`
+**Solutions:**
+- Install Chrome or Chromium
+- Use Basic Auth instead (set `SAP_USERNAME` and `SAP_PASSWORD` in `.env`)
+- Use legacy `sap-auth-mcp` to create cookie files externally
 
-**For SSO:**
-1. Re-authenticate using `sap_authenticate` tool
-2. Restart MCP server: `/mcp`
-3. Check SAP system connectivity
-
-### SSO Cookie Not Found
+### Browser Login Timeout
 
 **Error:**
 ```
-🔒 Authentication Required
-
-No authentication method available.
+Login timeout — 5 minutes exceeded.
 ```
 
-**Check cookie locations:**
-```bash
-# Check if cookie file exists
-ls -la tmp/sap_cookies.json
-ls -la ~/.sap/cookies/sap_cookies.json
-
-# Verify cookie file format
-cat tmp/sap_cookies.json
-```
-
-**Solution:**
-1. Call `sap_authenticate` tool
-2. Verify `store_path` parameter matches expected location
-3. Check cookie file was created
-4. Restart MCP server
-
-### Cookie File Permissions
-
-**Linux/Mac:**
-```bash
-# Ensure cookie file is readable
-chmod 600 tmp/sap_cookies.json
-
-# Check ownership
-ls -l tmp/sap_cookies.json
-```
-
-**Windows:**
-```powershell
-# Check file exists
-Test-Path tmp/sap_cookies.json
-
-# View file properties
-Get-Item tmp/sap_cookies.json
-```
-
-### Authentication Method Not Detected
-
-**Check current auth method:**
-
-Look for console logs when server starts:
-```
-[Auth] Using SSO Authentication (cookies from tmp/sap_cookies.json)
-```
-or
-```
-[Auth] Using Basic Authentication (credentials)
-```
-
-**Verify configuration:**
-```bash
-# Check .env file
-cat .env
-
-# Verify credentials are set (Basic Auth)
-echo $SAP_USERNAME
-echo $SAP_PASSWORD
-
-# Check cookie file exists (SSO)
-ls -la tmp/sap_cookies.json
-```
+The browser SSO flow gives you 5 minutes to complete interactive login. If it times out:
+1. Call `SapBrowserLogin` again
+2. Complete the login faster (bookmark the IDP page, have credentials ready)
+3. Check if your IDP has additional approval steps that take too long
 
 ### Debugging Authentication Issues
 
-**Enable detailed logging:**
-
-1. Run MCP server in development mode
-2. Check console output for auth-related messages
-3. Look for `[Auth]` and `[CSRF]` prefixed logs
-
-**Example logs:**
+**Check console logs for auth-related messages:**
 ```
-[Auth] Loaded 2 SSO cookies from C:/path/to/tmp/sap_cookies.json
-[Auth] Using SSO Authentication (cookies from C:/path/to/tmp/sap_cookies.json)
-[CSRF] Fetching token using SSO (cookie file)
+[Auth] Using Basic Authentication (credentials)
+[Auth] Using Browser SSO Authentication (will launch Chrome when needed)
+[BrowserSSO] Opening browser for login at https://...
+[BrowserSSO] Login detected, capturing cookies...
+[CookieStore] Saved cookies to /tmp/mcp-abap-adt/my-system.json
+[Auth] SSO session expired, re-authenticating...
 ```
+
+Look for `[Auth]`, `[BrowserSSO]`, `[CookieStore]`, and `[CSRF]` prefixed messages.
 
 ## Best Practices
 
-1. **Use Basic Auth for simplicity**
-   - Simpler setup and maintenance
-   - Works for most SAP systems
-   - Easier to troubleshoot
-
-2. **Use SSO when required**
-   - For systems that only support SSO
-   - When organization mandates SSO for specific systems
-   - More complex setup with external dependencies
-
-3. **Never commit credentials**
-   - Keep `.env` in `.gitignore`
-   - Use environment variables for CI/CD
-   - Rotate passwords regularly
-
-4. **Monitor authentication logs**
-   - Check console for auth method used
-   - Watch for 401/403 errors
-   - Re-authenticate when sessions expire
-
-5. **Keep cookies secure**
-   - Store in project directory (`tmp/`)
-   - Don't commit to version control
-   - Set appropriate file permissions
+1. **Use Basic Auth for simplicity** -- when the system supports it
+2. **Use built-in Browser SSO for SSO systems** -- zero config, auto-retry on expiry
+3. **Never commit credentials** -- keep `.env` in `.gitignore`, use environment variables for CI/CD
+4. **Monitor auth logs** -- look for `[Auth]` and `[BrowserSSO]` prefixed messages
+5. **Pre-authenticate with `SapBrowserLogin`** -- avoid Chrome popup during a batch of requests
 
 ## Environment Variables Reference
 

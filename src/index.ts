@@ -68,6 +68,7 @@ import { handleExportMetadataExtensionToFile } from './handlers/handleExportMeta
 import { handleGetSystemInfo } from './handlers/handleGetSystemInfo';
 import { handleListSystems } from './handlers/handleListSystems';
 import { handleSetDefaultSystem } from './handlers/handleSetDefaultSystem';
+import { handleSapBrowserLogin } from './handlers/handleSapBrowserLogin';
 import { handleListRuntimeErrors } from './handlers/handleListRuntimeErrors';
 import { handleGetRuntimeError } from './handlers/handleGetRuntimeError';
 import { handleRunATC } from './handlers/handleRunATC';
@@ -442,6 +443,21 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['system_id'],
+                        },
+                    },
+                    {
+                        name: 'SapBrowserLogin',
+                        description:
+                            'Trigger browser-based SSO authentication for an SAP system. Opens Chrome for interactive login (supports any IDP: SAP IAS, ADFS, certificate, 2FA). Use this to proactively authenticate before making requests, or to re-authenticate when SSO cookies expire. Not needed for systems using Basic Auth.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                systemId: {
+                                    type: 'string',
+                                    description:
+                                        'System ID to authenticate (e.g., "DEV", "PRD"). Defaults to the active system.',
+                                },
+                            },
                         },
                     },
                     {
@@ -1541,6 +1557,8 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleListSystems();
                 case 'SetDefaultSystem':
                     return await handleSetDefaultSystem(request.params.arguments as any);
+                case 'SapBrowserLogin':
+                    return await handleSapBrowserLogin(request.params.arguments || {});
                 case 'ListRuntimeErrors':
                     return await handleListRuntimeErrors(request.params.arguments || {});
                 case 'GetRuntimeError':

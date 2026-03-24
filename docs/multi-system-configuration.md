@@ -94,8 +94,9 @@ Each system in the `systems` object has the following properties:
 ```
 
 - Recommended for production and corporate systems
-- `cookiePath` is optional, defaults to `./tmp/sap_cookies.json`
-- Requires authentication via `sap_authenticate` tool from the `sap-auth-mcp-main` MCP server
+- `cookiePath` is optional -- if omitted, built-in browser SSO launches Chrome automatically and caches cookies to `$TMPDIR/mcp-abap-adt/<domain>.json`
+- You can call the `SapBrowserLogin` tool to proactively authenticate
+- **Legacy fallback**: If `cookiePath` is set, the server checks that file first. You can still use the `sap_authenticate` tool from the external `sap-auth-mcp-main` MCP server to populate it
 
 ### Environment Variable Interpolation
 
@@ -193,6 +194,24 @@ In multi-system mode, this shows:
 
 ### SSO Authentication
 
+**Built-in Browser SSO (Recommended)**:
+
+1. Configure the system in `.sap-systems.json` with `"type": "sso"` (no `cookiePath` needed):
+   ```json
+   {
+     "auth": {
+       "type": "sso"
+     }
+   }
+   ```
+
+2. On first request, Chrome launches automatically for SSO login
+3. Or call `SapBrowserLogin` to proactively authenticate
+4. Cookies are cached to `$TMPDIR/mcp-abap-adt/<domain>.json` with 12h TTL
+5. 401/403 responses auto-retry with re-authentication
+
+**Legacy SSO (sap-auth-mcp-main)**:
+
 1. Install and configure the `sap-auth-mcp-main` MCP server
 
 2. Authenticate for each system:
@@ -203,7 +222,7 @@ In multi-system mode, this shows:
    }
    ```
 
-3. Configure the system in `.sap-systems.json`:
+3. Configure the system with a `cookiePath` in `.sap-systems.json`:
    ```json
    {
      "auth": {
@@ -296,7 +315,7 @@ This prevents cookie conflicts between systems.
 ### Authentication Failures
 
 - For Basic Auth: Verify environment variables are set correctly
-- For SSO: Re-authenticate using `sap_authenticate` tool
+- For SSO: Call `SapBrowserLogin` or re-authenticate using legacy `sap_authenticate` tool
 - Check that the `cookiePath` points to a valid file
 - Restart the MCP server after configuration changes
 
@@ -389,5 +408,5 @@ SAP_PASSWORD=mypass
 ## Related Documentation
 
 - [README.md](../README.md) - Main project documentation
-- [sap-auth-mcp-main](https://github.com/orchestraight/sap-auth-mcp-main) - SSO authentication server
+- [sap-auth-mcp-main](https://github.com/orchestraight/sap-auth-mcp-main) - Legacy SSO authentication server (external)
 - [.sap-systems.example.json](../.sap-systems.example.json) - Example configuration file

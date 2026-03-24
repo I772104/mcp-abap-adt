@@ -129,7 +129,8 @@ EOF
 #    See docs/Authentication.md for detailed guide
 #
 # Quick options:
-# - SSO (Recommended): Use sap_authenticate tool
+# - SSO (Recommended): Built-in browser SSO launches Chrome automatically
+#   Or call SapBrowserLogin tool to proactively authenticate
 # - Basic Auth: Add SAP_USERNAME/SAP_PASSWORD to .env
 
 # 5. Add to your MCP client configuration (see AI Agent Integration section)
@@ -219,13 +220,15 @@ The server supports two authentication methods that are automatically selected b
 
 **Option 1 - SSO Authentication (Recommended for Production)**:
 
-Best for corporate SAP systems with SSO. Requires the `sap-auth-mcp` MCP server.
+Best for corporate SAP systems with SSO. Built-in browser SSO requires no extra setup.
 
-1. Install and configure `sap-auth-mcp` server (see [Authentication Guide](docs/Authentication.md#sso-authentication-recommended))
-2. Use your MCP client to call `sap_authenticate` tool:
-   - `entry_url`: `{SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}`
-   - `store_path`: `tmp`
-3. Cookies are saved to `tmp/sap_cookies.json` and used automatically
+1. Leave `SAP_USERNAME` and `SAP_PASSWORD` unset in `.env`
+2. On first request, Chrome launches automatically for SSO login
+3. Or call the `SapBrowserLogin` tool to proactively authenticate
+4. Cookies are cached to `$TMPDIR/mcp-abap-adt/<domain>.json` with 12h TTL
+5. 401/403 responses auto-retry with re-authentication
+
+**Legacy alternative**: The external `sap-auth-mcp-main` MCP server still works as a fallback (see [Authentication Guide](docs/Authentication.md#sso-authentication-recommended))
 
 **Option 2 - Basic Authentication (Recommended for Dev/Test)**:
 
@@ -243,8 +246,8 @@ SAP_PASSWORD=your_password
 The server automatically detects and uses the best authentication method:
 
 1. **If credentials exist** (`SAP_USERNAME` and `SAP_PASSWORD` in `.env`) → Uses Basic Auth
-2. **If SSO cookies exist** (`tmp/sap_cookies.json`) → Uses SSO
-3. **If neither exists** → Shows clear error with setup instructions
+2. **If SSO cookies exist** (legacy cookie file or `$TMPDIR/mcp-abap-adt/<domain>.json`) → Uses cached SSO cookies
+3. **If neither exists** → Launches Chrome for built-in browser SSO on first request
 
 You'll see which method is active in the console logs:
 ```
@@ -262,7 +265,7 @@ For complete authentication setup, troubleshooting, and best practices, see the 
 📚 **[Authentication Guide](docs/Authentication.md)**
 
 The guide covers:
-- Detailed SSO setup with sap-auth-mcp server
+- Built-in browser SSO (primary) and legacy sap-auth-mcp setup
 - Basic authentication configuration
 - Cookie file locations and formats
 - Re-authentication procedures

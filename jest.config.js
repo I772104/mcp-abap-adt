@@ -29,6 +29,10 @@ module.exports = {
   },
   // Setup file runs before test suites to set test mode flag
   setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
+  // Map ESM-only modules to CJS mocks so Jest can process them
+  moduleNameMapper: {
+    '^chrome-launcher$': '<rootDir>/tests/__mocks__/chrome-launcher.js',
+  },
   // Separate test configurations
   projects: [
     {
@@ -37,6 +41,9 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
       roots: ['<rootDir>/tests/unit', '<rootDir>/src'],
+      moduleNameMapper: {
+        '^chrome-launcher$': '<rootDir>/tests/__mocks__/chrome-launcher.js',
+      },
     },
     {
       displayName: 'integration',
@@ -44,6 +51,9 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
       roots: ['<rootDir>/tests/integration', '<rootDir>/src'],
+      moduleNameMapper: {
+        '^chrome-launcher$': '<rootDir>/tests/__mocks__/chrome-launcher.js',
+      },
     },
     {
       displayName: 'legacy',
@@ -51,6 +61,9 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/src/**/*.test.ts'],
       roots: ['<rootDir>/src'],
+      moduleNameMapper: {
+        '^chrome-launcher$': '<rootDir>/tests/__mocks__/chrome-launcher.js',
+      },
     }
   ],
 };

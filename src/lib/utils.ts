@@ -4,6 +4,7 @@ import { Agent } from 'https';
 import { AxiosResponse } from 'axios';
 import { getConfig, SapConfig } from '../index'; // getConfig needs to be exported from index.ts
 import { AuthProvider, createAuthProvider, CookieAuthProvider } from '../infrastructure/auth';
+import { BrowserSsoAuthProvider } from '../infrastructure/auth/BrowserSsoAuthProvider';
 import { SystemRegistry } from '../infrastructure/system';
 import { AuthProviderRegistry } from '../infrastructure/auth/AuthProviderRegistry';
 import * as path from 'path';
@@ -303,7 +304,8 @@ export async function makeAdtRequestForSystem(
     data?: any,
     params?: any,
     customHeaders?: any,
-    systemId?: string
+    systemId?: string,
+    isRetry = false
 ): Promise<AxiosResponse> {
     const registry = SystemRegistry.getInstance();
     const authRegistry = AuthProviderRegistry.getInstance();
@@ -323,9 +325,28 @@ export async function makeAdtRequestForSystem(
         }
     }
 
-    const requestHeaders = {
-        ...(await getAuthHeadersForSystem(systemId)),
-    };
+    // Get auth headers with retry on transient browser launch errors
+    let requestHeaders: Record<string, string>;
+    try {
+        requestHeaders = {
+            ...(await getAuthHeadersForSystem(systemId)),
+        };
+    } catch (error) {
+        // Retry once on transient Chrome launch errors (EPERM, lighthouse permission issues)
+        if (
+            !isRetry &&
+            error instanceof Error &&
+            (error.message.includes('EPERM') ||
+                error.message.includes('EACCES') ||
+                error.message.includes('lighthouse') ||
+                error.message.includes('Permission denied'))
+        ) {
+            console.error(`[Auth] System "${system.id}": Transient auth error, retrying once...`);
+            await new Promise((r) => setTimeout(r, 1000));
+            return makeAdtRequestForSystem(url, method, timeout, data, params, customHeaders, systemId, true);
+        }
+        throw error;
+    }
 
     // Add CSRF token for POST/PUT requests
     if ((method === 'POST' || method === 'PUT') && token) {
@@ -380,6 +401,24 @@ export async function makeAdtRequestForSystem(
             authRegistry.setCsrfToken(system.id, token);
             requestConfig.headers['x-csrf-token'] = token;
             return await createAxiosInstance()(requestConfig);
+        }
+        // SSO re-auth on 401, or 403 without CSRF in body
+        else if (
+            error instanceof AxiosError &&
+            (error.response?.status === 401 || error.response?.status === 403) &&
+            !isRetry
+        ) {
+            const provider = authRegistry.getProvider(system);
+            if (provider instanceof BrowserSsoAuthProvider) {
+                console.error(`[Auth] System "${system.id}": SSO session expired, re-authenticating...`);
+                await provider.refreshAuth();
+                // refreshAuth() clears its own in-memory cookies and CookieStore on disk.
+                // We must also clear the registry's per-system CSRF token and session cookies
+                // separately, since refreshAuth() does not access the registry.
+                authRegistry.setCsrfToken(system.id, '');
+                authRegistry.setCookies(system.id, '');
+                return makeAdtRequestForSystem(url, method, timeout, data, params, customHeaders, systemId, true);
+            }
         }
         throw error;
     }
@@ -528,7 +567,8 @@ export async function makeAdtRequest(
     timeout: number,
     data?: any,
     params?: any,
-    customHeaders?: any
+    customHeaders?: any,
+    isRetry = false
 ) {
     // Try new multi-system mode first
     try {
@@ -550,9 +590,28 @@ export async function makeAdtRequest(
         }
     }
 
-    const requestHeaders = {
-        ...(await getAuthHeaders()),
-    };
+    // Get auth headers with retry on transient browser launch errors
+    let requestHeaders: Record<string, string>;
+    try {
+        requestHeaders = {
+            ...(await getAuthHeaders()),
+        };
+    } catch (error) {
+        // Retry once on transient Chrome launch errors
+        if (
+            !isRetry &&
+            error instanceof Error &&
+            (error.message.includes('EPERM') ||
+                error.message.includes('EACCES') ||
+                error.message.includes('lighthouse') ||
+                error.message.includes('Permission denied'))
+        ) {
+            console.error('[Auth] Transient auth error, retrying once...');
+            await new Promise((r) => setTimeout(r, 1000));
+            return makeAdtRequest(url, method, timeout, data, params, customHeaders, true);
+        }
+        throw error;
+    }
 
     // Add CSRF token for POST/PUT requests
     if ((method === 'POST' || method === 'PUT') && csrfToken) {
@@ -608,6 +667,20 @@ export async function makeAdtRequest(
             csrfToken = await fetchCsrfToken(url);
             requestConfig.headers['x-csrf-token'] = csrfToken;
             return await createAxiosInstance()(requestConfig);
+        }
+        // SSO re-auth on 401, or 403 without CSRF in body
+        else if (
+            error instanceof AxiosError &&
+            (error.response?.status === 401 || error.response?.status === 403) &&
+            !isRetry
+        ) {
+            if (authProvider instanceof BrowserSsoAuthProvider) {
+                console.error('[Auth] SSO session expired, re-authenticating...');
+                await authProvider.refreshAuth();
+                csrfToken = null;
+                cookies = null;
+                return makeAdtRequest(url, method, timeout, data, params, customHeaders, true);
+            }
         }
         throw error;
     }

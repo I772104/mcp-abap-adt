@@ -8,32 +8,42 @@
 
 ### 1. Authentication Setup (First Time)
 
-**SSO Authentication (Recommended)**:
+**SSO Authentication (Recommended) -- Built-in Browser SSO**:
 ```
-IMPORTANT: Read .env file first to get SAP_URL and SAP_CLIENT values!
+When no credentials are configured in .env, the server automatically
+launches Chrome for SSO login on first request. No extra setup needed.
+
+To proactively authenticate before making requests:
+
+Tool: SapBrowserLogin
+Parameters: (none required -- uses SAP_URL and SAP_CLIENT from .env)
+
+✅ Zero-config: Chrome launches automatically when needed
+✅ Cookies cached to $TMPDIR/mcp-abap-adt/<domain>.json with 12h TTL
+✅ 401/403 responses auto-retry with re-authentication
+✅ No server restart needed
+```
+
+**Legacy SSO Fallback (sap-auth-mcp-main)**:
+```
+If built-in browser SSO is not suitable, the external sap-auth-mcp-main
+MCP server still works. Its cookie file path is checked before browser SSO.
 
 Tool: sap_authenticate
 Parameters:
   entry_url: {SAP_URL}/sap/bc/adt?sap-client={SAP_CLIENT}
   store_path: {shared_cookie_location}
-
-Example:
-  entry_url: "https://your-sap-system.com:8000/sap/bc/adt?sap-client=001"
-  store_path: "C:\\Users\\{username}\\.sap\\cookies"
-
-✅ Cookies stored in shared location work across all projects
-✅ No server restart needed after initial setup
 ```
 
 **Troubleshooting Authentication**:
-- CSRF 403 errors mean cookies expired or server needs restart
-- Check cookie status: `sap_get_cookie_info`
-- Re-authenticate to shared location when cookies expire
+- 401/403 errors are auto-retried with re-authentication
+- For persistent issues, call `SapBrowserLogin` to force a fresh login
+- Legacy cookie status: `sap_get_cookie_info`
 - Server must be restarted after .env changes
 
 **Basic Auth Fallback**:
 ```
-Only used if SSO cookies unavailable
+Only used if SAP_USERNAME and SAP_PASSWORD are set in .env
 Set in .env: SAP_USERNAME, SAP_PASSWORD
 ```
 

@@ -1,5 +1,6 @@
 import { AuthProvider } from './AuthProvider';
 import { BasicAuthProvider } from './BasicAuthProvider';
+import { BrowserSsoAuthProvider } from './BrowserSsoAuthProvider';
 import { CookieAuthProvider } from './CookieAuthProvider';
 import { SystemConfig } from '../system/types';
 import * as path from 'path';
@@ -45,23 +46,10 @@ export function createAuthProvider(
         }
     }
 
-    // No authentication available
-    throw new Error(
-        '🔒 No Authentication Method Available\n\n' +
-            'Neither basic auth credentials nor SSO cookies are configured.\n' +
-            'Please authenticate using SSO:\n\n' +
-            'SSO Authentication (Recommended):\n' +
-            '  1. Use sap-auth-mcp-main MCP server\n' +
-            '  2. Call sap_authenticate tool with:\n' +
-            `     entry_url: ${systemUrl}/sap/bc/adt?sap-client=${client}\n` +
-            '     store_path: tmp\n' +
-            '  3. Restart MCP server: /mcp\n\n' +
-            'Alternative - Basic Authentication (for dev/test):\n' +
-            '  Set SAP_USERNAME and SAP_PASSWORD in .env file\n' +
-            // '  Then restart MCP server: /mcp\n\n' +
-            'Cookie locations checked:\n' +
-            cookieLocations.map((p) => `  - ${p}`).join('\n')
-    );
+    // Browser SSO fallback (instead of throwing error)
+    console.error('[Auth] Using Browser SSO Authentication (will launch Chrome when needed)');
+    const domain = new URL(systemUrl).hostname;
+    return new BrowserSsoAuthProvider(systemUrl, client, domain);
 }
 
 /**
@@ -101,22 +89,8 @@ export function createAuthProviderFromConfig(config: SystemConfig): AuthProvider
         }
     }
 
-    // No authentication available
-    throw new Error(
-        `🔒 No Authentication Method Available for System "${config.id}"\n\n` +
-            `System: ${config.name} (${config.id})\n` +
-            `URL: ${config.url}\n` +
-            `Client: ${config.client}\n\n` +
-            'SSO Authentication (Recommended):\n' +
-            '  1. Use sap-auth-mcp-main MCP server\n' +
-            '  2. Call sap_authenticate tool with:\n' +
-            `     entry_url: ${config.url}/sap/bc/adt?sap-client=${config.client}\n` +
-            `     store_path: ${config.auth.cookiePath || 'tmp'}\n` +
-            '  3. Restart MCP server: /mcp\n\n' +
-            'Alternative - Basic Authentication (for dev/test):\n' +
-            `  Update .sap-systems.json with credentials for "${config.id}"\n` +
-            '  Then restart MCP server: /mcp\n\n' +
-            'Cookie locations checked:\n' +
-            cookieLocations.map((p) => `  - ${p}`).join('\n')
-    );
+    // Browser SSO fallback
+    console.error(`[Auth] System "${config.id}": Using Browser SSO Authentication`);
+    const domain = new URL(config.url).hostname;
+    return new BrowserSsoAuthProvider(config.url, config.client, domain);
 }
