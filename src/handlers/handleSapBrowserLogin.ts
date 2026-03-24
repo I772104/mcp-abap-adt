@@ -74,7 +74,7 @@ export async function handleSapBrowserLogin(args: Record<string, unknown>) {
             `URL: ${system.url}\n` +
             `Client: ${system.client}\n` +
             `Auth Method: ${provider.getName()}\n` +
-            `Cookie Cache: ${(provider as any).cookieStore.getPath()}\n\n` +
+            `Cookie Cache: ${provider.getCookieCachePath()}\n\n` +
             'Authentication cookies have been saved and will be valid for 12 hours.\n' +
             'The browser window has been closed.';
 

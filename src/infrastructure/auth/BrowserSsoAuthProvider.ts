@@ -60,6 +60,13 @@ export class BrowserSsoAuthProvider implements AuthProvider {
     }
 
     /**
+     * Get the path to the cookie cache file
+     */
+    getCookieCachePath(): string {
+        return this.cookieStore.getPath();
+    }
+
+    /**
      * Get authentication headers
      * Priority: auth in progress > in-memory > disk cache > launch browser
      */
