@@ -59,12 +59,17 @@ export class SystemRegistry {
      * Find the .sap-systems.json configuration file
      */
     private findConfigFile(): string | null {
-        // Look in current working directory
-        const cwd = process.cwd();
-        const configPath = path.join(cwd, '.sap-systems.json');
+        // Look relative to the server root (3 levels up from dist/infrastructure/system/)
+        const serverRoot = path.resolve(__dirname, '../../..');
+        const serverRootPath = path.join(serverRoot, '.sap-systems.json');
+        if (fs.existsSync(serverRootPath)) {
+            return serverRootPath;
+        }
 
-        if (fs.existsSync(configPath)) {
-            return configPath;
+        // Fall back to current working directory
+        const cwdPath = path.join(process.cwd(), '.sap-systems.json');
+        if (fs.existsSync(cwdPath)) {
+            return cwdPath;
         }
 
         return null;
