@@ -1,4 +1,4 @@
-import * as chromeLauncher from 'chrome-launcher';
+import type { LaunchedChrome } from 'chrome-launcher';
 import { AuthProvider } from './AuthProvider';
 import { CookieStore } from './CookieStore';
 
@@ -14,7 +14,7 @@ const AUTH_TIMEOUT_MS = 300_000; // 5 minutes
  */
 export class BrowserSsoAuthProvider implements AuthProvider {
     private cookies: string = '';
-    private chrome: chromeLauncher.LaunchedChrome | null = null;
+    private chrome: LaunchedChrome | null = null;
     private readonly cookieStore: CookieStore;
     private authInProgress: Promise<void> | null = null;
 
@@ -98,6 +98,8 @@ export class BrowserSsoAuthProvider implements AuthProvider {
         console.error(`[BrowserSSO] Opening browser for login at ${entryUrl}`);
 
         try {
+            // Dynamic import to handle chrome-launcher as an ESM-only package
+            const chromeLauncher = await import('chrome-launcher');
             this.chrome = await chromeLauncher.launch({
                 startingUrl: entryUrl,
                 chromeFlags: ['--window-size=1280,800', '--disable-popup-blocking', '--no-first-run'],
@@ -114,7 +116,11 @@ export class BrowserSsoAuthProvider implements AuthProvider {
             for (let i = 0; i < 5; i++) {
                 try {
                     const res = await fetch(cdpUrl);
-                    targets = (await res.json()) as Array<{ webSocketDebuggerUrl: string; url: string; type: string }>;
+                    targets = (await res.json()) as Array<{
+                        webSocketDebuggerUrl: string;
+                        url: string;
+                        type: string;
+                    }>;
                     break;
                 } catch {
                     console.error(`[BrowserSSO] CDP connection attempt ${i + 1}/5...`);
@@ -147,16 +153,24 @@ export class BrowserSsoAuthProvider implements AuthProvider {
             });
 
             let msgId = 1;
-            const send = (method: string, params = {}): Promise<any> => {
+            const send = (method: string, params = {}): Promise<unknown> => {
                 return new Promise((resolve, reject) => {
                     const timeout = setTimeout(() => reject(new Error(`CDP timeout: ${method}`)), 10000);
                     const id = msgId++;
                     const handler = (event: MessageEvent) => {
-                        const data = JSON.parse(event.data);
+                        const data = JSON.parse(event.data as string) as {
+                            id: number;
+                            error?: { message: string };
+                            result: unknown;
+                        };
                         if (data.id === id) {
                             clearTimeout(timeout);
                             ws.removeEventListener('message', handler);
-                            data.error ? reject(new Error(data.error.message)) : resolve(data.result);
+                            if (data.error) {
+                                reject(new Error(data.error.message));
+                            } else {
+                                resolve(data.result);
+                            }
                         }
                     };
                     ws.addEventListener('message', handler);
@@ -170,16 +184,18 @@ export class BrowserSsoAuthProvider implements AuthProvider {
 
             await new Promise((r) => setTimeout(r, 2000));
 
-            const { cookies } = await send('Network.getAllCookies');
-            const cookieStr = cookies
-                .filter((c: { domain: string }) => c.domain.includes(this.domain) || c.domain.includes('.sap'))
-                .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
+            const cdpCookies = (await send('Network.getAllCookies')) as {
+                cookies: Array<{ name: string; value: string; domain: string }>;
+            };
+            const cookieStr = cdpCookies.cookies
+                .filter((c) => c.domain.includes(this.domain) || c.domain.includes('.sap'))
+                .map((c) => `${c.name}=${c.value}`)
                 .join('; ');
 
             this.cookies = cookieStr;
             await this.cookieStore.save(cookieStr, this.domain);
 
-            console.error(`[BrowserSSO] Captured ${cookies.length} cookies`);
+            console.error(`[BrowserSSO] Captured ${cdpCookies.cookies.length} cookies`);
             ws.close();
             await this.chrome.kill();
             this.chrome = null;
@@ -199,16 +215,16 @@ export class BrowserSsoAuthProvider implements AuthProvider {
         }
     }
 
-    private async waitForLogin(send: (method: string, params?: object) => Promise<any>): Promise<void> {
+    private async waitForLogin(send: (method: string, params?: object) => Promise<unknown>): Promise<void> {
         const start = Date.now();
 
         while (Date.now() - start < AUTH_TIMEOUT_MS) {
             try {
-                const { result } = await send('Runtime.evaluate', {
+                const cdpResult = (await send('Runtime.evaluate', {
                     expression: 'window.location.href',
-                });
+                })) as { value: string };
 
-                const url = result.value as string;
+                const url = cdpResult.value;
                 console.error(`[BrowserSSO] Current URL: ${url?.substring(0, 80)}...`);
 
                 if (
