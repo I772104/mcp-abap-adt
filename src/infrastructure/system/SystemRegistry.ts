@@ -183,8 +183,8 @@ export class SystemRegistry {
             throw new Error('SAP_URL and SAP_CLIENT must be set in environment or .sap-systems.json must exist');
         }
 
-        // Determine auth type
-        const authType = cookiePath ? 'sso' : 'basic';
+        // Determine auth type: prefer SSO if cookie path is set or if no credentials are provided
+        const authType = cookiePath || (!username && !password) ? 'sso' : 'basic';
 
         const config: SystemConfig = {
             id: 'default',

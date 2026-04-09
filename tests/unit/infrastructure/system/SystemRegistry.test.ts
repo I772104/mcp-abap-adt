@@ -291,6 +291,21 @@ describe('SystemRegistry', () => {
             expect(system.auth.cookiePath).toBe('./tmp/cookies.json');
         });
 
+        test('should use SSO auth when no credentials are configured (browser SSO)', () => {
+            process.env.SAP_URL = 'https://sap.example.com:443';
+            process.env.SAP_CLIENT = '100';
+            // No username, password, or cookie path - should default to browser SSO
+
+            mockFs.existsSync.mockReturnValue(false);
+
+            const registry = SystemRegistry.getInstance();
+            registry.initialize();
+
+            const system = registry.getSystem('default');
+            expect(system.auth.type).toBe('sso');
+            expect(system.auth.cookiePath).toBeUndefined();
+        });
+
         test('should throw error if SAP_URL not set', () => {
             process.env.SAP_CLIENT = '100';
             mockFs.existsSync.mockReturnValue(false);
