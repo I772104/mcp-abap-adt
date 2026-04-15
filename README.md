@@ -490,6 +490,8 @@ Retrieve source code and definitions from your ABAP system.
 | `GetFunctionGroup`   | Retrieve entire function group source                | [GetFunctionGroup.md](docs/GetFunctionGroup.md)     |
 | `GetTable`           | Retrieve database table structure and metadata       | [GetTable.md](docs/GetTable.md)                     |
 | `GetStructure`       | Retrieve DDIC structure definitions                  | [GetStructure.md](docs/GetStructure.md)             |
+| `GetDomain`          | Retrieve domain definitions with data types and values | [GetDomain.md](docs/GetDomain.md)                   |
+| `GetDataElement`     | Retrieve data element definitions with labels        | [GetDataElement.md](docs/GetDataElement.md)         |
 | `GetTypeInfo`        | Retrieve ABAP type information                       | -                                                   |
 | `GetPackage`         | Retrieve package details and contained objects       | [GetPackage.md](docs/GetPackage.md)                 |
 | `GetPackageContents` | List objects within a package                        | [GetPackageContents.md](docs/GetPackageContents.md) |

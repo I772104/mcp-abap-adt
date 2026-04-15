@@ -22,6 +22,8 @@ import { handleGetFunctionGroup } from './handlers/handleGetFunctionGroup';
 import { handleGetFunction } from './handlers/handleGetFunction';
 import { handleGetTable } from './handlers/handleGetTable';
 import { handleGetStructure } from './handlers/handleGetStructure';
+import { handleGetDomain } from './handlers/handleGetDomain';
+import { handleGetDataElement } from './handlers/handleGetDataElement';
 import { handleGetTableContents } from './handlers/handleGetTableContents';
 import { handleGetPackage } from './handlers/handleGetPackage';
 import { handleGetPackageContents } from './handlers/handleGetPackageContents';
@@ -640,6 +642,36 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['table_name'],
+                        },
+                    },
+                    {
+                        name: 'GetDomain',
+                        description:
+                            'Retrieve ABAP domain definition including data type, length, fixed values, and conversion exit',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                domain_name: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP domain (e.g., MATNR, BUKRS, LIFNR)',
+                                },
+                            },
+                            required: ['domain_name'],
+                        },
+                    },
+                    {
+                        name: 'GetDataElement',
+                        description:
+                            'Retrieve ABAP data element definition including domain reference, field labels, and documentation',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                dataelement_name: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP data element (e.g., MATNR, BUKRS, NETWR)',
+                                },
+                            },
+                            required: ['dataelement_name'],
                         },
                     },
                     {
@@ -1579,6 +1611,10 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleGetStructure(request.params.arguments);
                 case 'GetTable':
                     return await handleGetTable(request.params.arguments);
+                case 'GetDomain':
+                    return await handleGetDomain(request.params.arguments);
+                case 'GetDataElement':
+                    return await handleGetDataElement(request.params.arguments);
                 case 'GetTableContents':
                     return await handleGetTableContents(request.params.arguments);
                 case 'GetPackage':
