@@ -1,4 +1,7 @@
 import type { LaunchedChrome } from 'chrome-launcher';
+import { mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AuthProvider } from './AuthProvider';
 import { CookieStore } from './CookieStore';
 
@@ -100,8 +103,15 @@ export class BrowserSsoAuthProvider implements AuthProvider {
         try {
             // Dynamic import to handle chrome-launcher as an ESM-only package
             const chromeLauncher = await import('chrome-launcher');
+
+            // Use fixed userDataDir to prevent Windows EPERM errors on cleanup
+            // chrome-launcher only deletes the profile dir if it created it
+            const userDataDir = join(tmpdir(), 'mcp-abap-adt-chrome');
+            mkdirSync(userDataDir, { recursive: true });
+
             this.chrome = await chromeLauncher.launch({
                 startingUrl: entryUrl,
+                userDataDir,
                 chromeFlags: ['--window-size=1280,800', '--disable-popup-blocking', '--no-first-run'],
             });
 
@@ -220,11 +230,12 @@ export class BrowserSsoAuthProvider implements AuthProvider {
 
         while (Date.now() - start < AUTH_TIMEOUT_MS) {
             try {
+                // Fix: CDP Runtime.evaluate returns { result: { type, value } }
                 const cdpResult = (await send('Runtime.evaluate', {
                     expression: 'window.location.href',
-                })) as { value: string };
+                })) as { result: { value: string } };
 
-                const url = cdpResult.value;
+                const url = cdpResult.result.value;
                 console.error(`[BrowserSSO] Current URL: ${url?.substring(0, 80)}...`);
 
                 if (
