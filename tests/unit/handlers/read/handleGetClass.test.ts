@@ -7,12 +7,20 @@
 
 import { handleGetClass } from '../../../../src/handlers/handleGetClass';
 import * as utils from '../../../../src/lib/utils';
+import * as classUtils from '../../../../src/lib/classUtils';
 
 // Mock the utility functions
 jest.mock('../../../../src/lib/utils', () => ({
   ...jest.requireActual('../../../../src/lib/utils'),
   makeAdtRequest: jest.fn(),
   getBaseUrl: jest.fn(),
+}));
+
+// Mock classUtils
+jest.mock('../../../../src/lib/classUtils', () => ({
+  ...jest.requireActual('../../../../src/lib/classUtils'),
+  fetchIncludes: jest.fn(),
+  formatMultiIncludeOutput: jest.fn(),
 }));
 
 describe('handleGetClass', () => {
@@ -31,7 +39,7 @@ describe('handleGetClass', () => {
 
   describe('Input Validation', () => {
     test('should reject missing class_name', async () => {
-      const result = await handleGetClass({});
+      const result = await handleGetClass({} as any);
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Class name');
@@ -497,6 +505,207 @@ ENDCLASS.`;
         'GET',
         expect.any(Number) // Timeout parameter
       );
+    });
+  });
+
+  describe('Multi-Include Support (New Feature)', () => {
+    let mockFetchIncludes: jest.MockedFunction<typeof classUtils.fetchIncludes>;
+    let mockFormatMultiIncludeOutput: jest.MockedFunction<typeof classUtils.formatMultiIncludeOutput>;
+
+    beforeEach(() => {
+      mockFetchIncludes = classUtils.fetchIncludes as jest.MockedFunction<typeof classUtils.fetchIncludes>;
+      mockFormatMultiIncludeOutput = classUtils.formatMultiIncludeOutput as jest.MockedFunction<
+        typeof classUtils.formatMultiIncludeOutput
+      >;
+    });
+
+    test('should use fast path for main only (backward compatible)', async () => {
+      mockMakeAdtRequest.mockResolvedValueOnce({
+        status: 200,
+        data: 'CLASS cl_test DEFINITION.',
+        headers: {},
+      } as any);
+
+      const result = await handleGetClass({ class_name: 'CL_TEST' });
+
+      expect(result.isError).toBe(false);
+      expect(mockMakeAdtRequest).toHaveBeenCalledTimes(1);
+      expect(mockMakeAdtRequest).toHaveBeenCalledWith(
+        expect.stringContaining('/source/main'),
+        'GET',
+        30000
+      );
+      // Should NOT call fetchIncludes for fast path
+      expect(mockFetchIncludes).not.toHaveBeenCalled();
+    });
+
+    test('should support include_types parameter with single type', async () => {
+      // Single ['main'] should use fast path which doesn't call fetchIncludes
+      mockMakeAdtRequest.mockResolvedValueOnce({
+        status: 200,
+        data: 'CLASS cl_test DEFINITION.',
+        headers: {},
+      } as any);
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['main'],
+      });
+
+      expect(result.isError).toBe(false);
+      // Single main should use fast path
+      expect(mockMakeAdtRequest).toHaveBeenCalled();
+      expect(mockFetchIncludes).not.toHaveBeenCalled();
+    });
+
+    test('should fetch multiple includes when specified', async () => {
+      const mockIncludes = [
+        { type: 'main', source: 'MAIN SOURCE' },
+        { type: 'implementations', source: 'IMPL SOURCE' },
+      ];
+
+      mockFetchIncludes.mockResolvedValueOnce(mockIncludes);
+      mockFormatMultiIncludeOutput.mockReturnValueOnce('FORMATTED OUTPUT WITH BOTH');
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['main', 'implementations'],
+      });
+
+      expect(result.isError).toBe(false);
+      expect(mockFetchIncludes).toHaveBeenCalledWith('CL_TEST', ['main', 'implementations']);
+      expect(mockFormatMultiIncludeOutput).toHaveBeenCalledWith(mockIncludes);
+      expect(result.content[0].text).toBe('FORMATTED OUTPUT WITH BOTH');
+    });
+
+    test('should fetch all includes when type is "all"', async () => {
+      const mockAllIncludes = [
+        { type: 'main', source: 'MAIN' },
+        { type: 'definitions', source: 'DEFS' },
+        { type: 'implementations', source: 'IMPL' },
+        { type: 'macros', source: 'MACROS' },
+        { type: 'testclasses', source: 'TESTS' },
+      ];
+
+      mockFetchIncludes.mockResolvedValueOnce(mockAllIncludes);
+      mockFormatMultiIncludeOutput.mockReturnValueOnce('ALL INCLUDES FORMATTED');
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['all'],
+      });
+
+      expect(result.isError).toBe(false);
+      expect(mockFetchIncludes).toHaveBeenCalledWith('CL_TEST', ['all']);
+      expect(result.content[0].text).toBe('ALL INCLUDES FORMATTED');
+    });
+
+    test('should handle empty include_types array (default to main)', async () => {
+      mockMakeAdtRequest.mockResolvedValueOnce({
+        status: 200,
+        data: 'MAIN SOURCE',
+        headers: {},
+      } as any);
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: [],
+      });
+
+      // Empty array should default to ['main']
+      expect(result.isError).toBe(false);
+    });
+
+    test('should handle missing includes gracefully', async () => {
+      const mockIncludes = [
+        { type: 'main', source: 'MAIN SOURCE' },
+        { type: 'definitions', source: null }, // Missing
+      ];
+
+      mockFetchIncludes.mockResolvedValueOnce(mockIncludes);
+      mockFormatMultiIncludeOutput.mockReturnValueOnce('MAIN\n\n// No definitions');
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['main', 'definitions'],
+      });
+
+      expect(result.isError).toBe(false);
+      expect(result.content[0].text).toContain('MAIN');
+    });
+
+    test('should format output with section separators', async () => {
+      const formattedOutput = `${'='.repeat(80)}
+MAIN SOURCE
+${'='.repeat(80)}
+CLASS cl_test DEFINITION.
+ENDCLASS.
+
+${'='.repeat(80)}
+LOCAL CLASS IMPLEMENTATIONS (CCIMP)
+${'='.repeat(80)}
+CLASS lcl_helper IMPLEMENTATION.
+ENDCLASS.`;
+
+      mockFetchIncludes.mockResolvedValueOnce([
+        { type: 'main', source: 'CLASS cl_test DEFINITION.' },
+        { type: 'implementations', source: 'CLASS lcl_helper IMPLEMENTATION.' },
+      ]);
+      mockFormatMultiIncludeOutput.mockReturnValueOnce(formattedOutput);
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['main', 'implementations'],
+      });
+
+      expect(result.isError).toBe(false);
+      expect(result.content[0].text).toContain('MAIN SOURCE');
+      expect(result.content[0].text).toContain('LOCAL CLASS IMPLEMENTATIONS');
+      expect(result.content[0].text).toContain('='.repeat(80));
+    });
+
+    test('should handle errors from fetchIncludes', async () => {
+      mockFetchIncludes.mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await handleGetClass({
+        class_name: 'CL_TEST',
+        include_types: ['all'],
+      });
+
+      expect(result.isError).toBe(true);
+    });
+
+    test('should support all valid include types', async () => {
+      const validTypes = ['definitions', 'implementations', 'macros', 'testclasses'];
+
+      for (const type of validTypes) {
+        mockFetchIncludes.mockResolvedValueOnce([
+          { type: type, source: `${type.toUpperCase()} SOURCE` },
+        ]);
+        mockFormatMultiIncludeOutput.mockReturnValueOnce(`FORMATTED ${type}`);
+
+        const result = await handleGetClass({
+          class_name: 'CL_TEST',
+          include_types: [type],
+        });
+
+        expect(result.isError).toBe(false);
+      }
+    });
+
+    test('should maintain backward compatibility - undefined include_types', async () => {
+      mockMakeAdtRequest.mockResolvedValueOnce({
+        status: 200,
+        data: 'CLASS cl_test DEFINITION.',
+        headers: {},
+      } as any);
+
+      const result = await handleGetClass({ class_name: 'CL_TEST' });
+
+      expect(result.isError).toBe(false);
+      expect(result.content[0].text).toBe('CLASS cl_test DEFINITION.');
+      // Should use fast path, not call fetchIncludes
+      expect(mockFetchIncludes).not.toHaveBeenCalled();
     });
   });
 });

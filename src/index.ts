@@ -32,6 +32,7 @@ import { handleGetTypeInfo } from './handlers/handleGetTypeInfo';
 import { handleGetInterface } from './handlers/handleGetInterface';
 import { handleGetTransaction } from './handlers/handleGetTransaction';
 import { handleGetClassTests } from './handlers/handleGetClassTests';
+import { handleGetClassInclude } from './handlers/handleGetClassInclude';
 import { handleRunClassTests } from './handlers/handleRunClassTests';
 import { handleRunPackageTests } from './handlers/handleRunPackageTests';
 import { handleGetClassCoverage } from './handlers/handleGetClassCoverage';
@@ -258,13 +259,34 @@ export class mcp_abap_adt_server {
                     {
                         name: 'ExportClassToFile',
                         description:
-                            'Export an ABAP class from the system directly to a file in the tmp folder. Automatically creates the tmp folder if it does not exist.',
+                            'Export an ABAP class from the system directly to file(s) in the tmp folder. Optionally export all includes (definitions, implementations, macros, testclasses). Automatically creates the tmp folder if it does not exist.',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 class_name: {
                                     type: 'string',
                                     description: 'Name of the ABAP class to export',
+                                },
+                                include_types: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string',
+                                        enum: [
+                                            'main',
+                                            'definitions',
+                                            'implementations',
+                                            'macros',
+                                            'testclasses',
+                                            'all',
+                                        ],
+                                    },
+                                    description:
+                                        "Optional: Include types to export. Default: ['main']. Use 'all' for all available includes.",
+                                },
+                                single_file: {
+                                    type: 'boolean',
+                                    description:
+                                        'Optional: Combine all includes into single file (default: false - separate files per include)',
                                 },
                             },
                             required: ['class_name'],
@@ -572,13 +594,30 @@ export class mcp_abap_adt_server {
                     },
                     {
                         name: 'GetClass',
-                        description: 'Retrieve ABAP class source code',
+                        description:
+                            'Retrieve ABAP class source code. Optionally fetch local includes (definitions, implementations, macros, testclasses).',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 class_name: {
                                     type: 'string',
                                     description: 'Name of the ABAP class',
+                                },
+                                include_types: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'string',
+                                        enum: [
+                                            'main',
+                                            'definitions',
+                                            'implementations',
+                                            'macros',
+                                            'testclasses',
+                                            'all',
+                                        ],
+                                    },
+                                    description:
+                                        "Optional: Include types to fetch. Default: ['main']. Use 'all' for all available includes. Examples: ['main', 'implementations'], ['all']",
                                 },
                             },
                             required: ['class_name'],
@@ -888,6 +927,27 @@ export class mcp_abap_adt_server {
                                 },
                             },
                             required: ['class_name'],
+                        },
+                    },
+                    {
+                        name: 'GetClassInclude',
+                        description:
+                            'Retrieve a specific include from an ABAP class (definitions, implementations, macros, testclasses, or main)',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                class_name: {
+                                    type: 'string',
+                                    description: 'Name of the ABAP class',
+                                },
+                                include_type: {
+                                    type: 'string',
+                                    enum: ['definitions', 'implementations', 'macros', 'testclasses', 'main'],
+                                    description:
+                                        "Type of include to fetch. 'definitions' = local class definitions (CCDEF), 'implementations' = local class implementations (CCIMP), 'macros' = local macros (CCMAC), 'testclasses' = test classes (CCAU), 'main' = main source",
+                                },
+                            },
+                            required: ['class_name', 'include_type'],
                         },
                     },
                     {
@@ -1602,7 +1662,7 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                 case 'GetProgram':
                     return await handleGetProgram(request.params.arguments);
                 case 'GetClass':
-                    return await handleGetClass(request.params.arguments);
+                    return await handleGetClass(request.params.arguments as any);
                 case 'GetFunction':
                     return await handleGetFunction(request.params.arguments);
                 case 'GetFunctionGroup':
@@ -1633,6 +1693,8 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleGetTransaction(request.params.arguments);
                 case 'GetClassTests':
                     return await handleGetClassTests(request.params.arguments);
+                case 'GetClassInclude':
+                    return await handleGetClassInclude(request.params.arguments as any);
                 case 'RunClassTests':
                     return await handleRunClassTests(request.params.arguments);
                 case 'RunPackageTests':

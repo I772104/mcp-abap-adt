@@ -19,6 +19,7 @@ tmp/
 
 # MCP configuration (local only)
 .mcp.json
+mcp.json
 
 # Logs
 logs

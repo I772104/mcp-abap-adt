@@ -92,11 +92,14 @@ arguments: {
 When modifying existing classes:
 
 ```
-1. GetClass
-   → access_mcp_resource: uri=abap://class/ZCL_EXISTING_CLASS
+1. GetClass (with includes)
+   → class_name: "ZCL_EXISTING_CLASS"
+   → include_types: ["all"]  # Fetch main + local includes
+   → Retrieves complete class with CCIMP, CCDEF, CCMAC, CCAU
 
 2. GetClassTests
    → use_mcp_tool: GetClassTests with class_name=ZCL_EXISTING_CLASS
+   → Or use GetClassInclude with include_type="testclasses"
 
 3. CheckSyntax
    → Validate modified code
@@ -113,6 +116,27 @@ When modifying existing classes:
 
 7. ActivateClasses
    → Only if all checks pass
+```
+
+### Focused Include Analysis
+
+When you only need specific class includes:
+
+```
+# Get only local implementations
+GetClassInclude
+  → class_name: "ZCL_EXISTING_CLASS"
+  → include_type: "implementations"
+
+# Get only local definitions
+GetClassInclude
+  → class_name: "ZCL_EXISTING_CLASS"
+  → include_type: "definitions"
+
+# Get only test classes
+GetClassInclude
+  → class_name: "ZCL_EXISTING_CLASS"
+  → include_type: "testclasses"
 ```
 
 ## Workflow Prompt for Refactoring
@@ -190,3 +214,6 @@ See [../ABAP_Standards.md](../ABAP_Standards.md) for complete guidelines.
 - [../CreateClassTests.md](../CreateClassTests.md) - Test creation tool
 - [../RunClassTests.md](../RunClassTests.md) - Test execution tool
 - [../ActivateClasses.md](../ActivateClasses.md) - Activation tool
+- [../GetClass.md](../GetClass.md) - Retrieve class source with includes
+- [../GetClassInclude.md](../GetClassInclude.md) - Retrieve specific class include
+- [../GetClassTests.md](../GetClassTests.md) - Retrieve test classes

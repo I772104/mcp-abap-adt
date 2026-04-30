@@ -2,12 +2,27 @@
 
 ## Overview
 
-The `GetClass` tool retrieves the complete source code of an ABAP class from the SAP system via the ADT (ABAP Development Tools) API. It returns the main class definition and implementation, including public, protected, and private sections.
+The `GetClass` tool retrieves the complete source code of an ABAP class from the SAP system via the ADT (ABAP Development Tools) API. It supports retrieving the main class source as well as local class includes (definitions, implementations, macros, and test classes).
 
-## Endpoint
+## New in v1.2: Multi-Include Support
+
+GetClass now supports fetching **local class includes** in addition to the main source:
+
+- **CCDEF** (definitions): Local class definitions, types, and interfaces
+- **CCIMP** (implementations): Local class implementations
+- **CCMAC** (macros): Local macro definitions
+- **CCAU** (testclasses): Local test classes
+
+This allows you to retrieve the complete class including all helper classes, local types, and implementations that are crucial for understanding the full class structure.
+
+## Endpoints
 
 ```
-GET /sap/bc/adt/oo/classes/{class_name}/source/main
+GET /sap/bc/adt/oo/classes/{class_name}/source/main              # Main source (default)
+GET /sap/bc/adt/oo/classes/{class_name}/includes/definitions      # CCDEF
+GET /sap/bc/adt/oo/classes/{class_name}/includes/implementations  # CCIMP
+GET /sap/bc/adt/oo/classes/{class_name}/includes/macros           # CCMAC
+GET /sap/bc/adt/oo/classes/{class_name}/includes/testclasses      # CCAU
 ```
 
 ## Input Parameters
@@ -15,17 +30,53 @@ GET /sap/bc/adt/oo/classes/{class_name}/source/main
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `class_name` | string | Yes | Name of the ABAP class to retrieve |
+| `include_types` | array of strings | No | Include types to fetch. Options: `'main'`, `'definitions'`, `'implementations'`, `'macros'`, `'testclasses'`, `'all'`. Default: `['main']` |
+
+### Include Types
+
+- **`main`**: Main class definition and implementation (default)
+- **`definitions`**: Local class definitions (CCDEF)
+- **`implementations`**: Local class implementations (CCIMP)
+- **`macros`**: Local macro definitions (CCMAC)
+- **`testclasses`**: Test classes (CCAU)
+- **`all`**: Fetch all available includes
 
 ## Response Structure
 
-The tool returns the complete ABAP class source code as plain text, including:
+### Single Include (Default Behavior)
 
-- Class definition (PUBLIC, PROTECTED, PRIVATE sections)
-- Class implementation
-- Method definitions and implementations
-- Type definitions
-- Constants and data declarations
-- Aliases and interfaces
+Returns the ABAP source code as plain text.
+
+### Multiple Includes
+
+When fetching multiple includes, the response is formatted with clear section separators:
+
+```
+================================================================================
+MAIN SOURCE
+================================================================================
+[Main class definition and implementation]
+
+================================================================================
+LOCAL CLASS DEFINITIONS (CCDEF)
+================================================================================
+[Local class definitions, types, interfaces]
+
+================================================================================
+LOCAL CLASS IMPLEMENTATIONS (CCIMP)
+================================================================================
+[Local class implementations]
+
+================================================================================
+LOCAL MACROS (CCMAC)
+================================================================================
+[Macro definitions]
+
+================================================================================
+LOCAL TEST CLASSES (CCAU)
+================================================================================
+[Test class definitions and implementations]
+```
 
 ### Example Response
 
@@ -80,7 +131,7 @@ ENDCLASS.
 
 ## Usage Examples
 
-### Example 1: Retrieve a Standard Class
+### Example 1: Retrieve Main Source Only (Default, Backward Compatible)
 
 ```json
 {
@@ -88,21 +139,49 @@ ENDCLASS.
 }
 ```
 
-### Example 2: Retrieve a Custom Class
+### Example 2: Retrieve All Includes
 
 ```json
 {
-  "class_name": "ZCL_MY_UTILITY"
+  "class_name": "ZCL_MY_UTILITY",
+  "include_types": ["all"]
 }
 ```
 
-### Example 3: Retrieve a Class for Analysis
+This fetches the main source plus all local includes (definitions, implementations, macros, test classes), formatted with section separators.
+
+### Example 3: Retrieve Specific Includes
 
 ```json
 {
-  "class_name": "ZCL_DATA_PROCESSOR"
+  "class_name": "ZCL_DATA_PROCESSOR",
+  "include_types": ["main", "implementations"]
 }
 ```
+
+Retrieves only the main source and local implementations (CCIMP).
+
+### Example 4: Retrieve Only Local Implementations
+
+```json
+{
+  "class_name": "ZCL_MY_CLASS",
+  "include_types": ["implementations"]
+}
+```
+
+Useful when you only need to see local helper class implementations.
+
+### Example 5: Get Definitions and Test Classes
+
+```json
+{
+  "class_name": "ZCL_MY_CLASS",
+  "include_types": ["definitions", "testclasses"]
+}
+```
+
+Fetch local type definitions and test classes together.
 
 ## Response Format
 
@@ -326,34 +405,43 @@ ENDCLASS.
 
 ## Limitations
 
-1. **Main Source Only**: Returns only the main class source, not test classes (use GetClassTests for tests)
-2. **No Metadata**: Returns source code only, not class metadata like creation date or responsible person
-3. **Active Version**: Returns the active version, not inactive changes
-4. **No Includes**: Does not return separate include files if the class uses them
-5. **Text Format**: Returns plain text, requires parsing for structured analysis
+1. **Active Version**: Returns the active version, not inactive changes
+2. **No Metadata**: Returns source code only, not class metadata like creation date or responsible person  
+3. **Text Format**: Returns plain text, requires parsing for structured analysis
+4. **Missing Includes**: If an include doesn't exist (e.g., no local implementations), it returns a placeholder comment
 
 ## Performance Considerations
 
-- **Response Size**: Large classes may take longer to retrieve
+- **Response Size**: Large classes with all includes may take longer to retrieve
+- **Parallel Fetching**: Multiple includes are fetched in parallel for ~5x performance improvement over sequential
+- **Fast Path Optimization**: Default behavior (main only) uses optimized single-request path
 - **Network Latency**: Response time depends on network connection to SAP system
 - **System Load**: Performance may vary based on SAP system load
 - **Caching**: Consider implementing client-side caching for frequently accessed classes
 
+### Performance Tips
+
+- Use `include_types: ['main']` (or omit parameter) for fastest retrieval
+- Request only the includes you need rather than using `'all'`
+- For classes with many includes, expect ~200ms total response time (vs ~100ms for main only)
+
 ## Related Tools
 
-- **GetClassTests**: Retrieve unit test classes for the class
+- **GetClassInclude**: Retrieve a specific include individually (definitions, implementations, macros, testclasses, or main)
+- **GetClassTests**: Retrieve unit test classes (convenience wrapper for testclasses include)
 - **GetClassUsages**: Find where the class is used in the codebase
 - **GetClassCoverage**: Run tests and get code coverage information
 - **CheckSyntax**: Validate the syntax of retrieved source code
 - **CreateClass**: Create a new class based on retrieved source
 - **SearchObject**: Search for classes by name pattern
 - **GetInterface**: Retrieve interface definitions implemented by the class
+- **ExportClassToFile**: Export class source to file with multi-include support
 
 ## Version History
 
 - **v1.0**: Initial implementation with basic class retrieval
 - **v1.1**: Enhanced error handling and timeout management
-- **v1.2**: Improved character encoding support
+- **v1.2**: Added multi-include support (CCIMP, CCDEF, CCMAC, CCAU) with parallel fetching
 
 ## Additional Notes
 

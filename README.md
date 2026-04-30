@@ -79,12 +79,12 @@ This approach allows rapid iteration on MCP capabilities while delivering real v
 
 ## Key Features
 
-- 🔍 **Comprehensive ABAP Object Access**: Retrieve programs, classes, interfaces, functions, tables, structures, and more
+- 🔍 **Comprehensive ABAP Object Access**: Retrieve programs, classes (including local includes: CCIMP, CCDEF, CCMAC, CCAU), interfaces, functions, tables, structures, and more
 - 🚀 **RAP Development Support**: Full support for CDS views, behavior definitions, service bindings, metadata extensions, and access control
 - 🚚 **Transport & Version Control**: List transport requests, view version history, and compare object versions across transports
 - 📦 **Batch Query Operations**: Query multiple tables or CDS views in a single call with advanced filtering and pagination
 - 🧪 **Testing & Quality Assurance**: Execute unit tests, analyze coverage, validate syntax, and find object usages
-- 🏗️ **Class Management**: Create, modify, activate, and delete ABAP classes directly from your AI assistant
+- 🏗️ **Class Management**: Create, modify, activate, and delete ABAP classes with full include support (main, definitions, implementations, macros, test classes)
 - 📊 **RAP BO Analysis**: Comprehensive analysis of RAP Business Objects via cacheable MCP resources
 - 🌐 **Multi-System Support**: Configure and work with multiple SAP systems (DEV, QAS, PRD) simultaneously with easy system switching
 - 🤖 **AI Agent Ready**: Optimized for Cline, Claude Code CLI, Cursor, OpenCode, and other MCP-compatible clients
@@ -483,7 +483,8 @@ Retrieve source code and definitions from your ABAP system.
 | Tool                 | Description                                          | Documentation                                       |
 | -------------------- | ---------------------------------------------------- | --------------------------------------------------- |
 | `GetProgram`         | Retrieve ABAP program source code                    | [GetProgram.md](docs/GetProgram.md)                 |
-| `GetClass`           | Retrieve ABAP class definition and implementation    | [GetClass.md](docs/GetClass.md)                     |
+| `GetClass`           | Retrieve ABAP class source (supports local includes) | [GetClass.md](docs/GetClass.md)                     |
+| `GetClassInclude`    | Retrieve specific class include (CCIMP, CCDEF, etc.) | [GetClassInclude.md](docs/GetClassInclude.md)       |
 | `GetInterface`       | Retrieve ABAP interface source code                  | [GetInterface.md](docs/GetInterface.md)             |
 | `GetInclude`         | Retrieve ABAP include program source                 | [GetInclude.md](docs/GetInclude.md)                 |
 | `GetFunction`        | Retrieve function module source code                 | [GetFunction.md](docs/GetFunction.md)               |
