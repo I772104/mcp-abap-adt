@@ -1,6 +1,6 @@
 import { McpError, ErrorCode } from '../lib/utils';
 import { makeAdtRequest, return_error, getBaseUrl } from '../lib/utils';
-import { parseStringPromise } from 'xml2js';
+import { parseDataPreviewXml } from '../lib/dataPreviewUtils';
 
 /**
  * Escape SQL special characters in value
@@ -41,61 +41,17 @@ export async function handleSearchRapBo(args: any) {
             throw new McpError(ErrorCode.InternalError, 'Empty response from RONT_HEADER_T query');
         }
 
-        // Parse XML response similar to GetTableContents
-        const parsed = await parseStringPromise(response.data, { explicitArray: false });
-        const tableData = parsed?.['dataPreview:tableData'];
-
-        if (!tableData) {
-            throw new McpError(ErrorCode.InternalError, 'Invalid table contents response format');
-        }
-
-        const columns = Array.isArray(tableData['dataPreview:columns'])
-            ? tableData['dataPreview:columns']
-            : [tableData['dataPreview:columns']];
-
-        // Extract row data
-        const rows: any[] = [];
-        if (columns.length > 0 && columns[0]['dataPreview:dataSet']?.['dataPreview:data']) {
-            const firstColData = columns[0]['dataPreview:dataSet']['dataPreview:data'];
-            const numRows = Array.isArray(firstColData) ? firstColData.length : 1;
-
-            for (let i = 0; i < numRows; i++) {
-                const row: any = {};
-                columns.forEach((col: any) => {
-                    const metadata = col['dataPreview:metadata']?.$;
-                    const colName = metadata['dataPreview:name'];
-                    const dataSet = col['dataPreview:dataSet']?.['dataPreview:data'];
-
-                    if (dataSet) {
-                        row[colName] = Array.isArray(dataSet) ? dataSet[i] : dataSet;
-                    } else {
-                        row[colName] = null;
-                    }
-                });
-                rows.push(row);
-            }
-        }
+        const rows = await parseDataPreviewXml(response.data);
 
         if (rows.length > 0) {
             // Sort by description length to get best matches first
-            rows.sort((a, b) => {
-                const aLen = (a.DESCRIPTION || '').length;
-                const bLen = (b.DESCRIPTION || '').length;
-                return aLen - bLen;
-            });
+            rows.sort((a, b) => (a.DESCRIPTION || '').length - (b.DESCRIPTION || '').length);
 
-            // Return just the RAP BO name (RONT_NAME) of the best match
             return {
                 isError: false,
-                content: [
-                    {
-                        type: 'text',
-                        text: rows[0].RONT_NAME,
-                    },
-                ],
+                content: [{ type: 'text', text: rows[0].RONT_NAME }],
             };
         } else {
-            // No matches found - return error
             throw new McpError(
                 ErrorCode.InvalidRequest,
                 `No RAP Business Objects found matching the search term: ${searchTerm}`

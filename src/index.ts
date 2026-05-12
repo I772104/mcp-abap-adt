@@ -76,6 +76,8 @@ import { handleListRuntimeErrors } from './handlers/handleListRuntimeErrors';
 import { handleGetRuntimeError } from './handlers/handleGetRuntimeError';
 import { handleRunATC } from './handlers/handleRunATC';
 import { handleListATCCheckVariants } from './handlers/handleListATCCheckVariants';
+import { handleGetBopfBusinessObject } from './handlers/handleGetBopfBusinessObject';
+import { handleSearchBopfBusinessObjects } from './handlers/handleSearchBopfBusinessObjects';
 
 // Import resource handlers
 import { listResources, listResourceTemplates, readResource } from './handlers/resources/index';
@@ -1447,6 +1449,67 @@ export class mcp_abap_adt_server {
                         },
                     },
                     {
+                        name: 'SearchBopfBusinessObjects',
+                        description:
+                            'Search for BOPF/BOBF Business Objects by name pattern in the /BOBF/OBM_BO registry table. ' +
+                            'Supports wildcard * in query and package (e.g. "*SALES*", "/IAM/*"). ' +
+                            'Returns name, object category, and generated flag for each match. ' +
+                            'When package is provided, also returns the package name per result.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                query: {
+                                    type: 'string',
+                                    description:
+                                        'Name pattern to search for. Use * as wildcard (e.g. "*SALES*", "/IAM/*", "I_DEFECT*"). ' +
+                                        'Without wildcards the pattern is treated as a contains-search.',
+                                },
+                                objcat: {
+                                    type: 'string',
+                                    description:
+                                        'Optional: filter by object category. ' +
+                                        'Values: "0"=Business Process Object, "1"=Dependent Object, "2"=Mass Data Run Object, ' +
+                                        '"3"=Master Data Object, "4"=Meta Data Object, "5"=Controller Object, ' +
+                                        '"6"=Technical Object, "7"=Message Object, "8"=Test Object, ' +
+                                        '"9"=Configuration Object, "D"=Draft Object, ""=not classified.',
+                                },
+                                package: {
+                                    type: 'string',
+                                    description:
+                                        'Optional: filter by package name pattern. Use * as wildcard (e.g. "/IAM/*", "VDM_QM*"). ' +
+                                        'When provided, results also include the package name.',
+                                },
+                                max_results: {
+                                    type: 'number',
+                                    description: 'Maximum number of results to return (default: 50, max: 500)',
+                                },
+                            },
+                            required: ['query'],
+                        },
+                    },
+                    {
+                        name: 'GetBopfBusinessObject',
+                        description:
+                            'Retrieve BOPF/BOPF Business Object definition including nodes, properties, associations, actions, determinations, and validations',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                bo_name: {
+                                    type: 'string',
+                                    description: 'Name of the BOPF Business Object (e.g., I_DEFECT_TP)',
+                                },
+                                analyze: {
+                                    type: 'boolean',
+                                    description:
+                                        'false (default): structural overview — nodes, persistence, actions, determinations, validations. ' +
+                                        'true: full analysis — additionally loads ABAP source of all implementation classes ' +
+                                        '(main, local definitions CCDEF, local implementations CCIMP, unit tests CCAU).',
+                                },
+                            },
+                            required: ['bo_name'],
+                        },
+                    },
+                    {
                         name: 'SearchRapBo',
                         description:
                             'Search for RAP Business Objects by description and return the best matching technical name',
@@ -1731,6 +1794,10 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleGetAccessControl(request.params.arguments);
                 case 'GetBehaviorForRapBo':
                     return await handleGetBehaviorForRapBo(request.params.arguments);
+                case 'SearchBopfBusinessObjects':
+                    return await handleSearchBopfBusinessObjects(request.params.arguments as any);
+                case 'GetBopfBusinessObject':
+                    return await handleGetBopfBusinessObject(request.params.arguments as any);
                 case 'SearchRapBo':
                     return await handleSearchRapBo(request.params.arguments);
                 case 'ListUserTransports':
