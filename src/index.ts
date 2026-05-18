@@ -43,9 +43,13 @@ import { handleCheckSyntax } from './handlers/handleCheckSyntax';
 import { handleCreateClass } from './handlers/handleCreateClass';
 import { handleDeleteLocalClass } from './handlers/handleDeleteLocalClass';
 import { handleCreateClassTests } from './handlers/handleCreateClassTests';
+import { handleCreateClassImplementation } from './handlers/handleCreateClassImplementation';
+import { handleCreateServiceDefinition } from './handlers/handleCreateServiceDefinition';
 import { handleActivateClasses } from './handlers/handleActivateClasses';
 import { handleGetCDSView } from './handlers/handleGetCDSView';
 import { handleGetCDSViewContents } from './handlers/handleGetCDSViewContents';
+import { handleCreateCDSView } from './handlers/handleCreateCDSView';
+import { handleCreateBehaviorDefinition } from './handlers/handleCreateBehaviorDefinition';
 import { handleGetBehaviorDefinition } from './handlers/handleGetBehaviorDefinition';
 import { handleGetServiceDefinition } from './handlers/handleGetServiceDefinition';
 import { handleGetServiceBinding } from './handlers/handleGetServiceBinding';
@@ -1224,6 +1228,34 @@ export class mcp_abap_adt_server {
                         },
                     },
                     {
+                        name: 'CreateClassImplementation',
+                        description: 'Write or replace the local class implementations include (CCIMP) of an existing global ABAP class. Use this to update method implementations for local classes defined in the class.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                class_name: {
+                                    type: 'string',
+                                    description: 'Name of the existing ABAP class',
+                                },
+                                source_code: {
+                                    type: 'string',
+                                    description: 'Complete CCIMP source code (local class implementations)',
+                                },
+                                auto_activate: {
+                                    type: 'boolean',
+                                    description: 'Optional: Automatically activate the class after updating (default: true)',
+                                    default: true,
+                                },
+                                preaudit_requested: {
+                                    type: 'boolean',
+                                    description: 'Optional: Request pre-audit during activation (default: true)',
+                                    default: true,
+                                },
+                            },
+                            required: ['class_name', 'source_code'],
+                        },
+                    },
+                    {
                         name: 'ActivateClasses',
                         description:
                             'Activate ABAP classes after creation or modification. Provide either class_name for a single class or class_names array for multiple classes.',
@@ -1245,6 +1277,122 @@ export class mcp_abap_adt_server {
                                     default: true,
                                 },
                             },
+                        },
+                    },
+                    {
+                        name: 'CreateBehaviorDefinition',
+                        description:
+                            'Create or replace a RAP Behavior Definition (BDEF) in the SAP system. Only supports local packages ($TMP, $LOCAL, $-prefixed). Supports managed, unmanaged, projection, and abstract types. Auto-activates by default.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                behavior_name: {
+                                    type: 'string',
+                                    description: 'BDEF name (must start with Z or Y)',
+                                },
+                                source_code: {
+                                    type: 'string',
+                                    description: 'Complete BDEF DDL source code',
+                                },
+                                bdef_type: {
+                                    type: 'string',
+                                    enum: ['managed', 'unmanaged', 'projection', 'abstract'],
+                                    description: 'Type of behavior definition',
+                                },
+                                description: {
+                                    type: 'string',
+                                    description: 'Optional description for the BDEF',
+                                },
+                                package: {
+                                    type: 'string',
+                                    description: 'Package name (defaults to $TMP, must be a local package)',
+                                },
+                                auto_activate: {
+                                    type: 'boolean',
+                                    description: 'Optional: Automatically activate the BDEF after creation (default: true)',
+                                    default: true,
+                                },
+                                preaudit_requested: {
+                                    type: 'boolean',
+                                    description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                                    default: true,
+                                },
+                            },
+                            required: ['behavior_name', 'source_code', 'bdef_type'],
+                        },
+                    },
+                    {
+                        name: 'CreateServiceDefinition',
+                        description:
+                            'Create or replace a Service Definition (SRVD) in the SAP system. Only supports local packages ($TMP, $LOCAL, $-prefixed). Auto-activates by default.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                service_name: {
+                                    type: 'string',
+                                    description: 'Service definition name (must start with Z or Y)',
+                                },
+                                source_code: {
+                                    type: 'string',
+                                    description: 'Complete service definition DDL source (define service ... { expose ...; })',
+                                },
+                                description: {
+                                    type: 'string',
+                                    description: 'Optional description shown in ADT',
+                                },
+                                package: {
+                                    type: 'string',
+                                    description: 'Package name (defaults to $TMP, must be a local package)',
+                                },
+                                auto_activate: {
+                                    type: 'boolean',
+                                    description: 'Optional: Automatically activate after creation (default: true)',
+                                    default: true,
+                                },
+                                preaudit_requested: {
+                                    type: 'boolean',
+                                    description: 'Optional: Request pre-audit during activation (default: true)',
+                                    default: true,
+                                },
+                            },
+                            required: ['service_name', 'source_code'],
+                        },
+                    },
+                    {
+                        name: 'CreateCDSView',
+                        description:
+                            'Create or replace a local CDS DDL view in the SAP system. Only supports local packages ($TMP, $LOCAL, $-prefixed). Auto-activates by default.',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                view_name: {
+                                    type: 'string',
+                                    description: 'CDS view name (must start with Z or Y)',
+                                },
+                                source_code: {
+                                    type: 'string',
+                                    description: 'Complete DDL source code for the CDS view',
+                                },
+                                description: {
+                                    type: 'string',
+                                    description: 'Optional description for the CDS view',
+                                },
+                                package: {
+                                    type: 'string',
+                                    description: 'Package name (defaults to $TMP, must be a local package)',
+                                },
+                                auto_activate: {
+                                    type: 'boolean',
+                                    description: 'Optional: Automatically activate the CDS view after creation (default: true)',
+                                    default: true,
+                                },
+                                preaudit_requested: {
+                                    type: 'boolean',
+                                    description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                                    default: true,
+                                },
+                            },
+                            required: ['view_name', 'source_code'],
                         },
                     },
                     {
@@ -1776,8 +1924,16 @@ Use this tool to find a developer's transports, both in-progress and released.`,
                     return await handleDeleteLocalClass(request.params.arguments);
                 case 'CreateClassTests':
                     return await handleCreateClassTests(request.params.arguments);
+                case 'CreateClassImplementation':
+                    return await handleCreateClassImplementation(request.params.arguments);
                 case 'ActivateClasses':
                     return await handleActivateClasses(request.params.arguments);
+                case 'CreateBehaviorDefinition':
+                    return await handleCreateBehaviorDefinition(request.params.arguments);
+                case 'CreateServiceDefinition':
+                    return await handleCreateServiceDefinition(request.params.arguments);
+                case 'CreateCDSView':
+                    return await handleCreateCDSView(request.params.arguments);
                 case 'GetCDSView':
                     return await handleGetCDSView(request.params.arguments);
                 case 'GetCDSViewContents':

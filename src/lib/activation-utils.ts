@@ -1,4 +1,5 @@
 import { handleActivateClasses } from '../handlers/handleActivateClasses';
+import { makeAdtRequest, getBaseUrl } from './utils';
 
 /**
  * Interface for activation attempt result
@@ -36,6 +37,81 @@ export interface WorkflowResult {
         next_steps?: string[];
         total_duration?: string;
     };
+}
+
+/**
+ * Generic ADT object activation — works for any object type (CDS, class, etc.)
+ * The caller supplies the full ADT URI for the object.
+ */
+export async function attemptObjectActivation(
+    objectName: string,
+    adtUri: string,
+    preauditRequested: boolean = true
+): Promise<ActivationAttemptResult> {
+    try {
+        const baseUrl = await getBaseUrl();
+        const activationUrl = `${baseUrl}/sap/bc/adt/activation?method=activate&preauditRequested=${preauditRequested}`;
+
+        const escapedName = objectName
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+
+        const escapedUri = adtUri
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+
+        const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?><adtcore:objectReferences xmlns:adtcore="http://www.sap.com/adt/core">
+  <adtcore:objectReference adtcore:uri="${escapedUri}" adtcore:name="${escapedName}"/>
+</adtcore:objectReferences>`;
+
+        const response = await makeAdtRequest(activationUrl, 'POST', 30000, xmlPayload, undefined, {
+            'Content-Type': 'application/xml; charset=utf-8',
+            Accept: 'application/xml',
+        });
+
+        const responseData: string = response.data || '';
+        const activationCancelled = responseData.includes('Activation was cancelled');
+        const activationFailed = responseData.includes('activationExecuted="false"');
+        const errorMatch = responseData.match(/<msg[^>]*type="E"[^>]*>[\s\S]*?<shortText><txt>(.*?)<\/txt>/);
+        const hasErrors = !!errorMatch || activationCancelled || activationFailed;
+
+        if (hasErrors) {
+            const errorText = errorMatch ? errorMatch[1] : 'Activation cancelled or failed';
+            return {
+                status: 'error',
+                error_message: `Activation failed for ${objectName}: ${errorText}`,
+                details: {
+                    error_code: 'ACTIVATION_FAILED',
+                    raw_response: responseData,
+                    suggested_action: 'Check syntax and dependencies, then activate manually',
+                },
+                timestamp: new Date().toISOString(),
+            };
+        }
+
+        return {
+            status: 'success',
+            message: `${objectName} activated successfully`,
+            activatedClasses: [{ className: objectName, uri: adtUri, status: 'success' }],
+            summary: { totalClasses: 1, successCount: 1, errorCount: 0, warningCount: 0 },
+            timestamp: new Date().toISOString(),
+        };
+    } catch (error: any) {
+        return {
+            status: 'error',
+            error_message: `Unexpected error during activation of ${objectName}`,
+            details: {
+                error_code: 'ACTIVATION_EXCEPTION',
+                raw_response: error?.message || 'Unknown error',
+                suggested_action: 'Check system connectivity and permissions, then try manual activation',
+            },
+            timestamp: new Date().toISOString(),
+        };
+    }
 }
 
 /**
