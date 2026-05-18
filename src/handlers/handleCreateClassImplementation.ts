@@ -73,7 +73,10 @@ export async function handleCreateClassImplementation(args: any): Promise<any> {
             await makeAdtRequest(`${baseUrl}/sap/bc/adt/oo/classes/${encodedClassName}`, 'GET', 10000);
         } catch (error: any) {
             if (error.message?.includes('404') || error.message?.includes('Not Found')) {
-                throw new McpError(ErrorCode.InvalidParams, `Class ${params.class_name} does not exist or is not accessible`);
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    `Class ${params.class_name} does not exist or is not accessible`
+                );
             }
             throw error;
         }
@@ -132,7 +135,10 @@ export async function handleCreateClassImplementation(args: any): Promise<any> {
     } catch (error) {
         if (error instanceof Error && (error.message.includes('authorization') || error.message.includes('403'))) {
             return return_error(
-                new McpError(ErrorCode.InvalidParams, 'Insufficient authorization to modify class implementation. Check S_DEVELOP authorization.')
+                new McpError(
+                    ErrorCode.InvalidParams,
+                    'Insufficient authorization to modify class implementation. Check S_DEVELOP authorization.'
+                )
             );
         }
         return return_error(error);

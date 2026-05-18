@@ -94,12 +94,18 @@ export async function handleCreateBehaviorDefinition(args: any): Promise<any> {
             throw new McpError(ErrorCode.InvalidParams, 'source_code parameter is required');
         }
         if (!args?.bdef_type) {
-            throw new McpError(ErrorCode.InvalidParams, 'bdef_type parameter is required (managed, unmanaged, projection, or abstract)');
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                'bdef_type parameter is required (managed, unmanaged, projection, or abstract)'
+            );
         }
 
         const VALID_BDEF_TYPES = ['managed', 'unmanaged', 'projection', 'abstract'];
         if (!VALID_BDEF_TYPES.includes(args.bdef_type)) {
-            throw new McpError(ErrorCode.InvalidParams, `bdef_type must be one of: managed, unmanaged, projection, abstract`);
+            throw new McpError(
+                ErrorCode.InvalidParams,
+                `bdef_type must be one of: managed, unmanaged, projection, abstract`
+            );
         }
 
         const params: CreateBehaviorDefinitionParams = {
@@ -158,7 +164,11 @@ export async function handleCreateBehaviorDefinition(args: any): Promise<any> {
             isReplacing = false;
 
             const createUrl = `${baseUrl}/sap/bc/adt/bo/behaviordefinitions`;
-            const metadataPayload = createBdefMetadataPayload(params.behavior_name, params.description!, params.package!);
+            const metadataPayload = createBdefMetadataPayload(
+                params.behavior_name,
+                params.description!,
+                params.package!
+            );
 
             let bdefCreated = false;
             try {
@@ -174,7 +184,11 @@ export async function handleCreateBehaviorDefinition(args: any): Promise<any> {
 
                 if (bdefCreated) {
                     try {
-                        await makeAdtRequest(`${baseUrl}/sap/bc/adt/bo/behaviordefinitions/${encodedName}`, 'DELETE', 10000);
+                        await makeAdtRequest(
+                            `${baseUrl}/sap/bc/adt/bo/behaviordefinitions/${encodedName}`,
+                            'DELETE',
+                            10000
+                        );
                     } catch (_) {
                         // cleanup failure is non-fatal
                     }

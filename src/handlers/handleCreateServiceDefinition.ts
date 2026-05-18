@@ -64,7 +64,10 @@ function createErrorResponse(name: string, originalError: any, isReplacing: bool
             originalError: errorMessage,
             errorType: isETagError ? 'ETag_Mismatch_Likely_Syntax' : 'General_Error',
             recommendations: isETagError
-                ? ['Check service definition source syntax', isReplacing ? 'Original unchanged' : 'No service definition was created']
+                ? [
+                      'Check service definition source syntax',
+                      isReplacing ? 'Original unchanged' : 'No service definition was created',
+                  ]
                 : ['Check system connectivity and authorization', 'Verify service name starts with Z or Y'],
         },
         timestamp: new Date().toISOString(),
@@ -134,7 +137,11 @@ export async function handleCreateServiceDefinition(args: any): Promise<any> {
             isReplacing = false;
 
             const createUrl = `${baseUrl}/sap/bc/adt/ddic/srvd/sources`;
-            const metadataPayload = createSrvdMetadataPayload(params.service_name, params.description!, params.package!);
+            const metadataPayload = createSrvdMetadataPayload(
+                params.service_name,
+                params.description!,
+                params.package!
+            );
 
             let srvdCreated = false;
             try {

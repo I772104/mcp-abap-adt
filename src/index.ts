@@ -1229,7 +1229,8 @@ export class mcp_abap_adt_server {
                     },
                     {
                         name: 'CreateClassImplementation',
-                        description: 'Write or replace the local class implementations include (CCIMP) of an existing global ABAP class. Use this to update method implementations for local classes defined in the class.',
+                        description:
+                            'Write or replace the local class implementations include (CCIMP) of an existing global ABAP class. Use this to update method implementations for local classes defined in the class.',
                         inputSchema: {
                             type: 'object',
                             properties: {
@@ -1243,7 +1244,8 @@ export class mcp_abap_adt_server {
                                 },
                                 auto_activate: {
                                     type: 'boolean',
-                                    description: 'Optional: Automatically activate the class after updating (default: true)',
+                                    description:
+                                        'Optional: Automatically activate the class after updating (default: true)',
                                     default: true,
                                 },
                                 preaudit_requested: {
@@ -1309,12 +1311,14 @@ export class mcp_abap_adt_server {
                                 },
                                 auto_activate: {
                                     type: 'boolean',
-                                    description: 'Optional: Automatically activate the BDEF after creation (default: true)',
+                                    description:
+                                        'Optional: Automatically activate the BDEF after creation (default: true)',
                                     default: true,
                                 },
                                 preaudit_requested: {
                                     type: 'boolean',
-                                    description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                                    description:
+                                        'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
                                     default: true,
                                 },
                             },
@@ -1334,7 +1338,8 @@ export class mcp_abap_adt_server {
                                 },
                                 source_code: {
                                     type: 'string',
-                                    description: 'Complete service definition DDL source (define service ... { expose ...; })',
+                                    description:
+                                        'Complete service definition DDL source (define service ... { expose ...; })',
                                 },
                                 description: {
                                     type: 'string',
@@ -1383,12 +1388,14 @@ export class mcp_abap_adt_server {
                                 },
                                 auto_activate: {
                                     type: 'boolean',
-                                    description: 'Optional: Automatically activate the CDS view after creation (default: true)',
+                                    description:
+                                        'Optional: Automatically activate the CDS view after creation (default: true)',
                                     default: true,
                                 },
                                 preaudit_requested: {
                                     type: 'boolean',
-                                    description: 'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
+                                    description:
+                                        'Optional: Request pre-audit during activation (default: true, only used if auto_activate is true)',
                                     default: true,
                                 },
                             },

@@ -146,7 +146,11 @@ export async function handleCreateCDSView(args: any): Promise<any> {
 
                 if (viewCreated) {
                     try {
-                        await makeAdtRequest(`${baseUrl}/sap/bc/adt/ddic/ddl/sources/${encodedViewName}`, 'DELETE', 10000);
+                        await makeAdtRequest(
+                            `${baseUrl}/sap/bc/adt/ddic/ddl/sources/${encodedViewName}`,
+                            'DELETE',
+                            10000
+                        );
                     } catch (_) {
                         // cleanup failure is non-fatal
                     }
@@ -184,11 +188,7 @@ export async function handleCreateCDSView(args: any): Promise<any> {
         } as any;
 
         if (params.auto_activate) {
-            const activationResult = await attemptObjectActivation(
-                params.view_name,
-                adtUri,
-                params.preaudit_requested
-            );
+            const activationResult = await attemptObjectActivation(params.view_name, adtUri, params.preaudit_requested);
 
             const workflowResponse = createWorkflowResponse(enhancedResponse, activationResult, true);
 
