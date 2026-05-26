@@ -1,5 +1,5 @@
 import type { LaunchedChrome } from 'chrome-launcher';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthProvider } from './AuthProvider';
@@ -108,6 +108,12 @@ export class BrowserSsoAuthProvider implements AuthProvider {
             // chrome-launcher only deletes the profile dir if it created it
             const userDataDir = join(tmpdir(), 'mcp-abap-adt-chrome');
             mkdirSync(userDataDir, { recursive: true });
+
+            // Kill any leftover Chrome instance using the same userDataDir.
+            // When chrome-launcher finds an existing instance it prints
+            // "Opening in existing browser session" and returns without
+            // binding a new CDP port, causing ECONNREFUSED on our next fetch.
+            await this.killStaleChromeProcess(userDataDir);
 
             this.chrome = await chromeLauncher.launch({
                 startingUrl: entryUrl,
@@ -260,6 +266,22 @@ export class BrowserSsoAuthProvider implements AuthProvider {
         }
 
         throw new Error('Login timeout — 5 minutes exceeded. Please try again.');
+    }
+
+    private async killStaleChromeProcess(userDataDir: string): Promise<void> {
+        const pidFile = join(userDataDir, 'chrome.pid');
+        try {
+            const pid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+            if (!isNaN(pid)) {
+                process.kill(pid, 0); // throws if process doesn't exist
+                process.kill(pid, 'SIGTERM');
+                console.error(`[BrowserSSO] Killed stale Chrome process (pid=${pid})`);
+                // Wait for the process to release the SingletonLock before re-launching.
+                await new Promise((r) => setTimeout(r, 500));
+            }
+        } catch {
+            // No pid file, process already gone, or kill failed — all fine
+        }
     }
 
     private async cleanup(): Promise<void> {

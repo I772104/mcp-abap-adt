@@ -1,5 +1,6 @@
 import { BrowserSsoAuthProvider } from '../../../../src/infrastructure/auth/BrowserSsoAuthProvider';
 import { CookieStore } from '../../../../src/infrastructure/auth/CookieStore';
+import * as fs from 'node:fs';
 
 // Mock chrome-launcher
 jest.mock('chrome-launcher', () => ({
@@ -9,12 +10,27 @@ jest.mock('chrome-launcher', () => ({
 // Mock CookieStore
 jest.mock('../../../../src/infrastructure/auth/CookieStore');
 
+// Mock node:fs so pid file behaviour is explicit in every test
+jest.mock('node:fs', () => ({
+    ...jest.requireActual('node:fs'),
+    mkdirSync: jest.fn(),
+    readFileSync: jest.fn(),
+}));
+
 describe('BrowserSsoAuthProvider', () => {
     let provider: BrowserSsoAuthProvider;
     let mockCookieStore: jest.Mocked<CookieStore>;
+    const mockReadFileSync = fs.readFileSync as jest.Mock;
 
     beforeEach(() => {
         jest.clearAllMocks();
+
+        // Default: no pid file present — killStaleChromeProcess is a no-op
+        mockReadFileSync.mockImplementation(() => {
+            const err = new Error('ENOENT') as NodeJS.ErrnoException;
+            err.code = 'ENOENT';
+            throw err;
+        });
 
         mockCookieStore = {
             save: jest.fn().mockResolvedValue(undefined),
@@ -98,6 +114,79 @@ describe('BrowserSsoAuthProvider', () => {
             }
 
             expect(mockCookieStore.clear).toHaveBeenCalled();
+        });
+    });
+
+    describe('killStaleChromeProcess()', () => {
+        let processSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            processSpy = jest.spyOn(process, 'kill').mockImplementation(() => true);
+        });
+
+        afterEach(() => {
+            processSpy.mockRestore();
+        });
+
+        test('kills stale Chrome when pid file exists and process is running', async () => {
+            mockReadFileSync.mockReturnValue('12345\n');
+
+            const chromeLauncher = require('chrome-launcher');
+            chromeLauncher.launch.mockRejectedValue(new Error('No Chrome'));
+
+            mockCookieStore.load.mockResolvedValue(null);
+
+            try {
+                await provider.getAuthHeaders();
+            } catch {
+                // Expected — Chrome not available in test
+            }
+
+            expect(processSpy).toHaveBeenCalledWith(12345, 0);
+            expect(processSpy).toHaveBeenCalledWith(12345, 'SIGTERM');
+        });
+
+        test('does nothing when pid file does not exist', async () => {
+            mockReadFileSync.mockImplementation(() => {
+                const err = new Error('ENOENT') as NodeJS.ErrnoException;
+                err.code = 'ENOENT';
+                throw err;
+            });
+
+            const chromeLauncher = require('chrome-launcher');
+            chromeLauncher.launch.mockRejectedValue(new Error('No Chrome'));
+
+            mockCookieStore.load.mockResolvedValue(null);
+
+            try {
+                await provider.getAuthHeaders();
+            } catch {
+                // Expected
+            }
+
+            expect(processSpy).not.toHaveBeenCalled();
+        });
+
+        test('does nothing when process in pid file is already gone', async () => {
+            mockReadFileSync.mockReturnValue('99999\n');
+            processSpy.mockImplementationOnce(() => {
+                throw new Error('ESRCH');
+            });
+
+            const chromeLauncher = require('chrome-launcher');
+            chromeLauncher.launch.mockRejectedValue(new Error('No Chrome'));
+
+            mockCookieStore.load.mockResolvedValue(null);
+
+            try {
+                await provider.getAuthHeaders();
+            } catch {
+                // Expected
+            }
+
+            // First call (signal 0) throws — second call (SIGTERM) never happens
+            expect(processSpy).toHaveBeenCalledTimes(1);
+            expect(processSpy).toHaveBeenCalledWith(99999, 0);
         });
     });
 });
