@@ -120,7 +120,7 @@ export class SystemRegistry {
             this.defaultSystemId = config.default;
             this.activeSystemId = config.default;
 
-            console.log(
+            console.error(
                 `[SystemRegistry] Loaded ${this.systems.size} systems from ${configPath}, default: ${this.defaultSystemId}`
             );
         } catch (error) {
@@ -202,7 +202,7 @@ export class SystemRegistry {
         this.defaultSystemId = 'default';
         this.activeSystemId = 'default';
 
-        console.log('[SystemRegistry] Loaded single system from .env (backward compatibility mode)');
+        console.error('[SystemRegistry] Loaded single system from .env (backward compatibility mode)');
     }
 
     /**
@@ -225,7 +225,7 @@ export class SystemRegistry {
         this.defaultSystemId = 'test';
         this.activeSystemId = 'test';
 
-        console.log('[SystemRegistry] Initialized test mode with mock system');
+        console.error('[SystemRegistry] Initialized test mode with mock system');
     }
 
     /**
@@ -273,7 +273,7 @@ export class SystemRegistry {
             );
         }
         this.activeSystemId = systemId;
-        console.log(`[SystemRegistry] Active system changed to: ${systemId}`);
+        console.error(`[SystemRegistry] Active system changed to: ${systemId}`);
     }
 
     /**
