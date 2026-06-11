@@ -87,7 +87,9 @@ function createClassMetadataPayload(className: string, description: string, pack
 }
 
 /**
- * Uploads source code to the created class with proper ETag handling
+ * Uploads source code to the created class with proper ETag handling.
+ * Always fetches a fresh ETag before PUT to avoid stale-ETag 412 errors after
+ * activation or any prior write in the same session.
  */
 async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<void> {
     const baseHeaders = {
@@ -95,31 +97,22 @@ async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<
         Accept: 'text/plain',
     };
 
-    // Try direct upload first
-    try {
+    const getResponse = await makeAdtRequest(sourceUrl, 'GET', 10000);
+    const etag = getResponse.headers['etag'] || getResponse.headers['ETag'];
+
+    if (etag) {
         await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
             ...baseHeaders,
-            'If-Match': '*',
+            'If-Match': etag,
         });
         return;
-    } catch (directUploadError) {
-        // Fallback: GET current content for ETag, then PUT with proper ETag
-        try {
-            const getResponse = await makeAdtRequest(sourceUrl, 'GET', 10000);
-            const etag = getResponse.headers['etag'] || getResponse.headers['ETag'];
-
-            if (etag) {
-                await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
-                    ...baseHeaders,
-                    'If-Match': etag,
-                });
-                return;
-            }
-        } catch (etagUploadError) {
-            // If both approaches fail, throw the original error
-            throw directUploadError;
-        }
     }
+
+    // Fallback for systems that don't return an ETag header
+    await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
+        ...baseHeaders,
+        'If-Match': '*',
+    });
 }
 
 /**
@@ -162,9 +155,10 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
     let recommendations: string[];
 
     if (isReplacing && isETagError) {
-        mainMessage = `Class ${action} failed with ETag mismatch. This commonly occurs when there are syntax errors in the new source code.`;
+        mainMessage = `Class ${action} failed with ETag mismatch (HTTP 412). The class may have been modified or activated concurrently.`;
         recommendations = [
-            'Check your ABAP source code for syntax errors',
+            'Retry the operation — a fresh ETag will be fetched automatically',
+            'If the error persists, check whether another user or process is modifying the class',
             'The original class remains unchanged due to this error',
         ];
     } else if (isSyntaxRelated) {
@@ -192,7 +186,7 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
             className: params.class_name,
             action: isReplacing ? 'replace' : 'create',
             originalError: errorMessage,
-            errorType: isETagError ? 'ETag_Mismatch_Likely_Syntax' : isSyntaxRelated ? 'Syntax_Error' : 'General_Error',
+            errorType: isETagError ? 'ETag_Mismatch' : isSyntaxRelated ? 'Syntax_Error' : 'General_Error',
             recommendations: recommendations,
         },
         timestamp: new Date().toISOString(),
@@ -201,7 +195,7 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
     return {
         data: JSON.stringify(errorResponse, null, 2),
         status: 400,
-        statusText: isETagError ? 'Bad Request - ETag Mismatch (Likely Syntax Error)' : 'Bad Request - Syntax Error',
+        statusText: isETagError ? 'Bad Request - ETag Mismatch' : 'Bad Request - Syntax Error',
         headers: {},
         config: { headers: {} },
     } as any;

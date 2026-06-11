@@ -442,7 +442,7 @@ export class mcp_abap_adt_server {
                     {
                         name: 'GetSystemInfo',
                         description:
-                            'Get current SAP system connection information including system URL, client, authentication method, and connection status',
+                            'Returns the active SAP ABAP backend connection details: system URL, SAP client number, authentication method (basic/SSO), and whether the ADT connection is reachable. Use ONLY to troubleshoot ADT connectivity or confirm which SAP backend is currently targeted. Do NOT call this as a prerequisite for reading ABAP objects, running searches, or any other ABAP operation — all other tools establish the ADT connection automatically.',
                         inputSchema: {
                             type: 'object',
                             properties: {},
