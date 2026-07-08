@@ -31,6 +31,7 @@ GET /sap/bc/adt/oo/classes/{class_name}/includes/testclasses      # CCAU
 |-----------|------|----------|-------------|
 | `class_name` | string | Yes | Name of the ABAP class to retrieve |
 | `include_types` | array of strings | No | Include types to fetch. Options: `'main'`, `'definitions'`, `'implementations'`, `'macros'`, `'testclasses'`, `'all'`. Default: `['main']` |
+| `output_format` | string | No | Output format: `'text'` (default) or `'structured'`. See below. |
 
 ### Include Types
 
@@ -40,6 +41,49 @@ GET /sap/bc/adt/oo/classes/{class_name}/includes/testclasses      # CCAU
 - **`macros`**: Local macro definitions (CCMAC)
 - **`testclasses`**: Test classes (CCAU)
 - **`all`**: Fetch all available includes
+
+## Output Formats
+
+### `output_format: 'text'` (default)
+
+Returns raw ABAP source as plain text — backward compatible with all existing callers.
+
+### `output_format: 'structured'`
+
+Returns a parsed JSON object instead of raw source text. Designed for use with the default `include_types: ['main']`; non-main includes (CCDEF, CCIMP, etc.) do not contain top-level `CLASS...DEFINITION/IMPLEMENTATION` headers and will produce empty sections.
+
+**JSON structure:**
+
+```json
+{
+  "object_type": "CLAS",
+  "name": "ZCL_MY_CLASS",
+  "definition": {
+    "public":    "  METHODS: calculate ...",
+    "protected": "",
+    "private":   "  DATA mv_rate TYPE p DECIMALS 2."
+  },
+  "methods": [
+    {
+      "name": "CALCULATE",
+      "body": "  rv_result = iv_input * mv_rate."
+    }
+  ]
+}
+```
+
+**Why structured output?**
+
+JSON-aware context compressors can reduce tokens significantly compared to plain text (method bodies become hashes when not actively needed). This is useful when working with large classes (50+ methods) where loading the full source would be expensive.
+
+**Two-step pattern for large classes:**
+
+```
+Step 1: GetClass(class_name, output_format='structured')
+        → see all method names + definition sections (much smaller)
+Step 2: GetClass(class_name) or GetClassInclude(class_name, include_type='implementations')
+        → load only the method(s) you need in full
+```
 
 ## Response Structure
 
@@ -406,9 +450,9 @@ ENDCLASS.
 ## Limitations
 
 1. **Active Version**: Returns the active version, not inactive changes
-2. **No Metadata**: Returns source code only, not class metadata like creation date or responsible person  
-3. **Text Format**: Returns plain text, requires parsing for structured analysis
-4. **Missing Includes**: If an include doesn't exist (e.g., no local implementations), it returns a placeholder comment
+2. **No Metadata**: Returns source code only, not class metadata like creation date or responsible person
+3. **Missing Includes**: If an include doesn't exist (e.g., no local implementations), it returns a placeholder comment
+4. **Structured output scope**: `output_format: 'structured'` parses `CLASS...DEFINITION/IMPLEMENTATION` blocks only. Non-main includes (CCDEF, CCIMP, etc.) do not contain these headers and will parse as empty sections/methods — use `output_format: 'text'` when fetching those includes.
 
 ## Performance Considerations
 
@@ -442,6 +486,7 @@ ENDCLASS.
 - **v1.0**: Initial implementation with basic class retrieval
 - **v1.1**: Enhanced error handling and timeout management
 - **v1.2**: Added multi-include support (CCIMP, CCDEF, CCMAC, CCAU) with parallel fetching
+- **v1.3**: Added `output_format: 'structured'` for JSON output with definition sections and method array
 
 ## Additional Notes
 

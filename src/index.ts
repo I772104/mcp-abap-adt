@@ -629,7 +629,7 @@ export class mcp_abap_adt_server {
                                     type: 'string',
                                     enum: ['text', 'structured'],
                                     description:
-                                        "Optional: Output format. 'text' (default) returns raw ABAP source. 'structured' returns parsed JSON with definition sections and method array — enables 90%+ token compression with Headroom SmartCrusher.",
+                                        "Optional: Output format. 'text' (default) returns raw ABAP source. 'structured' returns parsed JSON with definition sections and method array — enables significantly better compression with JSON-aware context compressors. Use with include_types=['main'] (the default) for best results.",
                                 },
                             },
                             required: ['class_name'],

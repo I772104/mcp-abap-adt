@@ -277,8 +277,8 @@ export function getIncludeLabel(includeType: string): string {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Structured ABAP output — for output_format: 'structured'
-// Converts raw ABAP source text to JSON so downstream compressors (e.g.
-// Headroom SmartCrusher) can achieve 90%+ compression vs ~65% on plain text.
+// Converts raw ABAP source text to JSON so JSON-aware downstream compressors
+// can achieve significantly better compression vs plain text.
 // Fully backward-compatible: only used when caller passes output_format.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -318,6 +318,9 @@ export interface AbapStructuredClass {
  * @returns Structured JSON representation of the class
  */
 export function parseAbapClassToJson(source: string, className: string): AbapStructuredClass {
+    // Guard: non-string source (null/undefined/object) would crash split()
+    const safeSource = typeof source === 'string' ? source : '';
+
     const result: AbapStructuredClass = {
         object_type: 'CLAS',
         name: className.toUpperCase(),
@@ -325,7 +328,7 @@ export function parseAbapClassToJson(source: string, className: string): AbapStr
         methods: [],
     };
 
-    const lines = source.split('\n');
+    const lines = safeSource.split('\n');
 
     // ── 1. Extract DEFINITION sections ──────────────────────────────────────
     let inDefinition = false;
@@ -341,9 +344,11 @@ export function parseAbapClassToJson(source: string, className: string): AbapStr
 
         if (/^\s*CLASS\s+\S+\s+DEFINITION\b/i.test(trimmed)) {
             inDefinition = true;
+            currentSection = null; // reset section when a new class block starts
             continue;
         }
-        if (/^ENDCLASS\s*\./i.test(trimmed) && inDefinition) {
+        // Use ^\s* so indented ENDCLASS. lines (common in generated code) are matched
+        if (/^\s*ENDCLASS\s*\./i.test(trimmed) && inDefinition) {
             inDefinition = false;
             currentSection = null;
             continue;
@@ -383,7 +388,8 @@ export function parseAbapClassToJson(source: string, className: string): AbapStr
             inImplementation = true;
             continue;
         }
-        if (/^ENDCLASS\s*\./i.test(trimmed) && inImplementation) {
+        // Use ^\s* so indented ENDCLASS. lines are matched
+        if (/^\s*ENDCLASS\s*\./i.test(trimmed) && inImplementation) {
             inImplementation = false;
             if (inMethod) {
                 // Discard any unclosed method buffer (malformed source)
@@ -407,7 +413,7 @@ export function parseAbapClassToJson(source: string, className: string): AbapStr
         }
 
         if (inMethod) {
-            methodBuffer.push(trimmed);
+            // Check ENDMETHOD before pushing so the sentinel line is NOT included in the body
             if (/^\s*ENDMETHOD\s*\./i.test(trimmed)) {
                 result.methods.push({
                     name: currentMethodName,
@@ -416,6 +422,8 @@ export function parseAbapClassToJson(source: string, className: string): AbapStr
                 inMethod = false;
                 currentMethodName = '';
                 methodBuffer.length = 0;
+            } else {
+                methodBuffer.push(trimmed);
             }
         }
     }

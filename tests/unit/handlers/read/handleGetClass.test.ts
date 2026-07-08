@@ -801,6 +801,7 @@ describe('output_format: structured', () => {
     expect(parsed.methods[0].name).toBe('CALCULATE_TAX');
     expect(parsed.methods[1].name).toBe('VALIDATE_INVOICE');
     expect(parsed.methods[0].body).toContain('rv_tax = iv_amount');
+    expect(parsed.methods[0].body).not.toContain('ENDMETHOD');
   });
 
   test('output_format=text (default) still returns plain string', async () => {
@@ -958,5 +959,113 @@ ENDCLASS.`;
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.methods).toHaveLength(1);
     expect(parsed.methods[0].name).toBe('RUN');
+  });
+
+  test('indented ENDCLASS. is matched correctly (leading whitespace)', async () => {
+    const source = `CLASS zcl_indented_end DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS: run.
+  ENDCLASS.
+CLASS zcl_indented_end IMPLEMENTATION.
+  METHOD run.
+    WRITE 'test'.
+  ENDMETHOD.
+  ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: source, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INDENTED_END',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    // Parser must exit the DEFINITION block — not leak into IMPLEMENTATION
+    expect(parsed.definition.public).toContain('METHODS: run');
+    expect(parsed.definition.public).not.toContain('METHOD run');
+    expect(parsed.methods).toHaveLength(1);
+    expect(parsed.methods[0].name).toBe('RUN');
+  });
+
+  test('currentSection resets between CLASS DEFINITION blocks (local class bleed prevention)', async () => {
+    const source = `CLASS zcl_main DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS: main_method.
+  PRIVATE SECTION.
+    DATA mv_val TYPE string.
+ENDCLASS.
+CLASS lcl_helper DEFINITION.
+    METHODS: helper_method.
+ENDCLASS.
+CLASS zcl_main IMPLEMENTATION.
+  METHOD main_method.
+    rv_x = mv_val.
+  ENDMETHOD.
+ENDCLASS.
+CLASS lcl_helper IMPLEMENTATION.
+  METHOD helper_method.
+    WRITE 'helper'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: source, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_MAIN',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    // Local class helper_method lines must NOT appear in the main class private section
+    expect(parsed.definition.private).toContain('DATA mv_val');
+    expect(parsed.definition.private).not.toContain('helper_method');
+  });
+
+  test('ENDMETHOD line is NOT included in the method body', async () => {
+    const source = `CLASS zcl_clean DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS: run.
+ENDCLASS.
+CLASS zcl_clean IMPLEMENTATION.
+  METHOD run.
+    WRITE 'hello'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: source, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_CLEAN',
+      output_format: 'structured',
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.methods[0].body).toContain("WRITE 'hello'");
+    expect(parsed.methods[0].body).not.toContain('ENDMETHOD');
+  });
+
+  test('null response.data is handled gracefully (no crash)', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: null, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_NULL',
+      output_format: 'structured',
+    });
+
+    // Must not crash — returns empty structured object
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.object_type).toBe('CLAS');
+    expect(parsed.methods).toHaveLength(0);
   });
 });
