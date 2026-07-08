@@ -601,7 +601,7 @@ export class mcp_abap_adt_server {
                     {
                         name: 'GetClass',
                         description:
-                            'Retrieve ABAP class source code. Optionally fetch local includes (definitions, implementations, macros, testclasses).',
+                            'Retrieve ABAP class source code. Optionally fetch local includes (definitions, implementations, macros, testclasses). Use output_format=structured for JSON output suitable for downstream compression.',
                         inputSchema: {
                             type: 'object',
                             properties: {
@@ -624,6 +624,12 @@ export class mcp_abap_adt_server {
                                     },
                                     description:
                                         "Optional: Include types to fetch. Default: ['main']. Use 'all' for all available includes. Examples: ['main', 'implementations'], ['all']",
+                                },
+                                output_format: {
+                                    type: 'string',
+                                    enum: ['text', 'structured'],
+                                    description:
+                                        "Optional: Output format. 'text' (default) returns raw ABAP source. 'structured' returns parsed JSON with definition sections and method array — enables 90%+ token compression with Headroom SmartCrusher.",
                                 },
                             },
                             required: ['class_name'],

@@ -709,3 +709,254 @@ ENDCLASS.`;
     });
   });
 });
+// ─────────────────────────────────────────────────────────────────────────────
+// output_format: 'structured' tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SAMPLE_CLASS_SOURCE = `CLASS zcl_invoice_processing DEFINITION
+  PUBLIC FINAL CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    METHODS: calculate_tax
+      IMPORTING iv_amount TYPE p DECIMALS 2
+      RETURNING VALUE(rv_tax) TYPE p DECIMALS 2.
+    METHODS: validate_invoice
+      IMPORTING iv_id TYPE string
+      RETURNING VALUE(rv_valid) TYPE abap_bool.
+
+  PRIVATE SECTION.
+    DATA: mv_tax_rate TYPE p DECIMALS 2 VALUE '0.15'.
+
+ENDCLASS.
+
+CLASS zcl_invoice_processing IMPLEMENTATION.
+
+  METHOD calculate_tax.
+    rv_tax = iv_amount * mv_tax_rate.
+  ENDMETHOD.
+
+  METHOD validate_invoice.
+    rv_valid = abap_true.
+  ENDMETHOD.
+
+ENDCLASS.`;
+
+describe('output_format: structured', () => {
+  let mockMakeAdtRequest: jest.MockedFunction<typeof utils.makeAdtRequest>;
+  let mockGetBaseUrl: jest.MockedFunction<typeof utils.getBaseUrl>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+    mockMakeAdtRequest = utils.makeAdtRequest as jest.MockedFunction<typeof utils.makeAdtRequest>;
+    mockGetBaseUrl = utils.getBaseUrl as jest.MockedFunction<typeof utils.getBaseUrl>;
+    mockGetBaseUrl.mockResolvedValue('https://mock-sap-system.com:443');
+  });
+
+  test('should return JSON when output_format=structured', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200,
+      data: SAMPLE_CLASS_SOURCE,
+      headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INVOICE_PROCESSING',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.object_type).toBe('CLAS');
+    expect(parsed.name).toBe('ZCL_INVOICE_PROCESSING');
+  });
+
+  test('structured output contains definition sections', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: SAMPLE_CLASS_SOURCE, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INVOICE_PROCESSING',
+      output_format: 'structured',
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.definition.public).toContain('METHODS: calculate_tax');
+    expect(parsed.definition.private).toContain('mv_tax_rate');
+  });
+
+  test('structured output contains method array', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: SAMPLE_CLASS_SOURCE, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INVOICE_PROCESSING',
+      output_format: 'structured',
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.methods).toHaveLength(2);
+    expect(parsed.methods[0].name).toBe('CALCULATE_TAX');
+    expect(parsed.methods[1].name).toBe('VALIDATE_INVOICE');
+    expect(parsed.methods[0].body).toContain('rv_tax = iv_amount');
+  });
+
+  test('output_format=text (default) still returns plain string', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: SAMPLE_CLASS_SOURCE, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INVOICE_PROCESSING',
+      output_format: 'text',
+    });
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toBe(SAMPLE_CLASS_SOURCE);
+  });
+
+  test('omitting output_format defaults to text (backward compatible)', async () => {
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: SAMPLE_CLASS_SOURCE, headers: {},
+    } as any);
+
+    const result = await handleGetClass({ class_name: 'ZCL_INVOICE_PROCESSING' });
+
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toBe(SAMPLE_CLASS_SOURCE);
+    // Must NOT be JSON — backward compatibility check
+    expect(() => JSON.parse(result.content[0].text)).toThrow(); // plain ABAP text is not valid JSON
+  });
+
+  test('interface methods (IF~METHOD) parsed correctly', async () => {
+    const ifSource = `CLASS zcl_handler DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    INTERFACES: zif_handler.
+ENDCLASS.
+CLASS zcl_handler IMPLEMENTATION.
+  METHOD zif_handler~execute.
+    rv_result = 'done'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: ifSource, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_HANDLER',
+      output_format: 'structured',
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.methods[0].name).toBe('ZIF_HANDLER~EXECUTE');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bug fix tests — covering edge cases caught in PR review
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('parser edge cases (bug fixes)', () => {
+  let mockMakeAdtRequest: jest.MockedFunction<typeof utils.makeAdtRequest>;
+  let mockGetBaseUrl: jest.MockedFunction<typeof utils.getBaseUrl>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+    mockMakeAdtRequest = utils.makeAdtRequest as jest.MockedFunction<typeof utils.makeAdtRequest>;
+    mockGetBaseUrl = utils.getBaseUrl as jest.MockedFunction<typeof utils.getBaseUrl>;
+    mockGetBaseUrl.mockResolvedValue('https://mock-sap-system.com:443');
+  });
+
+  test('indented CLASS DEFINITION header is matched (leading whitespace)', async () => {
+    const indentedSource = `  CLASS zcl_indented DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS: run.
+ENDCLASS.
+  CLASS zcl_indented IMPLEMENTATION.
+  METHOD run.
+    WRITE 'hello'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: indentedSource, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_INDENTED',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.definition.public).toContain('METHODS: run');
+    expect(parsed.methods).toHaveLength(1);
+    expect(parsed.methods[0].name).toBe('RUN');
+  });
+
+  test('malformed source (missing ENDMETHOD) discards unclosed buffer, does not bleed into next class', async () => {
+    const malformedSource = `CLASS zcl_broken DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS: broken_method, safe_method.
+ENDCLASS.
+CLASS zcl_broken IMPLEMENTATION.
+  METHOD broken_method.
+    DATA lv_x TYPE string.
+ENDCLASS.
+CLASS zcl_other IMPLEMENTATION.
+  METHOD safe_method.
+    WRITE 'safe'.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: malformedSource, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_BROKEN',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    // broken_method has no ENDMETHOD — must be discarded, not bleed
+    const methodNames = parsed.methods.map((m: any) => m.name);
+    expect(methodNames).not.toContain('BROKEN_METHOD');
+    // safe_method from zcl_other is still captured (multi-class behaviour)
+    expect(methodNames).toContain('SAFE_METHOD');
+    // safe_method body must NOT contain broken_method's lines
+    const safeMethod = parsed.methods.find((m: any) => m.name === 'SAFE_METHOD');
+    expect(safeMethod?.body).not.toContain('DATA lv_x');
+  });
+
+  test('indented CLASS IMPLEMENTATION header is matched', async () => {
+    const source = `CLASS zcl_test DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    METHODS run.
+ENDCLASS.
+  CLASS zcl_test IMPLEMENTATION.
+  METHOD run.
+    rv_result = abap_true.
+  ENDMETHOD.
+ENDCLASS.`;
+
+    mockMakeAdtRequest.mockResolvedValueOnce({
+      status: 200, data: source, headers: {},
+    } as any);
+
+    const result = await handleGetClass({
+      class_name: 'ZCL_TEST',
+      output_format: 'structured',
+    });
+
+    expect(result.isError).toBe(false);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.methods).toHaveLength(1);
+    expect(parsed.methods[0].name).toBe('RUN');
+  });
+});

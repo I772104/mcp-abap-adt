@@ -274,3 +274,151 @@ export function getIncludeLabel(includeType: string): string {
             return includeType;
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Structured ABAP output — for output_format: 'structured'
+// Converts raw ABAP source text to JSON so downstream compressors (e.g.
+// Headroom SmartCrusher) can achieve 90%+ compression vs ~65% on plain text.
+// Fully backward-compatible: only used when caller passes output_format.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AbapMethodEntry {
+    name: string;
+    body: string;
+}
+
+export interface AbapClassDefinition {
+    public: string;
+    protected: string;
+    private: string;
+}
+
+export interface AbapStructuredClass {
+    object_type: 'CLAS';
+    name: string;
+    definition: AbapClassDefinition;
+    methods: AbapMethodEntry[];
+}
+
+/**
+ * Parses a raw ABAP class source string into a structured JSON object.
+ * Uses regex-based section/method boundary detection — no full AST needed
+ * because ABAP class structure is highly uniform and predictable.
+ *
+ * Structure detected:
+ *   CLASS <name> DEFINITION.
+ *     PUBLIC SECTION. / PROTECTED SECTION. / PRIVATE SECTION.
+ *   ENDCLASS.
+ *   CLASS <name> IMPLEMENTATION.
+ *     METHOD <name>. ... ENDMETHOD.
+ *   ENDCLASS.
+ *
+ * @param source - Raw ABAP class source string from GetClass()
+ * @param className - Class name for the output object
+ * @returns Structured JSON representation of the class
+ */
+export function parseAbapClassToJson(source: string, className: string): AbapStructuredClass {
+    const result: AbapStructuredClass = {
+        object_type: 'CLAS',
+        name: className.toUpperCase(),
+        definition: { public: '', protected: '', private: '' },
+        methods: [],
+    };
+
+    const lines = source.split('\n');
+
+    // ── 1. Extract DEFINITION sections ──────────────────────────────────────
+    let inDefinition = false;
+    let currentSection: keyof AbapClassDefinition | null = null;
+    const sectionBuffers: Record<keyof AbapClassDefinition, string[]> = {
+        public: [],
+        protected: [],
+        private: [],
+    };
+
+    for (const line of lines) {
+        const trimmed = line.trimEnd();
+
+        if (/^\s*CLASS\s+\S+\s+DEFINITION\b/i.test(trimmed)) {
+            inDefinition = true;
+            continue;
+        }
+        if (/^ENDCLASS\s*\./i.test(trimmed) && inDefinition) {
+            inDefinition = false;
+            currentSection = null;
+            continue;
+        }
+
+        if (inDefinition) {
+            if (/^\s*PUBLIC\s+SECTION\s*\./i.test(trimmed)) {
+                currentSection = 'public';
+                continue;
+            }
+            if (/^\s*PROTECTED\s+SECTION\s*\./i.test(trimmed)) {
+                currentSection = 'protected';
+                continue;
+            }
+            if (/^\s*PRIVATE\s+SECTION\s*\./i.test(trimmed)) {
+                currentSection = 'private';
+                continue;
+            }
+            if (currentSection) sectionBuffers[currentSection].push(trimmed);
+        }
+    }
+
+    result.definition.public = sectionBuffers.public.join('\n').trim();
+    result.definition.protected = sectionBuffers.protected.join('\n').trim();
+    result.definition.private = sectionBuffers.private.join('\n').trim();
+
+    // ── 2. Extract METHOD bodies from IMPLEMENTATION ─────────────────────────
+    let inImplementation = false;
+    let inMethod = false;
+    let currentMethodName = '';
+    const methodBuffer: string[] = [];
+
+    for (const line of lines) {
+        const trimmed = line.trimEnd();
+
+        if (/^\s*CLASS\s+\S+\s+IMPLEMENTATION\b/i.test(trimmed)) {
+            inImplementation = true;
+            continue;
+        }
+        if (/^ENDCLASS\s*\./i.test(trimmed) && inImplementation) {
+            inImplementation = false;
+            if (inMethod) {
+                // Discard any unclosed method buffer (malformed source)
+                inMethod = false;
+                currentMethodName = '';
+                methodBuffer.length = 0;
+            }
+            continue;
+        }
+
+        if (!inImplementation) continue;
+
+        // METHOD <name>. — handles simple and interface methods (IF~METH)
+        const methodStart = trimmed.match(/^\s*METHOD\s+([\w~]+)\s*\./i);
+        if (methodStart && !inMethod) {
+            inMethod = true;
+            currentMethodName = methodStart[1].toUpperCase();
+            methodBuffer.length = 0;
+            methodBuffer.push(trimmed);
+            continue;
+        }
+
+        if (inMethod) {
+            methodBuffer.push(trimmed);
+            if (/^\s*ENDMETHOD\s*\./i.test(trimmed)) {
+                result.methods.push({
+                    name: currentMethodName,
+                    body: methodBuffer.join('\n'),
+                });
+                inMethod = false;
+                currentMethodName = '';
+                methodBuffer.length = 0;
+            }
+        }
+    }
+
+    return result;
+}
