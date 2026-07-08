@@ -1,6 +1,6 @@
 /**
  * Unit Tests for handleCreateClass
- * 
+ *
  * Tests the CreateClass tool handler which creates new ABAP classes
  * in the SAP system via ADT protocol.
  */
@@ -27,20 +27,57 @@ describe('handleCreateClass', () => {
   let mockAttemptClassActivation: jest.MockedFunction<typeof activationUtils.attemptClassActivation>;
   let mockCreateWorkflowResponse: jest.MockedFunction<typeof activationUtils.createWorkflowResponse>;
 
+  // Factory for a fresh 404 error matching what makeAdtRequest throws when a class doesn't exist
+  const makeNotFoundError = (): any => {
+    const e: any = new Error('HTTP 404 Not Found');
+    e.status = 404;
+    e.response = { status: 404 };
+    return e;
+  };
+
+  // Standard workflow response mock value
+  const workflowResponseMock = {
+    workflow: { overall_status: 'success' },
+    data: JSON.stringify({ status: 'success' }),
+  };
+
   beforeEach(() => {
-    // Reset all mocks before each test
     jest.clearAllMocks();
     jest.resetAllMocks();
 
-    // Get references to mocked functions
     mockMakeAdtRequest = utils.makeAdtRequest as jest.MockedFunction<typeof utils.makeAdtRequest>;
     mockGetBaseUrl = utils.getBaseUrl as jest.MockedFunction<typeof utils.getBaseUrl>;
     mockAttemptClassActivation = activationUtils.attemptClassActivation as jest.MockedFunction<typeof activationUtils.attemptClassActivation>;
     mockCreateWorkflowResponse = activationUtils.createWorkflowResponse as jest.MockedFunction<typeof activationUtils.createWorkflowResponse>;
 
-    // Setup default mock implementations
     mockGetBaseUrl.mockResolvedValue('https://mock-sap-system.com:443');
   });
+
+  // Helper: mock a successful class creation sequence
+  // uploadSourceCode does GET (etag fetch) then PUT, so create path needs:
+  //   reject-404 (existence check), POST (metadata), GET (etag), PUT (source)
+  function mockSuccessfulCreate(etagHeaders: object = {}, withActivation = true) {
+    mockMakeAdtRequest
+      .mockRejectedValueOnce(makeNotFoundError())                                       // GET check — class doesn't exist
+      .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)               // POST create metadata
+      .mockResolvedValueOnce({ status: 200, headers: etagHeaders } as any)           // GET etag (uploadSourceCode)
+      .mockResolvedValueOnce({ status: 200 } as any);                                // PUT source
+    if (withActivation) {
+      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
+      mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
+    }
+  }
+
+  // Helper: mock a successful class replacement sequence
+  // Replace path: GET (existence check + etag fetch inside uploadSourceCode), PUT
+  function mockSuccessfulReplace(existingData = 'existing class content') {
+    mockMakeAdtRequest
+      .mockResolvedValueOnce({ status: 200, data: existingData, headers: {} } as any) // GET check — class exists
+      .mockResolvedValueOnce({ status: 200, headers: {} } as any)                     // GET etag (uploadSourceCode)
+      .mockResolvedValueOnce({ status: 200 } as any);                                 // PUT source
+    mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
+    mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
+  }
 
   describe('Input Validation', () => {
     test('should reject missing class_name', async () => {
@@ -74,24 +111,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept valid Z class name', async () => {
-      // Mock successful class creation
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 404 } as any) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ // POST create metadata
-          status: 201,
-          data: '<class:abapClass xmlns:class="http://www.sap.com/adt/oo/classes"/>',
-        } as any)
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source code
-
-      // Mock activation
-      mockAttemptClassActivation.mockResolvedValueOnce({
-        success: true,
-        activated: ['ZCL_TEST'],
-      } as any);
-
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -104,19 +124,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept valid Y class name', async () => {
-      // Mock successful class creation
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 404 } as any) // GET check
-        .mockResolvedValueOnce({ status: 201 } as any) // POST create
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source
-
-      mockAttemptClassActivation.mockResolvedValueOnce({
-        success: true,
-      } as any);
-
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'YCL_TEST',
@@ -128,28 +136,13 @@ describe('handleCreateClass', () => {
     });
 
     test('should default package to $TMP if not provided', async () => {
-      // Mock class doesn't exist - GET throws 404
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-      
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({ 
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
         source_code: 'CLASS zcl_test DEFINITION PUBLIC. ENDCLASS.\nCLASS zcl_test IMPLEMENTATION. ENDCLASS.',
       });
 
-      // Check that POST request includes $TMP package
       const postCall = mockMakeAdtRequest.mock.calls.find(call => call[1] === 'POST');
       expect(postCall).toBeDefined();
       expect(postCall![3]).toContain('$TMP');
@@ -170,13 +163,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept $TMP package', async () => {
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 404 } as any)
-        .mockResolvedValueOnce({ status: 201 } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({ workflow: { overall_status: 'success' } } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -188,13 +175,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept $TEST package', async () => {
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 404 } as any)
-        .mockResolvedValueOnce({ status: 201 } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({ workflow: { overall_status: 'success' } } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -208,7 +189,6 @@ describe('handleCreateClass', () => {
 
   describe('Error Handling', () => {
     test('should handle network errors', async () => {
-      // Mock network error during getBaseUrl
       mockGetBaseUrl.mockRejectedValueOnce(new Error('Network error'));
 
       const result = await handleCreateClass({
@@ -236,24 +216,7 @@ describe('handleCreateClass', () => {
 
   describe('Auto-Activation', () => {
     test('should activate by default (auto_activate defaults to true)', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-      
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source
-
-      mockAttemptClassActivation.mockResolvedValueOnce({
-        success: true,
-        activated: ['ZCL_TEST'],
-      } as any);
-
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success', auto_activated: true },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -264,14 +227,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should not activate when auto_activate is false', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-      
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source
+      mockSuccessfulCreate({}, false);
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -286,17 +242,7 @@ describe('handleCreateClass', () => {
 
   describe('Class Replacement', () => {
     test('should replace existing class', async () => {
-      // Mock class exists (GET succeeds)
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check - class exists
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source code
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        creation: { details: { action: 'replace' } },
-        data: JSON.stringify({ status: 'success', details: { action: 'replace' } })
-      } as any);
+      mockSuccessfulReplace();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -304,42 +250,15 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
-      // When class exists, should only PUT (update), not POST (create)
       const putCalls = mockMakeAdtRequest.mock.calls.filter(call => call[1] === 'PUT');
       expect(putCalls.length).toBeGreaterThan(0);
     });
 
     test('should handle ETag mismatch during replacement (likely syntax error)', async () => {
-      // Mock class exists
       mockMakeAdtRequest
         .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check
-        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed')); // PUT fails with ETag mismatch
-
-      const result = await handleCreateClass({
-        class_name: 'ZCL_TEST',
-        source_code: 'CLASS zcl_test DEFINITION PUBLIC. ENDCLASS.\nCLASS zcl_test IMPLEMENTATION. ENDCLASS.',
-      });
-
-      expect(result.isError).toBe(false); // Handler returns success with error details
-      const response = JSON.parse(result.content[0].text);
-      expect(response.status).toBe('error');
-      expect(response.details.errorType).toBe('ETag_Mismatch_Likely_Syntax');
-      expect(response.details.action).toBe('replace');
-    });
-
-    test('should use ETag fallback when direct upload fails', async () => {
-      // Mock class exists
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check
-        .mockRejectedValueOnce(new Error('Direct upload failed')) // First PUT fails
-        .mockResolvedValueOnce({ status: 200, headers: { etag: '"abc123"' } } as any) // GET for ETag
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT with ETag succeeds
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                          // GET etag
+        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'));                   // PUT fails
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -347,43 +266,35 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
-      // Should have made GET request for ETag
-      const getCalls = mockMakeAdtRequest.mock.calls.filter(call => call[1] === 'GET');
-      expect(getCalls.length).toBeGreaterThan(1); // Initial check + ETag fetch
+      const response = JSON.parse(result.content[0].text);
+      expect(response.status).toBe('error');
+      expect(response.details.errorType).toBe('ETag_Mismatch');
+      expect(response.details.action).toBe('replace');
+    });
+
+    test('should use ETag when server returns one', async () => {
+      mockMakeAdtRequest
+        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any)           // GET check
+        .mockResolvedValueOnce({ status: 200, headers: { etag: '"abc123"' } } as any)                 // GET etag
+        .mockResolvedValueOnce({ status: 200 } as any);                                               // PUT with ETag
+      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
+      mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
+
+      const result = await handleCreateClass({
+        class_name: 'ZCL_TEST',
+        source_code: 'CLASS zcl_test DEFINITION PUBLIC. ENDCLASS.\nCLASS zcl_test IMPLEMENTATION. ENDCLASS.',
+      });
+
+      expect(result.isError).toBe(false);
+      const putCall = mockMakeAdtRequest.mock.calls.find(call => call[1] === 'PUT');
+      expect(putCall).toBeDefined();
+      expect(putCall![5]).toMatchObject({ 'If-Match': '"abc123"' });
     });
   });
 
   describe('Backup Functionality', () => {
     test('should create backup when backup_existing is true and class exists', async () => {
-      // Mock class exists - first GET returns class content for backup
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ 
-          status: 200, 
-          data: 'existing class content',
-          headers: { 'content-type': 'text/plain' }
-        } as any) // GET check - class exists
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source code
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        creation: { 
-          details: { 
-            action: 'replace',
-            backup: { 
-              created: true,
-              timestamp: new Date().toISOString()
-            } 
-          } 
-        },
-        data: JSON.stringify({ 
-          status: 'success', 
-          details: { 
-            action: 'replace',
-            backup: { created: true } 
-          } 
-        })
-      } as any);
+      mockSuccessfulReplace('existing class content');
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -392,22 +303,12 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
-      // Should have called GET to retrieve existing class for backup
       const getCalls = mockMakeAdtRequest.mock.calls.filter(call => call[1] === 'GET');
       expect(getCalls.length).toBeGreaterThan(0);
     });
 
     test('should handle backup failure gracefully', async () => {
-      // Mock class exists but backup fails
-      mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check
-        .mockResolvedValueOnce({ status: 200 } as any); // PUT source code succeeds
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulReplace();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -415,21 +316,17 @@ describe('handleCreateClass', () => {
         backup_existing: true,
       });
 
-      // Should succeed even if backup fails
       expect(result.isError).toBe(false);
     });
   });
 
   describe('Source Code Upload Scenarios', () => {
     test('should handle upload failure during class creation', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
       mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create succeeds
-        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed')); // PUT source fails
+        .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
+        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
+        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
+        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'));            // PUT fails
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -442,16 +339,12 @@ describe('handleCreateClass', () => {
       expect(response.details.errorType).toBeDefined();
     });
 
-    test('should handle both upload methods failing', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
+    test('should handle upload failure (non-412) during class creation', async () => {
       mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create succeeds
-        .mockRejectedValueOnce(new Error('Direct upload failed')) // First PUT fails
-        .mockRejectedValueOnce(new Error('GET for ETag failed')); // GET for ETag fails
+        .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
+        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
+        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
+        .mockRejectedValueOnce(new Error('Connection reset'));                        // PUT fails (non-412)
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -462,23 +355,19 @@ describe('handleCreateClass', () => {
     });
 
     test('should handle upload failure with fallback cleanup attempt', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
       mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError) // GET check - class doesn't exist
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any) // POST create succeeds
-        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed')) // PUT source fails
-        .mockRejectedValueOnce(new Error('Cleanup failed')); // DELETE cleanup also fails
+        .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
+        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
+        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
+        .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'))             // PUT fails
+        .mockRejectedValueOnce(new Error('Cleanup failed'));                          // DELETE cleanup fails
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
         source_code: 'CLASS zcl_test DEFINITION PUBLIC. ENDCLASS.\nCLASS zcl_test IMPLEMENTATION. ENDCLASS.',
       });
 
-      // Should return error response even if cleanup fails
-      expect(result.isError).toBe(false); // Handler returns structured error
+      expect(result.isError).toBe(false);
       const response = JSON.parse(result.content[0].text);
       expect(response.status).toBe('error');
     });
@@ -516,20 +405,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept class name with underscores', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_VALID_NAME_123',
@@ -540,20 +416,7 @@ describe('handleCreateClass', () => {
     });
 
     test('should accept $LOCAL package', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -567,20 +430,9 @@ describe('handleCreateClass', () => {
 
   describe('Preaudit Parameter', () => {
     test('should pass preaudit_requested to activation', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
+      mockSuccessfulCreate({}, false); // Don't let helper stub activation — we'll do it explicitly
       mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
 
       await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -588,26 +440,12 @@ describe('handleCreateClass', () => {
         preaudit_requested: false,
       });
 
-      // Handler defaults preaudit_requested to true when not explicitly false
-      // The || true in the code means it will be true unless explicitly set to false
-      expect(mockAttemptClassActivation).toHaveBeenCalledWith('ZCL_TEST', true);
+      // preaudit_requested: false is passed through correctly
+      expect(mockAttemptClassActivation).toHaveBeenCalledWith('ZCL_TEST', false);
     });
 
     test('should default preaudit_requested to true', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -620,20 +458,7 @@ describe('handleCreateClass', () => {
 
   describe('Description Parameter', () => {
     test('should use provided description', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -642,27 +467,13 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
-      // Check that POST request includes the description
       const postCall = mockMakeAdtRequest.mock.calls.find(call => call[1] === 'POST');
       expect(postCall).toBeDefined();
       expect(postCall![3]).toContain('Custom test description');
     });
 
     test('should use default description when not provided', async () => {
-      const notFoundError: any = new Error('HTTP 404 Not Found');
-      notFoundError.status = 404;
-      notFoundError.response = { status: 404 };
-
-      mockMakeAdtRequest
-        .mockRejectedValueOnce(notFoundError)
-        .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)
-        .mockResolvedValueOnce({ status: 200 } as any);
-
-      mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
-      mockCreateWorkflowResponse.mockReturnValueOnce({
-        workflow: { overall_status: 'success' },
-        data: JSON.stringify({ status: 'success' })
-      } as any);
+      mockSuccessfulCreate();
 
       const result = await handleCreateClass({
         class_name: 'ZCL_TEST',
@@ -670,7 +481,6 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
-      // Check that POST request includes default description
       const postCall = mockMakeAdtRequest.mock.calls.find(call => call[1] === 'POST');
       expect(postCall).toBeDefined();
       expect(postCall![3]).toContain('Local class ZCL_TEST');

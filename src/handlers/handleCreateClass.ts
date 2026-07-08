@@ -382,7 +382,7 @@ export async function handleCreateClass(args: any): Promise<any> {
 
         // Handle auto-activation if requested
         if (params.auto_activate) {
-            const activationResult = await attemptClassActivation(params.class_name, params.preaudit_requested || true);
+            const activationResult = await attemptClassActivation(params.class_name, params.preaudit_requested ?? true);
 
             // Create comprehensive workflow response
             const workflowResponse = createWorkflowResponse(enhancedResponse, activationResult, true);
