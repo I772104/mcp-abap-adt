@@ -1,5 +1,5 @@
-import { McpError, ErrorCode, AxiosResponse } from '../lib/utils';
-import { makeAdtRequest, return_error, return_response, getBaseUrl } from '../lib/utils';
+import { McpError, ErrorCode } from '../lib/utils';
+import { makeAdtRequest, return_error, getBaseUrl } from '../lib/utils';
 
 export async function handleGetServiceDefinition(args: any) {
     try {
@@ -7,15 +7,13 @@ export async function handleGetServiceDefinition(args: any) {
             throw new McpError(ErrorCode.InvalidParams, 'Service name is required');
         }
 
-        const encodedServiceName = encodeURIComponent(args.service_name);
+        const encodedServiceName = encodeURIComponent(args.service_name.toLowerCase());
 
-        // Try different ADT endpoints for service definitions
+        // Try different ADT endpoints for service definitions (SRVD objects)
         const baseUrl = await getBaseUrl();
         const endpoints = [
-            `/sap/bc/adt/businessservices/odatav4/${encodedServiceName}`, // OData V4 service definition
-            `/sap/bc/adt/businessservices/odatav2/${encodedServiceName}`, // OData V2 service definition
-            `/sap/bc/adt/ddic/services/${encodedServiceName}`, // Generic service definition
-            `/sap/bc/adt/repository/informationsystem/search?operation=quickSearch&query=${encodedServiceName}&objectType=SRVD/SV`,
+            `/sap/bc/adt/ddic/srvd/sources/${encodedServiceName}/source/main?version=active`, // Primary: SRVD DDL source
+            `/sap/bc/adt/ddic/srvb/sources/${encodedServiceName}/source/main?version=active`, // Fallback: SRVB (service binding) DDL source
         ];
 
         let lastError: any;
@@ -25,31 +23,28 @@ export async function handleGetServiceDefinition(args: any) {
                 const url = `${baseUrl}${endpoint}`;
                 const response = await makeAdtRequest(url, 'GET', 30000);
 
-                // If we got a successful response, parse and enhance it
-                if (response.data) {
-                    let result = {
+                // Only treat as success if response contains actual DDL source code (not an XML list)
+                const data: string = typeof response.data === 'string' ? response.data : '';
+                if (data && !data.trimStart().startsWith('<?xml') && data.trim().length > 0) {
+                    const result = {
                         service_name: args.service_name,
-                        source_code: response.data,
-                        service_type: detectServiceType(response.data, endpoint),
-                        exposed_entities: extractExposedEntities(response.data),
-                        service_version: extractServiceVersion(response.data),
-                        namespace: extractNamespace(response.data),
-                        annotations: extractServiceAnnotations(response.data),
+                        source_code: data,
+                        service_type: detectServiceType(data, endpoint),
+                        exposed_entities: extractExposedEntities(data),
+                        service_version: extractServiceVersion(data),
+                        namespace: extractNamespace(data),
+                        annotations: extractServiceAnnotations(data),
                     };
 
                     return {
                         isError: false,
-                        content: [
-                            {
-                                type: 'text',
-                                text: JSON.stringify(result, null, 2),
-                            },
-                        ],
+                        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
                     };
+                } else {
+                    lastError = new Error(`Endpoint ${endpoint} returned an XML response instead of DDL source code`);
                 }
             } catch (error) {
                 lastError = error;
-                // Continue to next endpoint
                 continue;
             }
         }
@@ -62,10 +57,8 @@ export async function handleGetServiceDefinition(args: any) {
 }
 
 function detectServiceType(sourceCode: string, endpoint: string): string {
-    if (endpoint.includes('odatav4')) {
-        return 'OData V4';
-    } else if (endpoint.includes('odatav2')) {
-        return 'OData V2';
+    if (endpoint.includes('/srvb/')) {
+        return 'Service Binding';
     }
 
     const source = sourceCode.toLowerCase();
@@ -130,13 +123,11 @@ function extractServiceVersion(sourceCode: string): string | null {
     for (const line of lines) {
         const trimmed = line.trim();
 
-        // Match version annotations
         const versionMatch = trimmed.match(/@odata\.service\.version\s*:\s*['"]([^'"]+)['"]/i);
         if (versionMatch) {
             return versionMatch[1].trim();
         }
 
-        // Match version in service name
         const serviceVersionMatch = trimmed.match(/define\s+service\s+\w+_v(\d+)/i);
         if (serviceVersionMatch) {
             return serviceVersionMatch[1].trim();
@@ -152,13 +143,11 @@ function extractNamespace(sourceCode: string): string | null {
     for (const line of lines) {
         const trimmed = line.trim();
 
-        // Match namespace declarations
         const namespaceMatch = trimmed.match(/@namespace\s*:\s*['"]([^'"]+)['"]/i);
         if (namespaceMatch) {
             return namespaceMatch[1].trim();
         }
 
-        // Extract from service definition name
         const serviceMatch = trimmed.match(/define\s+service\s+([A-Z]+)_/i);
         if (serviceMatch) {
             return serviceMatch[1].trim();
@@ -182,7 +171,6 @@ function extractServiceAnnotations(sourceCode: string): any[] {
                     value: match[2].trim(),
                 });
             } else {
-                // Simple annotation without value
                 const simpleMatch = trimmed.match(/@([^\s]+)/);
                 if (simpleMatch) {
                     annotations.push({
