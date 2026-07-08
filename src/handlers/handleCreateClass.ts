@@ -87,28 +87,29 @@ function createClassMetadataPayload(className: string, description: string, pack
 }
 
 /**
- * Uploads source code to the created class with proper ETag handling.
- * Always fetches a fresh ETag before PUT to avoid stale-ETag 412 errors after
- * activation or any prior write in the same session.
+ * Uploads source code with ETag-safe PUT.
+ *
+ * When knownEtag is provided (replace path) it is used directly, avoiding a
+ * redundant GET round-trip and narrowing the concurrent-modification race window.
+ * When knownEtag is omitted (create path) the caller guarantees the object is
+ * brand-new, so If-Match: * is used directly without a GET — a freshly POSTed
+ * class has no prior ETag to conflict with.
  */
-async function uploadSourceCode(sourceUrl: string, sourceCode: string): Promise<void> {
+async function uploadSourceCode(sourceUrl: string, sourceCode: string, knownEtag?: string): Promise<void> {
     const baseHeaders = {
         'Content-Type': 'text/plain; charset=utf-8',
         Accept: 'text/plain',
     };
 
-    const getResponse = await makeAdtRequest(sourceUrl, 'GET', 10000);
-    const etag = getResponse.headers['etag'] || getResponse.headers['ETag'];
-
-    if (etag) {
+    if (knownEtag) {
         await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
             ...baseHeaders,
-            'If-Match': etag,
+            'If-Match': knownEtag,
         });
         return;
     }
 
-    // Fallback for systems that don't return an ETag header
+    // No known ETag (brand-new class): use If-Match: * — no prior write can conflict
     await makeAdtRequest(sourceUrl, 'PUT', 30000, sourceCode, undefined, {
         ...baseHeaders,
         'If-Match': '*',
@@ -149,17 +150,17 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
     const errorMessage = originalError.message || String(originalError);
     const isETagError = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
     const isSyntaxRelated =
-        isETagError || errorMessage.toLowerCase().includes('syntax') || errorMessage.toLowerCase().includes('invalid');
+        errorMessage.toLowerCase().includes('syntax') || errorMessage.toLowerCase().includes('invalid');
 
     let mainMessage: string;
     let recommendations: string[];
 
-    if (isReplacing && isETagError) {
+    if (isETagError) {
         mainMessage = `Class ${action} failed with ETag mismatch (HTTP 412). The class may have been modified or activated concurrently.`;
         recommendations = [
             'Retry the operation — a fresh ETag will be fetched automatically',
             'If the error persists, check whether another user or process is modifying the class',
-            'The original class remains unchanged due to this error',
+            isReplacing ? 'The original class remains unchanged due to this error' : 'No class was created',
         ];
     } else if (isSyntaxRelated) {
         mainMessage = `Class ${action} failed due to syntax errors in the provided source code.`;
@@ -202,7 +203,7 @@ function createSyntaxErrorResponse(params: CreateClassParams, originalError: any
 }
 
 /**
- * Handles fallback when class creation succeeds but source upload fails due to syntax issues
+ * Handles fallback when class creation succeeds but source upload fails (ETag mismatch or syntax error).
  */
 async function handleFallbackSyntaxCheck(
     params: CreateClassParams,
@@ -255,8 +256,10 @@ export async function handleCreateClass(args: any): Promise<any> {
 
         // Check if class exists
         try {
-            await makeAdtRequest(sourceUrl, 'GET', 10000);
+            const existsResponse = await makeAdtRequest(sourceUrl, 'GET', 10000);
             isReplacing = true;
+            const existingEtag: string | undefined =
+                existsResponse.headers?.['etag'] || existsResponse.headers?.['ETag'] || undefined;
 
             // Create backup if requested
             if (params.backup_existing) {
@@ -265,14 +268,14 @@ export async function handleCreateClass(args: any): Promise<any> {
 
             // If replacing, upload new source code with enhanced error handling
             try {
-                await uploadSourceCode(sourceUrl, params.source_code);
+                await uploadSourceCode(sourceUrl, params.source_code, existingEtag);
             } catch (uploadError: any) {
                 // Enhanced error handling for class replacement failures
                 const uploadErrorMessage = uploadError?.message || String(uploadError);
                 const isETagError = uploadErrorMessage.includes('HTTP 412') || uploadErrorMessage.includes('412');
 
                 if (isETagError) {
-                    // ETag mismatch during replacement - likely syntax errors
+                    // ETag mismatch — concurrent modification or activation between GET and PUT
                     const errorResponse = createSyntaxErrorResponse(params, uploadError, true);
                     return return_response(errorResponse);
                 }
@@ -311,10 +314,10 @@ export async function handleCreateClass(args: any): Promise<any> {
                     await makeAdtRequest(createUrl, 'POST', 30000, metadataPayload, undefined, createHeaders);
                     classCreated = true;
 
-                    // Upload custom source code
+                    // Upload custom source code (brand-new class — no prior ETag)
                     await uploadSourceCode(sourceUrl, params.source_code);
                 } catch (creationError: any) {
-                    // Check for HTTP 412 ETag mismatch during source upload - likely due to syntax issues
+                    // Check for HTTP 412 ETag mismatch or syntax error during source upload
                     const errorMessage = creationError?.message || creationError?.toString?.() || String(creationError);
                     const isHttp412Error = errorMessage.includes('HTTP 412') || errorMessage.includes('412');
 

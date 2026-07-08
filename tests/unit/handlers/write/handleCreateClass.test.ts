@@ -54,14 +54,13 @@ describe('handleCreateClass', () => {
   });
 
   // Helper: mock a successful class creation sequence
-  // uploadSourceCode does GET (etag fetch) then PUT, so create path needs:
-  //   reject-404 (existence check), POST (metadata), GET (etag), PUT (source)
+  // Create path: reject-404 (existence check), POST (metadata), PUT (source, If-Match:*)
+  // No GET-etag step — brand-new class uses If-Match: * directly
   function mockSuccessfulCreate(etagHeaders: object = {}, withActivation = true) {
     mockMakeAdtRequest
       .mockRejectedValueOnce(makeNotFoundError())                                       // GET check — class doesn't exist
       .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)               // POST create metadata
-      .mockResolvedValueOnce({ status: 200, headers: etagHeaders } as any)           // GET etag (uploadSourceCode)
-      .mockResolvedValueOnce({ status: 200 } as any);                                // PUT source
+      .mockResolvedValueOnce({ status: 200 } as any);                                // PUT source (If-Match: *)
     if (withActivation) {
       mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
       mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
@@ -69,12 +68,11 @@ describe('handleCreateClass', () => {
   }
 
   // Helper: mock a successful class replacement sequence
-  // Replace path: GET (existence check + etag fetch inside uploadSourceCode), PUT
-  function mockSuccessfulReplace(existingData = 'existing class content') {
+  // Replace path: GET (existence check, ETag in headers), PUT (source, If-Match: <etag>)
+  function mockSuccessfulReplace(existingData = 'existing class content', etag = '') {
     mockMakeAdtRequest
-      .mockResolvedValueOnce({ status: 200, data: existingData, headers: {} } as any) // GET check — class exists
-      .mockResolvedValueOnce({ status: 200, headers: {} } as any)                     // GET etag (uploadSourceCode)
-      .mockResolvedValueOnce({ status: 200 } as any);                                 // PUT source
+      .mockResolvedValueOnce({ status: 200, data: existingData, headers: etag ? { etag } : {} } as any) // GET check — class exists, optional ETag
+      .mockResolvedValueOnce({ status: 200 } as any);                                                   // PUT source
     mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
     mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
   }
@@ -256,8 +254,7 @@ describe('handleCreateClass', () => {
 
     test('should handle ETag mismatch during replacement (likely syntax error)', async () => {
       mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check
-        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                          // GET etag
+        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any) // GET check (no etag)
         .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'));                   // PUT fails
 
       const result = await handleCreateClass({
@@ -272,11 +269,10 @@ describe('handleCreateClass', () => {
       expect(response.details.action).toBe('replace');
     });
 
-    test('should use ETag when server returns one', async () => {
+    test('should use ETag from existence-check GET for the PUT', async () => {
       mockMakeAdtRequest
-        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: {} } as any)           // GET check
-        .mockResolvedValueOnce({ status: 200, headers: { etag: '"abc123"' } } as any)                 // GET etag
-        .mockResolvedValueOnce({ status: 200 } as any);                                               // PUT with ETag
+        .mockResolvedValueOnce({ status: 200, data: 'existing class', headers: { etag: '"abc123"' } } as any) // GET check — returns ETag
+        .mockResolvedValueOnce({ status: 200 } as any);                                                       // PUT with ETag
       mockAttemptClassActivation.mockResolvedValueOnce({ success: true } as any);
       mockCreateWorkflowResponse.mockReturnValueOnce(workflowResponseMock as any);
 
@@ -286,6 +282,9 @@ describe('handleCreateClass', () => {
       });
 
       expect(result.isError).toBe(false);
+      // Only one GET (existence check) — no second GET for ETag
+      const getCalls = mockMakeAdtRequest.mock.calls.filter(call => call[1] === 'GET');
+      expect(getCalls.length).toBe(1);
       const putCall = mockMakeAdtRequest.mock.calls.find(call => call[1] === 'PUT');
       expect(putCall).toBeDefined();
       expect(putCall![5]).toMatchObject({ 'If-Match': '"abc123"' });
@@ -325,7 +324,6 @@ describe('handleCreateClass', () => {
       mockMakeAdtRequest
         .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
         .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
-        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
         .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'));            // PUT fails
 
       const result = await handleCreateClass({
@@ -343,7 +341,6 @@ describe('handleCreateClass', () => {
       mockMakeAdtRequest
         .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
         .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
-        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
         .mockRejectedValueOnce(new Error('Connection reset'));                        // PUT fails (non-412)
 
       const result = await handleCreateClass({
@@ -358,7 +355,6 @@ describe('handleCreateClass', () => {
       mockMakeAdtRequest
         .mockRejectedValueOnce(makeNotFoundError())                                         // GET check
         .mockResolvedValueOnce({ status: 201, data: '<class/>' } as any)             // POST create
-        .mockResolvedValueOnce({ status: 200, headers: {} } as any)                  // GET etag
         .mockRejectedValueOnce(new Error('HTTP 412 Precondition Failed'))             // PUT fails
         .mockRejectedValueOnce(new Error('Cleanup failed'));                          // DELETE cleanup fails
 
