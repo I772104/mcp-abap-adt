@@ -1,3 +1,7 @@
+> [!WARNING]
+> **This MCP server is no longer actively maintained.** SAP has released an official ABAP MCP server — please use that instead:
+> [SAP Official ABAP MCP](https://portal.hyperspace.tools.sap/hyperspace-ai/mcp-registry/com.sap.adt%2Fmcp)
+
 > [!NOTE]
 > **🧪 EVALUATION & LEARNING PROJECT - SAP INTERNAL**
 >
